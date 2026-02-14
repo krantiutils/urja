@@ -32,8 +32,8 @@ func (s *Service) List(ctx context.Context, limit, offset int) ([]Organization, 
 	return s.repo.List(ctx, limit, offset)
 }
 
-// IsOrgMember delegates to the repository to check membership.
+// CheckOrgMembership delegates to the repository to check membership and role.
 // This implements middleware.OrgMembershipChecker.
-func (s *Service) IsOrgMember(ctx context.Context, userID, orgID string) (bool, error) {
-	return s.repo.IsOrgMember(ctx, userID, orgID)
+func (s *Service) CheckOrgMembership(ctx context.Context, userID, orgID string) (bool, string, error) {
+	return s.repo.CheckOrgMembership(ctx, userID, orgID)
 }

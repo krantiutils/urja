@@ -15,6 +15,8 @@ const (
 	UserRoleKey contextKey = "user_role"
 	// OrgIDKey is the context key for the organization ID from the route.
 	OrgIDKey contextKey = "org_id"
+	// OrgRoleKey is the context key for the user's role within the current organization.
+	OrgRoleKey contextKey = "org_role"
 )
 
 // TokenValidator is the interface that the auth service must implement
@@ -69,4 +71,10 @@ func UserRoleFromContext(ctx context.Context) (string, bool) {
 func OrgIDFromContext(ctx context.Context) (string, bool) {
 	id, ok := ctx.Value(OrgIDKey).(string)
 	return id, ok
+}
+
+// OrgRoleFromContext extracts the user's org-specific role from the request context.
+func OrgRoleFromContext(ctx context.Context) (string, bool) {
+	role, ok := ctx.Value(OrgRoleKey).(string)
+	return role, ok
 }

@@ -2,9 +2,11 @@ package org
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -68,16 +70,20 @@ func (r *Repository) List(ctx context.Context, limit, offset int) ([]Organizatio
 	return orgs, rows.Err()
 }
 
-// IsOrgMember checks if a user is a member of an organization.
+// CheckOrgMembership checks if a user is a member of an organization and returns their role.
 // This implements the middleware.OrgMembershipChecker interface.
-func (r *Repository) IsOrgMember(ctx context.Context, userID, orgID string) (bool, error) {
-	var exists bool
+func (r *Repository) CheckOrgMembership(ctx context.Context, userID, orgID string) (bool, string, error) {
+	var role string
 	err := r.db.QueryRow(ctx,
-		`SELECT EXISTS(
-			SELECT 1 FROM organization_members
-			WHERE user_id = $1 AND organization_id = $2 AND status = 'active'
-		)`,
+		`SELECT role FROM organization_members
+		 WHERE user_id = $1 AND organization_id = $2 AND status = 'active'`,
 		userID, orgID,
-	).Scan(&exists)
-	return exists, err
+	).Scan(&role)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, "", nil
+		}
+		return false, "", err
+	}
+	return true, role, nil
 }

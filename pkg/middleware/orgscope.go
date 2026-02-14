@@ -7,13 +7,15 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// OrgMembershipChecker verifies that a user belongs to an organization.
+// OrgMembershipChecker verifies that a user belongs to an organization
+// and returns their role within it.
 type OrgMembershipChecker interface {
-	IsOrgMember(ctx context.Context, userID, orgID string) (bool, error)
+	CheckOrgMembership(ctx context.Context, userID, orgID string) (isMember bool, role string, err error)
 }
 
 // OrgScope returns middleware that extracts the organization ID from the URL
 // and verifies the authenticated user is a member of that organization.
+// It also sets the user's org-specific role in the request context.
 // This prevents cross-org data access (PRD vulnerability #8).
 func OrgScope(checker OrgMembershipChecker) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -30,7 +32,7 @@ func OrgScope(checker OrgMembershipChecker) func(http.Handler) http.Handler {
 				return
 			}
 
-			isMember, err := checker.IsOrgMember(r.Context(), userID, orgID)
+			isMember, role, err := checker.CheckOrgMembership(r.Context(), userID, orgID)
 			if err != nil {
 				http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
 				return
@@ -41,6 +43,7 @@ func OrgScope(checker OrgMembershipChecker) func(http.Handler) http.Handler {
 			}
 
 			ctx := context.WithValue(r.Context(), OrgIDKey, orgID)
+			ctx = context.WithValue(ctx, OrgRoleKey, role)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
