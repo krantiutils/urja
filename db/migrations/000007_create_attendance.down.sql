@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS nfc_cards;
+DROP TABLE IF EXISTS attendance;
