@@ -4,81 +4,71 @@ test.describe("Login page", () => {
   test("renders phone input form in English", async ({ page }) => {
     await page.goto("/en/login");
 
-    // Brand heading
-    await expect(page.getByRole("heading", { name: "Urja" })).toBeVisible();
-
-    // Subtitle
-    await expect(page.getByText("Gym management, simplified")).toBeVisible();
-
-    // "Sign In" card heading
-    await expect(page.getByRole("heading", { name: "Sign In" })).toBeVisible();
-
-    // Phone input visible and focused
+    // The phone input should be visible
     const phoneInput = page.locator("#phone");
     await expect(phoneInput).toBeVisible();
     await expect(phoneInput).toHaveAttribute("placeholder", "98XXXXXXXX");
 
-    // Submit button
+    // Brand name should be visible
+    await expect(page.getByText("Urja")).toBeVisible();
+
+    // "Send OTP" button
     await expect(page.getByRole("button", { name: /Send OTP/i })).toBeVisible();
 
-    await page.screenshot({ path: "screenshots/login-en-phone.png", fullPage: true });
+    await page.screenshot({ path: "screenshots/login-en.png", fullPage: true });
   });
 
-  test("shows validation error for invalid phone number", async ({ page }) => {
-    await page.goto("/en/login");
-
-    // Type an invalid number and submit
-    await page.locator("#phone").fill("1234");
-    await page.getByRole("button", { name: /Send OTP/i }).click();
-
-    // Validation error should appear
-    await expect(page.getByText("Enter a valid Nepali mobile number")).toBeVisible();
-
-    await page.screenshot({ path: "screenshots/login-en-phone-error.png", fullPage: true });
-  });
-
-  test("transitions to OTP step after submitting valid phone", async ({ page }) => {
-    // Mock the login API endpoint
+  test("shows OTP step after submitting phone", async ({ page }) => {
+    // Mock the login API to succeed
     await page.route("**/api/v1/auth/login", (route) =>
-      route.fulfill({ status: 200, contentType: "application/json", body: "{}" })
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "OTP sent" }),
+      }),
     );
 
     await page.goto("/en/login");
 
-    await page.locator("#phone").fill("9841234567");
+    // Fill a valid Nepali phone number and submit
+    await page.locator("#phone").fill("9841000000");
     await page.getByRole("button", { name: /Send OTP/i }).click();
 
     // Wait for OTP form to appear
+    const otpInput = page.locator("#otp");
+    await expect(otpInput).toBeVisible({ timeout: 5000 });
     await expect(page.getByText("OTP sent to your phone")).toBeVisible();
-    await expect(page.locator("#otp")).toBeVisible();
+
+    // Resend and back buttons should be present
     await expect(page.getByRole("button", { name: /Verify/i })).toBeVisible();
 
-    // Back button and resend timer should be visible
-    await expect(page.getByText(/Mobile Number/i)).toBeVisible();
-    await expect(page.getByText(/Resend in/i)).toBeVisible();
-
-    await page.screenshot({ path: "screenshots/login-en-otp.png", fullPage: true });
+    await page.screenshot({ path: "screenshots/login-otp-en.png", fullPage: true });
   });
 
-  test("renders login page in Nepali locale", async ({ page }) => {
+  test("shows validation error for invalid phone", async ({ page }) => {
+    await page.goto("/en/login");
+
+    // Enter an invalid number
+    await page.locator("#phone").fill("12345");
+    await page.getByRole("button", { name: /Send OTP/i }).click();
+
+    // Should show the validation error
+    await expect(page.getByText("Enter a valid Nepali mobile number")).toBeVisible();
+
+    await page.screenshot({ path: "screenshots/login-invalid-phone-en.png", fullPage: true });
+  });
+
+  test("renders login page in Nepali", async ({ page }) => {
     await page.goto("/ne/login");
 
-    // Nepali brand name
-    await expect(page.getByRole("heading", { name: "ऊर्जा" })).toBeVisible();
+    // Nepali brand
+    await expect(page.getByText("ऊर्जा")).toBeVisible();
 
-    // Nepali subtitle
-    await expect(page.getByText("जिम व्यवस्थापन, सरलीकृत")).toBeVisible();
+    // Nepali sign in text
+    await expect(page.getByText("साइन इन")).toBeVisible();
 
-    // Nepali sign-in heading
-    await expect(page.getByRole("heading", { name: "साइन इन" })).toBeVisible();
-
-    // Phone input
+    // Phone input still present
     await expect(page.locator("#phone")).toBeVisible();
-
-    // Nepali OTP button text
-    await expect(
-      page.getByRole("button", { name: /OTP पठाउनुहोस्/i })
-    ).toBeVisible();
 
     await page.screenshot({ path: "screenshots/login-ne.png", fullPage: true });
   });

@@ -1,37 +1,43 @@
+import type { Page } from "@playwright/test";
+
 /**
- * Build a fake JWT accepted by the client-side auth code.
- *
- * The app only base64-decodes the payload section (`atob(parts[1])`)
- * and checks `exp` for token validity.  Header and signature are
- * ignored beyond the three-part split, so we can use stubs.
+ * Build a fake JWT token with the given payload.
+ * The signature is garbage but the app only decodes the payload (no server verification).
  */
-export function fakeJWT(overrides: Record<string, unknown> = {}): string {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64");
-  const payload = Buffer.from(
-    JSON.stringify({
-      sub: "test-user-1",
-      phone: "9841234567",
-      role: "admin",
-      org_id: "test-org-1",
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours from now
-      iss: "urja-test",
-      ...overrides,
-    })
-  ).toString("base64");
-  const signature = Buffer.from("fake-sig").toString("base64");
-  return `${header}.${payload}.${signature}`;
+function fakeJWT(payload: Record<string, unknown>): string {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sig = "fake-sig";
+  return `${header}.${body}.${sig}`;
 }
 
 /**
- * Inject auth tokens into localStorage so AuthGuard lets us through.
- *
- * Must be called via `page.addInitScript` *before* navigating to a
- * protected route, because the AuthProvider reads localStorage on mount.
+ * Inject a fake authenticated session into localStorage so AuthGuard lets us through.
  */
-export function injectAuthScript(token: string): string {
-  return `
-    localStorage.setItem('access_token', '${token}');
-    localStorage.setItem('refresh_token', 'fake-refresh-token');
-  `;
+export async function injectAuth(page: Page): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const accessToken = fakeJWT({
+    sub: "test-user-001",
+    phone: "9841000000",
+    role: "super_admin",
+    org_id: "org-001",
+    iat: now,
+    exp: now + 3600, // 1 hour from now
+    iss: "urja",
+  });
+  const refreshToken = fakeJWT({
+    sub: "test-user-001",
+    type: "refresh",
+    iat: now,
+    exp: now + 86400,
+    iss: "urja",
+  });
+
+  await page.evaluate(
+    ({ access, refresh }) => {
+      localStorage.setItem("access_token", access);
+      localStorage.setItem("refresh_token", refresh);
+    },
+    { access: accessToken, refresh: refreshToken },
+  );
 }
