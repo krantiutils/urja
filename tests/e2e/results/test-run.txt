@@ -1,0 +1,228 @@
+=== RUN   TestAbsentee_List
+--- PASS: TestAbsentee_List (0.76s)
+=== RUN   TestAbsentee_List_StaffAllowed
+--- PASS: TestAbsentee_List_StaffAllowed (0.74s)
+=== RUN   TestAbsentee_List_MemberForbidden
+--- PASS: TestAbsentee_List_MemberForbidden (0.76s)
+=== RUN   TestAbsentee_Notify
+--- PASS: TestAbsentee_Notify (0.76s)
+=== RUN   TestAbsentee_Notify_MissingOrgName
+--- PASS: TestAbsentee_Notify_MissingOrgName (0.75s)
+=== RUN   TestAccounts_List
+--- PASS: TestAccounts_List (0.73s)
+=== RUN   TestAccounts_List_MemberForbidden
+--- PASS: TestAccounts_List_MemberForbidden (0.78s)
+=== RUN   TestAccounts_Create
+--- PASS: TestAccounts_Create (0.77s)
+=== RUN   TestAccounts_Create_StaffAllowed
+--- PASS: TestAccounts_Create_StaffAllowed (0.75s)
+=== RUN   TestAccounts_GetSummary
+--- PASS: TestAccounts_GetSummary (0.76s)
+=== RUN   TestAccounts_Export
+--- PASS: TestAccounts_Export (0.76s)
+=== RUN   TestActivityLog_List
+--- PASS: TestActivityLog_List (0.93s)
+=== RUN   TestActivityLog_ListWithDateFilter
+--- PASS: TestActivityLog_ListWithDateFilter (1.47s)
+=== RUN   TestActivityLog_ListInvalidDateFormat
+--- PASS: TestActivityLog_ListInvalidDateFormat (1.46s)
+=== RUN   TestAttendance_ManualCheckIn
+--- PASS: TestAttendance_ManualCheckIn (1.50s)
+=== RUN   TestAttendance_ListByOrg
+--- PASS: TestAttendance_ListByOrg (1.48s)
+=== RUN   TestAttendance_ListMine
+--- PASS: TestAttendance_ListMine (1.48s)
+=== RUN   TestAttendance_GetMyStreaks
+--- PASS: TestAttendance_GetMyStreaks (1.47s)
+=== RUN   TestAttendance_NoAuth
+--- PASS: TestAttendance_NoAuth (0.00s)
+=== RUN   TestAuth_Login_MissingPhone
+--- PASS: TestAuth_Login_MissingPhone (1.47s)
+=== RUN   TestAuth_Login_InvalidBody
+--- PASS: TestAuth_Login_InvalidBody (0.00s)
+=== RUN   TestAuth_Login_ValidPhone
+--- PASS: TestAuth_Login_ValidPhone (1.50s)
+=== RUN   TestAuth_VerifyOTP_MissingFields
+=== RUN   TestAuth_VerifyOTP_MissingFields/missing_both
+=== RUN   TestAuth_VerifyOTP_MissingFields/missing_otp
+=== RUN   TestAuth_VerifyOTP_MissingFields/missing_phone
+--- PASS: TestAuth_VerifyOTP_MissingFields (0.00s)
+    --- PASS: TestAuth_VerifyOTP_MissingFields/missing_both (0.00s)
+    --- PASS: TestAuth_VerifyOTP_MissingFields/missing_otp (0.00s)
+    --- PASS: TestAuth_VerifyOTP_MissingFields/missing_phone (0.00s)
+=== RUN   TestAuth_Refresh_MissingToken
+--- PASS: TestAuth_Refresh_MissingToken (0.00s)
+=== RUN   TestAuth_Refresh_InvalidToken
+--- PASS: TestAuth_Refresh_InvalidToken (0.00s)
+=== RUN   TestAuth_Logout_NoAuth
+--- PASS: TestAuth_Logout_NoAuth (0.00s)
+=== RUN   TestAuth_LogoutAll_NoAuth
+--- PASS: TestAuth_LogoutAll_NoAuth (0.00s)
+=== RUN   TestAuth_Logout_WithAuth
+--- PASS: TestAuth_Logout_WithAuth (1.47s)
+=== RUN   TestAuth_LogoutAll_WithAuth
+--- PASS: TestAuth_LogoutAll_WithAuth (1.51s)
+=== RUN   TestAuth_ProtectedEndpoint_NoToken
+--- PASS: TestAuth_ProtectedEndpoint_NoToken (0.00s)
+=== RUN   TestAuth_ProtectedEndpoint_InvalidToken
+--- PASS: TestAuth_ProtectedEndpoint_InvalidToken (0.00s)
+=== RUN   TestAuth_ProtectedEndpoint_MalformedHeader
+--- PASS: TestAuth_ProtectedEndpoint_MalformedHeader (0.00s)
+=== RUN   TestBilling_ListPlans
+--- PASS: TestBilling_ListPlans (0.01s)
+=== RUN   TestBilling_Subscribe_NoAuth
+--- PASS: TestBilling_Subscribe_NoAuth (0.00s)
+=== RUN   TestBilling_Subscribe_MissingFields
+--- PASS: TestBilling_Subscribe_MissingFields (1.50s)
+=== RUN   TestBilling_Subscribe_MissingPlanID
+--- PASS: TestBilling_Subscribe_MissingPlanID (1.47s)
+=== RUN   TestDues_List
+--- PASS: TestDues_List (1.46s)
+=== RUN   TestDues_List_MemberForbidden
+--- PASS: TestDues_List_MemberForbidden (1.47s)
+=== RUN   TestDues_Pay
+--- PASS: TestDues_Pay (1.52s)
+=== RUN   TestDues_Pay_MissingFields
+--- PASS: TestDues_Pay_MissingFields (1.50s)
+=== RUN   TestDues_BlockAccess_AdminOnly
+--- PASS: TestDues_BlockAccess_AdminOnly (1.48s)
+=== RUN   TestDues_BlockAccess_StaffForbidden
+--- PASS: TestDues_BlockAccess_StaffForbidden (1.52s)
+=== RUN   TestFeedback_Create_AsMember
+--- PASS: TestFeedback_Create_AsMember (1.50s)
+=== RUN   TestFeedback_Create_EmptyMessage
+--- PASS: TestFeedback_Create_EmptyMessage (1.51s)
+=== RUN   TestFeedback_List_AdminAllowed
+--- PASS: TestFeedback_List_AdminAllowed (1.53s)
+=== RUN   TestFeedback_List_MemberForbidden
+--- PASS: TestFeedback_List_MemberForbidden (1.51s)
+=== RUN   TestHealthCheck
+--- PASS: TestHealthCheck (0.00s)
+=== RUN   TestMember_GetMe
+--- PASS: TestMember_GetMe (1.49s)
+=== RUN   TestMember_GetMe_NoAuth
+--- PASS: TestMember_GetMe_NoAuth (0.00s)
+=== RUN   TestMember_UpdateMe
+--- PASS: TestMember_UpdateMe (1.47s)
+=== RUN   TestMember_UpdateMe_InvalidEmail
+--- PASS: TestMember_UpdateMe_InvalidEmail (1.47s)
+=== RUN   TestMember_UpdatePrivacy
+--- PASS: TestMember_UpdatePrivacy (1.49s)
+=== RUN   TestMember_ListByOrg
+--- PASS: TestMember_ListByOrg (1.50s)
+=== RUN   TestMember_CreateOrgMember
+--- PASS: TestMember_CreateOrgMember (1.52s)
+=== RUN   TestMember_CreateOrgMember_InvalidPhone
+--- PASS: TestMember_CreateOrgMember_InvalidPhone (1.46s)
+=== RUN   TestMember_CreateOrgMember_MemberCantCreate
+--- PASS: TestMember_CreateOrgMember_MemberCantCreate (1.53s)
+=== RUN   TestMember_DeleteOrgMember
+--- PASS: TestMember_DeleteOrgMember (1.50s)
+=== RUN   TestMember_OrgIsolation
+--- PASS: TestMember_OrgIsolation (1.55s)
+=== RUN   TestNFC_ListCards
+--- PASS: TestNFC_ListCards (2.63s)
+=== RUN   TestNFC_RegisterCard
+--- PASS: TestNFC_RegisterCard (1.79s)
+=== RUN   TestNFC_AssignCard
+--- PASS: TestNFC_AssignCard (1.48s)
+=== RUN   TestNFC_UnassignCard
+--- PASS: TestNFC_UnassignCard (1.49s)
+=== RUN   TestNFC_ListDevices
+--- PASS: TestNFC_ListDevices (1.51s)
+=== RUN   TestNotice_List
+--- PASS: TestNotice_List (1.50s)
+=== RUN   TestNotice_List_MemberAllowed
+--- PASS: TestNotice_List_MemberAllowed (1.50s)
+=== RUN   TestNotice_Get
+--- PASS: TestNotice_Get (1.51s)
+=== RUN   TestNotice_Get_NotFound
+--- PASS: TestNotice_Get_NotFound (1.51s)
+=== RUN   TestNotice_Create
+--- PASS: TestNotice_Create (1.50s)
+=== RUN   TestNotice_Create_MemberForbidden
+--- PASS: TestNotice_Create_MemberForbidden (1.60s)
+=== RUN   TestNotice_Update
+--- PASS: TestNotice_Update (0.79s)
+=== RUN   TestNotice_Delete
+--- PASS: TestNotice_Delete (0.76s)
+=== RUN   TestOrg_ListGyms_Public
+--- PASS: TestOrg_ListGyms_Public (0.76s)
+=== RUN   TestOrg_GetGym_Public
+--- PASS: TestOrg_GetGym_Public (0.78s)
+=== RUN   TestOrg_GetGym_NotFound
+--- PASS: TestOrg_GetGym_NotFound (0.00s)
+=== RUN   TestOrg_Create_NoAuth
+--- PASS: TestOrg_Create_NoAuth (0.00s)
+=== RUN   TestOrg_Create_NotSuperAdmin
+--- PASS: TestOrg_Create_NotSuperAdmin (0.76s)
+=== RUN   TestOrg_Create_AsSuperAdmin
+--- PASS: TestOrg_Create_AsSuperAdmin (0.75s)
+=== RUN   TestOrg_Create_MissingName
+--- PASS: TestOrg_Create_MissingName (0.77s)
+=== RUN   TestOrg_Update_AsAdmin
+--- PASS: TestOrg_Update_AsAdmin (0.78s)
+=== RUN   TestOrg_Update_NotMember
+--- PASS: TestOrg_Update_NotMember (0.78s)
+=== RUN   TestPackages_ListPublic
+--- PASS: TestPackages_ListPublic (0.75s)
+=== RUN   TestPackages_ListByOrg_AdminOnly
+--- PASS: TestPackages_ListByOrg_AdminOnly (0.77s)
+=== RUN   TestPackages_ListByOrg_MemberForbidden
+--- PASS: TestPackages_ListByOrg_MemberForbidden (0.79s)
+=== RUN   TestPackages_Create
+--- PASS: TestPackages_Create (0.77s)
+=== RUN   TestPackages_Update
+--- PASS: TestPackages_Update (0.76s)
+=== RUN   TestPackages_Delete
+--- PASS: TestPackages_Delete (0.78s)
+=== RUN   TestPackages_ListMyPackages
+--- PASS: TestPackages_ListMyPackages (0.78s)
+=== RUN   TestQRCode_GeneratePNG
+--- PASS: TestQRCode_GeneratePNG (0.75s)
+=== RUN   TestQRCode_GenerateJSON
+--- PASS: TestQRCode_GenerateJSON (0.78s)
+=== RUN   TestQRCode_MemberAllowed
+--- PASS: TestQRCode_MemberAllowed (0.77s)
+=== RUN   TestSMS_GetBalance
+--- PASS: TestSMS_GetBalance (0.77s)
+=== RUN   TestSMS_GetBalance_MemberForbidden
+--- PASS: TestSMS_GetBalance_MemberForbidden (0.75s)
+=== RUN   TestSMS_Buy
+--- PASS: TestSMS_Buy (0.78s)
+=== RUN   TestSMS_Send
+--- PASS: TestSMS_Send (0.78s)
+=== RUN   TestSMS_History
+--- PASS: TestSMS_History (0.75s)
+=== RUN   TestSMS_StaffForbidden
+--- PASS: TestSMS_StaffForbidden (0.79s)
+=== RUN   TestStaff_List
+--- PASS: TestStaff_List (0.78s)
+=== RUN   TestStaff_Create
+--- PASS: TestStaff_Create (0.78s)
+=== RUN   TestStaff_Create_MissingFields
+--- PASS: TestStaff_Create_MissingFields (0.74s)
+=== RUN   TestStaff_Create_MemberForbidden
+--- PASS: TestStaff_Create_MemberForbidden (0.78s)
+=== RUN   TestStaff_GetUpdateDelete
+--- PASS: TestStaff_GetUpdateDelete (0.81s)
+=== RUN   TestStaff_RecordAttendance
+--- PASS: TestStaff_RecordAttendance (0.78s)
+=== RUN   TestStaff_ListAttendance
+--- PASS: TestStaff_ListAttendance (0.77s)
+=== RUN   TestSubscription_PackageSummary
+--- PASS: TestSubscription_PackageSummary (0.78s)
+=== RUN   TestSubscription_ListExpiring
+--- PASS: TestSubscription_ListExpiring (0.77s)
+=== RUN   TestSubscription_ListExpired
+--- PASS: TestSubscription_ListExpired (0.76s)
+=== RUN   TestSubscription_AssignPackage
+--- PASS: TestSubscription_AssignPackage (0.77s)
+=== RUN   TestSubscription_AssignPackage_MissingFields
+--- PASS: TestSubscription_AssignPackage_MissingFields (0.79s)
+=== RUN   TestSubscription_ListPayments
+--- PASS: TestSubscription_ListPayments (0.79s)
+=== RUN   TestSubscription_ListSubscriptions
+--- PASS: TestSubscription_ListSubscriptions (0.78s)
+PASS
+ok  	github.com/urja-gym/urja/tests/e2e	105.624s

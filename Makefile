@@ -1,4 +1,4 @@
-.PHONY: build run test lint clean docker-up docker-down tidy
+.PHONY: build run test test-unit test-e2e lint clean docker-up docker-down tidy dev
 
 BINARY_NAME := urja-api
 BUILD_DIR := ./bin
@@ -13,9 +13,17 @@ build:
 run:
 	go run ./cmd/api
 
-# Run all tests
-test:
-	go test -v -race -count=1 ./...
+# Run all tests (unit + E2E)
+test: test-unit test-e2e
+
+# Run unit tests only (internal + pkg, excludes E2E)
+test-unit:
+	go test -v -race -count=1 ./internal/... ./pkg/...
+
+# Run E2E tests only (requires PostgreSQL and Redis)
+test-e2e:
+	@mkdir -p tests/e2e/results
+	go test -v -count=1 -timeout 180s ./tests/e2e/... | tee tests/e2e/results/test-run.txt
 
 # Run tests with coverage
 test-cover:
@@ -53,6 +61,10 @@ docker-down:
 # Stop Docker services and remove volumes
 docker-down-clean:
 	docker compose down -v
+
+# Run the API server with hot reload (requires air: go install github.com/air-verse/air@latest)
+dev:
+	@command -v air >/dev/null 2>&1 && air || go run ./cmd/api
 
 # ─── Database Migrations (golang-migrate) ───────────────────
 

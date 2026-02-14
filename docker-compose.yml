@@ -25,7 +25,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-ONLY", "pg_isready", "-U", "urja"]
+      test: ["CMD-SHELL", "pg_isready -U urja"]
       interval: 5s
       timeout: 5s
       retries: 5
