@@ -13,6 +13,7 @@ import (
 
 	"github.com/urja-gym/urja/internal/absentee"
 	"github.com/urja-gym/urja/internal/accounts"
+	"github.com/urja-gym/urja/internal/activitylog"
 	"github.com/urja-gym/urja/internal/attendance"
 	"github.com/urja-gym/urja/internal/auth"
 	"github.com/urja-gym/urja/internal/billing"
@@ -20,9 +21,11 @@ import (
 	"github.com/urja-gym/urja/internal/dues"
 	"github.com/urja-gym/urja/internal/feedback"
 	"github.com/urja-gym/urja/internal/member"
+	"github.com/urja-gym/urja/internal/nfc"
 	"github.com/urja-gym/urja/internal/notice"
 	"github.com/urja-gym/urja/internal/org"
 	"github.com/urja-gym/urja/internal/packages"
+	"github.com/urja-gym/urja/internal/qrcode"
 	"github.com/urja-gym/urja/internal/smsapi"
 	"github.com/urja-gym/urja/internal/staff"
 	"github.com/urja-gym/urja/internal/subscription"
@@ -104,6 +107,19 @@ func main() {
 	pkgRepo := packages.NewRepository(pool)
 	pkgService := packages.NewService(pkgRepo, khaltiClient, logger)
 	pkgHandler := packages.NewHandler(pkgService, logger)
+
+	// NFC
+	nfcRepo := nfc.NewRepository(pool)
+	nfcService := nfc.NewService(nfcRepo, logger)
+	nfcHandler := nfc.NewHandler(nfcService, logger)
+
+	// Activity Log
+	activityLogRepo := activitylog.NewRepository(pool)
+	activityLogService := activitylog.NewService(activityLogRepo, logger)
+	activityLogHandler := activitylog.NewHandler(activityLogService, logger)
+
+	// QR Code
+	qrHandler := qrcode.NewHandler(cfg.Server.BaseURL, logger)
 
 	// Notice
 	noticeRepo := notice.NewRepository(pool)
@@ -251,6 +267,10 @@ func main() {
 				r.Route("/absentees", func(r chi.Router) {
 					absenteeHandler.RegisterOrgRoutes(r)
 				})
+
+				nfcHandler.RegisterOrgRoutes(r)
+				activityLogHandler.RegisterOrgRoutes(r)
+				qrHandler.RegisterOrgRoutes(r)
 
 				r.Route("/workout-templates", func(r chi.Router) {
 					// Workout template management (TODO)

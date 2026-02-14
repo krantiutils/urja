@@ -24,6 +24,7 @@ type ServerConfig struct {
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
 	ShutdownTimeout time.Duration
+	BaseURL         string
 }
 
 type DatabaseConfig struct {
@@ -91,6 +92,7 @@ func Load() (*Config, error) {
 	cfg.Server.ReadTimeout = envDuration("SERVER_READ_TIMEOUT", 15*time.Second)
 	cfg.Server.WriteTimeout = envDuration("SERVER_WRITE_TIMEOUT", 15*time.Second)
 	cfg.Server.ShutdownTimeout = envDuration("SERVER_SHUTDOWN_TIMEOUT", 10*time.Second)
+	cfg.Server.BaseURL = envOrDefault("BASE_URL", fmt.Sprintf("http://localhost:%d", cfg.Server.Port))
 
 	// Database
 	cfg.Database.Host = envRequired("DB_HOST")
