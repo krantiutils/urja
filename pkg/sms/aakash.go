@@ -41,6 +41,15 @@ type aakashResponse struct {
 	Message string `json:"message"`
 }
 
+// Send sends an arbitrary SMS message to the given phone number.
+// Phone must be a valid Nepal number (10 digits, starts with 9[6-9]).
+func (c *Client) Send(ctx context.Context, phone, message string) error {
+	if !ValidatePhone(phone) {
+		return fmt.Errorf("invalid Nepal phone number: %s", phone)
+	}
+	return c.send(ctx, phone, message)
+}
+
 // SendOTP sends an OTP message to the given phone number.
 // Phone must be a valid Nepal number (10 digits, starts with 9[6-9]).
 func (c *Client) SendOTP(ctx context.Context, phone, otp string) error {
