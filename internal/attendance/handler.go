@@ -20,13 +20,44 @@ func NewHandler(service *Service, logger *slog.Logger) *Handler {
 	return &Handler{service: service, logger: logger}
 }
 
-type checkInRequest struct {
-	Method string `json:"method"` // qr, nfc, manual
+type selfCheckInRequest struct {
+	Method  string `json:"method"`   // qr, nfc
+	QRToken string `json:"qr_token"` // for qr: base64url_payload.hex_signature
+	CardUID string `json:"card_uid"` // for nfc: hex card identifier
+	OrgID   string `json:"org_id"`   // for nfc: organization ID
 }
 
-// CheckIn handles POST /api/v1/orgs/{orgId}/attendance/check-in
-func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
+type manualCheckInRequest struct {
+	MemberID string `json:"member_id"`
+}
+
+// SelfCheckIn handles POST /api/v1/members/me/check-in
+func (h *Handler) SelfCheckIn(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	var req selfCheckInRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	result, err := h.service.SelfCheckIn(r.Context(), userID, req.Method, req.QRToken, req.CardUID, req.OrgID)
+	if err != nil {
+		h.logger.Error("self check-in failed", "error", err, "user_id", userID, "method", req.Method)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, result)
+}
+
+// ManualCheckIn handles POST /api/v1/orgs/{orgId}/attendance/check-in
+func (h *Handler) ManualCheckIn(w http.ResponseWriter, r *http.Request) {
+	staffUserID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
@@ -38,20 +69,22 @@ func (h *Handler) CheckIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req checkInRequest
+	var req manualCheckInRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 
-	rec, err := h.service.CheckIn(r.Context(), userID, orgID, req.Method)
+	result, err := h.service.ManualCheckIn(r.Context(), staffUserID, req.MemberID, orgID)
 	if err != nil {
-		h.logger.Error("check-in failed", "error", err, "user_id", userID, "org_id", orgID)
+		h.logger.Error("manual check-in failed",
+			"error", err, "staff_id", staffUserID,
+			"member_id", req.MemberID, "org_id", orgID)
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, rec)
+	writeJSON(w, http.StatusCreated, result)
 }
 
 // ListByOrg handles GET /api/v1/orgs/{orgId}/attendance
@@ -94,6 +127,24 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{"data": records})
+}
+
+// GetMyStreaks handles GET /api/v1/members/me/streaks
+func (h *Handler) GetMyStreaks(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	streaks, err := h.service.GetStreaks(r.Context(), userID)
+	if err != nil {
+		h.logger.Error("failed to get streaks", "error", err, "user_id", userID)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"data": streaks})
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

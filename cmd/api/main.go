@@ -89,7 +89,7 @@ func main() {
 
 	// Attendance
 	attendanceRepo := attendance.NewRepository(pool)
-	attendanceService := attendance.NewService(attendanceRepo, logger)
+	attendanceService := attendance.NewService(attendanceRepo, []byte(cfg.Auth.JWTSecret), logger)
 	attendanceHandler := attendance.NewHandler(attendanceService, logger)
 
 	// Packages
