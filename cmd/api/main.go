@@ -16,6 +16,7 @@ import (
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/org"
+	"github.com/urja-gym/urja/internal/subscription"
 	"github.com/urja-gym/urja/pkg/database"
 	"github.com/urja-gym/urja/pkg/middleware"
 	uredis "github.com/urja-gym/urja/pkg/redis"
@@ -83,6 +84,11 @@ func main() {
 	attendanceService := attendance.NewService(attendanceRepo, logger)
 	attendanceHandler := attendance.NewHandler(attendanceService, logger)
 
+	// Subscription (package lifecycle)
+	subscriptionRepo := subscription.NewRepository(pool)
+	subscriptionService := subscription.NewService(subscriptionRepo, logger)
+	subscriptionHandler := subscription.NewHandler(subscriptionService, logger)
+
 	// Router
 	r := chi.NewRouter()
 
@@ -124,10 +130,18 @@ func main() {
 
 				r.Route("/members", func(r chi.Router) {
 					memberHandler.RegisterOrgRoutes(r)
+
+					r.Route("/{memberId}", func(r chi.Router) {
+						subscriptionHandler.RegisterMemberRoutes(r)
+					})
 				})
 
 				r.Route("/attendance", func(r chi.Router) {
 					attendanceHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/packages", func(r chi.Router) {
+					subscriptionHandler.RegisterPackageRoutes(r)
 				})
 			})
 		})
