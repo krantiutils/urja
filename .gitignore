@@ -1,0 +1,10 @@
+.runtime/
+.claude/
+.beads/
+.logs/
+
+# Go
+backend/bin/
+backend/.env
+*.exe
+*.test
