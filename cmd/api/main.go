@@ -18,6 +18,7 @@ import (
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/org"
 	"github.com/urja-gym/urja/internal/packages"
+	"github.com/urja-gym/urja/internal/staff"
 	"github.com/urja-gym/urja/pkg/database"
 	"github.com/urja-gym/urja/pkg/khalti"
 	"github.com/urja-gym/urja/pkg/middleware"
@@ -97,6 +98,11 @@ func main() {
 	pkgService := packages.NewService(pkgRepo, khaltiClient, logger)
 	pkgHandler := packages.NewHandler(pkgService, logger)
 
+	// Staff
+	staffRepo := staff.NewRepository(pool)
+	staffService := staff.NewService(staffRepo, logger)
+	staffHandler := staff.NewHandler(staffService, logger)
+
 	// Billing
 	billingRepo := billing.NewRepository(pool)
 	billingService := billing.NewService(billingRepo, khaltiClient, logger)
@@ -169,6 +175,10 @@ func main() {
 
 				r.Route("/attendance", func(r chi.Router) {
 					attendanceHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/staff", func(r chi.Router) {
+					staffHandler.RegisterOrgRoutes(r)
 				})
 
 				r.Route("/workout-templates", func(r chi.Router) {
