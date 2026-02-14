@@ -13,6 +13,7 @@ import (
 
 	"github.com/urja-gym/urja/internal/attendance"
 	"github.com/urja-gym/urja/internal/auth"
+	"github.com/urja-gym/urja/internal/billing"
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/org"
@@ -96,6 +97,11 @@ func main() {
 	pkgService := packages.NewService(pkgRepo, khaltiClient, logger)
 	pkgHandler := packages.NewHandler(pkgService, logger)
 
+	// Billing
+	billingRepo := billing.NewRepository(pool)
+	billingService := billing.NewService(billingRepo, khaltiClient, logger)
+	billingHandler := billing.NewHandler(billingService, logger)
+
 	// Router
 	r := chi.NewRouter()
 
@@ -124,9 +130,20 @@ func main() {
 			pkgHandler.RegisterPublicRoutes(r)
 		})
 
+		r.Route("/billing", func(r chi.Router) {
+			billingHandler.RegisterPublicRoutes(r)
+		})
+
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
+
+			// Org management (super_admin create, org admin update)
+			r.Post("/orgs", orgHandler.Create)
+			r.Put("/orgs/{orgId}", orgHandler.Update)
+
+			// Billing subscribe (authenticated)
+			r.Post("/billing/subscribe", billingHandler.Subscribe)
 
 			r.Route("/members/me", func(r chi.Router) {
 				memberHandler.RegisterSelfRoutes(r)
