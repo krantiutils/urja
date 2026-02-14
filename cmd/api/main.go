@@ -11,10 +11,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 
+	"github.com/urja-gym/urja/internal/accounts"
 	"github.com/urja-gym/urja/internal/attendance"
 	"github.com/urja-gym/urja/internal/auth"
 	"github.com/urja-gym/urja/internal/billing"
 	"github.com/urja-gym/urja/internal/config"
+	"github.com/urja-gym/urja/internal/dues"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/org"
 	"github.com/urja-gym/urja/internal/packages"
@@ -98,6 +100,16 @@ func main() {
 	pkgService := packages.NewService(pkgRepo, khaltiClient, logger)
 	pkgHandler := packages.NewHandler(pkgService, logger)
 
+	// Dues
+	duesRepo := dues.NewRepository(pool)
+	duesService := dues.NewService(duesRepo, logger)
+	duesHandler := dues.NewHandler(duesService, logger)
+
+	// Accounts
+	accountsRepo := accounts.NewRepository(pool)
+	accountsService := accounts.NewService(accountsRepo, logger)
+	accountsHandler := accounts.NewHandler(accountsService, logger)
+
 	// Staff
 	staffRepo := staff.NewRepository(pool)
 	staffService := staff.NewService(staffRepo, logger)
@@ -179,6 +191,14 @@ func main() {
 
 				r.Route("/staff", func(r chi.Router) {
 					staffHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/dues", func(r chi.Router) {
+					duesHandler.RegisterRoutes(r)
+				})
+
+				r.Route("/accounts", func(r chi.Router) {
+					accountsHandler.RegisterRoutes(r)
 				})
 
 				r.Route("/workout-templates", func(r chi.Router) {
