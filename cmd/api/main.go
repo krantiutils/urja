@@ -16,6 +16,7 @@ import (
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/org"
+	"github.com/urja-gym/urja/internal/staff"
 	"github.com/urja-gym/urja/pkg/database"
 	"github.com/urja-gym/urja/pkg/middleware"
 	uredis "github.com/urja-gym/urja/pkg/redis"
@@ -83,6 +84,11 @@ func main() {
 	attendanceService := attendance.NewService(attendanceRepo, logger)
 	attendanceHandler := attendance.NewHandler(attendanceService, logger)
 
+	// Staff
+	staffRepo := staff.NewRepository(pool)
+	staffService := staff.NewService(staffRepo, logger)
+	staffHandler := staff.NewHandler(staffService, logger)
+
 	// Router
 	r := chi.NewRouter()
 
@@ -128,6 +134,10 @@ func main() {
 
 				r.Route("/attendance", func(r chi.Router) {
 					attendanceHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/staff", func(r chi.Router) {
+					staffHandler.RegisterOrgRoutes(r)
 				})
 			})
 		})
