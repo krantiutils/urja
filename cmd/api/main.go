@@ -21,6 +21,7 @@ import (
 	"github.com/urja-gym/urja/internal/dues"
 	"github.com/urja-gym/urja/internal/feedback"
 	"github.com/urja-gym/urja/internal/guide"
+	"github.com/urja-gym/urja/internal/health"
 	"github.com/urja-gym/urja/internal/leaderboard"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/nfc"
@@ -168,6 +169,11 @@ func main() {
 	leaderboardService := leaderboard.NewService(leaderboardRepo, logger)
 	leaderboardHandler := leaderboard.NewHandler(leaderboardService, logger)
 
+	// Health
+	healthRepo := health.NewRepository(pool)
+	healthService := health.NewService(healthRepo, "./uploads/photos", logger)
+	healthHandler := health.NewHandler(healthService, logger)
+
 	// Billing
 	billingRepo := billing.NewRepository(pool)
 	billingService := billing.NewService(billingRepo, khaltiClient, logger)
@@ -231,6 +237,9 @@ func main() {
 				})
 				r.Route("/packages", func(r chi.Router) {
 					pkgHandler.RegisterSelfRoutes(r)
+				})
+				r.Route("/health", func(r chi.Router) {
+					healthHandler.RegisterSelfRoutes(r)
 				})
 			})
 
