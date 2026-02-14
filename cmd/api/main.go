@@ -11,11 +11,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 
+	"github.com/urja-gym/urja/internal/activitylog"
 	"github.com/urja-gym/urja/internal/attendance"
 	"github.com/urja-gym/urja/internal/auth"
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/member"
+	"github.com/urja-gym/urja/internal/nfc"
 	"github.com/urja-gym/urja/internal/org"
+	"github.com/urja-gym/urja/internal/qrcode"
 	"github.com/urja-gym/urja/pkg/database"
 	"github.com/urja-gym/urja/pkg/middleware"
 	uredis "github.com/urja-gym/urja/pkg/redis"
@@ -83,6 +86,19 @@ func main() {
 	attendanceService := attendance.NewService(attendanceRepo, logger)
 	attendanceHandler := attendance.NewHandler(attendanceService, logger)
 
+	// NFC
+	nfcRepo := nfc.NewRepository(pool)
+	nfcService := nfc.NewService(nfcRepo, logger)
+	nfcHandler := nfc.NewHandler(nfcService, logger)
+
+	// Activity Log
+	activityLogRepo := activitylog.NewRepository(pool)
+	activityLogService := activitylog.NewService(activityLogRepo, logger)
+	activityLogHandler := activitylog.NewHandler(activityLogService, logger)
+
+	// QR Code
+	qrHandler := qrcode.NewHandler(cfg.Server.BaseURL, logger)
+
 	// Router
 	r := chi.NewRouter()
 
@@ -129,6 +145,10 @@ func main() {
 				r.Route("/attendance", func(r chi.Router) {
 					attendanceHandler.RegisterOrgRoutes(r)
 				})
+
+				nfcHandler.RegisterOrgRoutes(r)
+				activityLogHandler.RegisterOrgRoutes(r)
+				qrHandler.RegisterOrgRoutes(r)
 			})
 		})
 	})
