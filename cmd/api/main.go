@@ -11,15 +11,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 
+	"github.com/urja-gym/urja/internal/absentee"
 	"github.com/urja-gym/urja/internal/accounts"
 	"github.com/urja-gym/urja/internal/attendance"
 	"github.com/urja-gym/urja/internal/auth"
 	"github.com/urja-gym/urja/internal/billing"
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/dues"
+	"github.com/urja-gym/urja/internal/feedback"
 	"github.com/urja-gym/urja/internal/member"
+	"github.com/urja-gym/urja/internal/notice"
 	"github.com/urja-gym/urja/internal/org"
 	"github.com/urja-gym/urja/internal/packages"
+	"github.com/urja-gym/urja/internal/smsapi"
 	"github.com/urja-gym/urja/internal/staff"
 	"github.com/urja-gym/urja/internal/subscription"
 	"github.com/urja-gym/urja/pkg/database"
@@ -100,6 +104,26 @@ func main() {
 	pkgRepo := packages.NewRepository(pool)
 	pkgService := packages.NewService(pkgRepo, khaltiClient, logger)
 	pkgHandler := packages.NewHandler(pkgService, logger)
+
+	// Notice
+	noticeRepo := notice.NewRepository(pool)
+	noticeService := notice.NewService(noticeRepo, logger)
+	noticeHandler := notice.NewHandler(noticeService, logger)
+
+	// Feedback
+	feedbackRepo := feedback.NewRepository(pool)
+	feedbackService := feedback.NewService(feedbackRepo, logger)
+	feedbackHandler := feedback.NewHandler(feedbackService, logger)
+
+	// SMS API
+	smsapiRepo := smsapi.NewRepository(pool)
+	smsapiService := smsapi.NewService(smsapiRepo, smsClient, logger)
+	smsapiHandler := smsapi.NewHandler(smsapiService, logger)
+
+	// Absentee
+	absenteeRepo := absentee.NewRepository(pool)
+	absenteeService := absentee.NewService(absenteeRepo, smsClient, logger)
+	absenteeHandler := absentee.NewHandler(absenteeService, logger)
 
 	// Dues
 	duesRepo := dues.NewRepository(pool)
@@ -210,6 +234,22 @@ func main() {
 
 				r.Route("/accounts", func(r chi.Router) {
 					accountsHandler.RegisterRoutes(r)
+				})
+
+				r.Route("/notices", func(r chi.Router) {
+					noticeHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/feedbacks", func(r chi.Router) {
+					feedbackHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/sms", func(r chi.Router) {
+					smsapiHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/absentees", func(r chi.Router) {
+					absenteeHandler.RegisterOrgRoutes(r)
 				})
 
 				r.Route("/workout-templates", func(r chi.Router) {
