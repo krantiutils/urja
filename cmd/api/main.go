@@ -32,6 +32,7 @@ import (
 	"github.com/urja-gym/urja/internal/smsapi"
 	"github.com/urja-gym/urja/internal/staff"
 	"github.com/urja-gym/urja/internal/subscription"
+	"github.com/urja-gym/urja/internal/workout"
 	"github.com/urja-gym/urja/pkg/database"
 	"github.com/urja-gym/urja/pkg/khalti"
 	"github.com/urja-gym/urja/pkg/middleware"
@@ -184,6 +185,11 @@ func main() {
 	guideService := guide.NewService(guideRepo, logger)
 	guideHandler := guide.NewHandler(guideService, logger)
 
+	// Workout
+	workoutRepo := workout.NewRepository(pool)
+	workoutService := workout.NewService(workoutRepo, logger)
+	workoutHandler := workout.NewHandler(workoutService, logger)
+
 	// Router
 	r := chi.NewRouter()
 
@@ -232,6 +238,7 @@ func main() {
 
 			r.Route("/members/me", func(r chi.Router) {
 				memberHandler.RegisterSelfRoutes(r)
+				workoutHandler.RegisterSelfRoutes(r)
 				r.Route("/attendance", func(r chi.Router) {
 					attendanceHandler.RegisterSelfRoutes(r)
 				})
@@ -261,6 +268,7 @@ func main() {
 					r.Route("/{memberId}", func(r chi.Router) {
 						memberHandler.RegisterMemberRoutes(r)
 						subscriptionHandler.RegisterMemberRoutes(r)
+						workoutHandler.RegisterMemberRoutes(r)
 					})
 				})
 
@@ -305,7 +313,7 @@ func main() {
 				qrHandler.RegisterOrgRoutes(r)
 
 				r.Route("/workout-templates", func(r chi.Router) {
-					// Workout template management (TODO)
+					workoutHandler.RegisterOrgRoutes(r)
 				})
 
 				r.Route("/leaderboard", func(r chi.Router) {

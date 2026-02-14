@@ -42,6 +42,7 @@ import (
 	"github.com/urja-gym/urja/internal/smsapi"
 	"github.com/urja-gym/urja/internal/staff"
 	"github.com/urja-gym/urja/internal/subscription"
+	"github.com/urja-gym/urja/internal/workout"
 	"github.com/urja-gym/urja/pkg/khalti"
 	"github.com/urja-gym/urja/pkg/middleware"
 	"github.com/urja-gym/urja/pkg/sms"
@@ -272,6 +273,10 @@ func TestMain(m *testing.M) {
 	leaderboardSvc := leaderboard.NewService(leaderboardRepo, testLogger)
 	leaderboardHandler := leaderboard.NewHandler(leaderboardSvc, testLogger)
 
+	workoutRepo := workout.NewRepository(pool)
+	workoutSvc := workout.NewService(workoutRepo, testLogger)
+	workoutHandler := workout.NewHandler(workoutSvc, testLogger)
+
 	// --- Build chi router (mirrors main.go) ---
 	r := chi.NewRouter()
 
@@ -305,6 +310,7 @@ func TestMain(m *testing.M) {
 
 			r.Route("/members/me", func(r chi.Router) {
 				memberHandler.RegisterSelfRoutes(r)
+				workoutHandler.RegisterSelfRoutes(r)
 				r.Route("/attendance", func(r chi.Router) {
 					attendanceHandler.RegisterSelfRoutes(r)
 				})
@@ -331,6 +337,7 @@ func TestMain(m *testing.M) {
 					r.Route("/{memberId}", func(r chi.Router) {
 						memberHandler.RegisterMemberRoutes(r)
 						subscriptionHandler.RegisterMemberRoutes(r)
+						workoutHandler.RegisterMemberRoutes(r)
 					})
 				})
 
@@ -368,6 +375,10 @@ func TestMain(m *testing.M) {
 
 				r.Route("/training-guides", func(r chi.Router) {
 					guideHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/workout-templates", func(r chi.Router) {
+					workoutHandler.RegisterOrgRoutes(r)
 				})
 
 				nfcHandler.RegisterOrgRoutes(r)
