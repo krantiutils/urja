@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 
+	"github.com/urja-gym/urja/internal/attendance"
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/pkg/database"
 	"github.com/urja-gym/urja/pkg/middleware"
@@ -57,6 +58,11 @@ func main() {
 	// SMS client
 	smsClient := sms.NewClient(cfg.SMS.AakashToken, cfg.SMS.AakashAPIURL, logger)
 
+	// Attendance module
+	attendanceRepo := attendance.NewRepository(pool)
+	attendanceService := attendance.NewService(attendanceRepo, []byte(cfg.Auth.JWTSecret), logger)
+	attendanceHandler := attendance.NewHandler(attendanceService, logger)
+
 	// Router
 	r := chi.NewRouter()
 
@@ -94,7 +100,7 @@ func main() {
 			// r.Use(middleware.Auth(authService))
 
 			r.Route("/members/me", func(r chi.Router) {
-				// Member self-service routes
+				attendanceHandler.RegisterSelfRoutes(r)
 			})
 
 			// Organization-scoped routes
@@ -107,7 +113,7 @@ func main() {
 				})
 
 				r.Route("/attendance", func(r chi.Router) {
-					// Attendance management
+					attendanceHandler.RegisterOrgRoutes(r)
 				})
 
 				r.Route("/workout-templates", func(r chi.Router) {
@@ -122,7 +128,6 @@ func main() {
 	})
 
 	// Suppress unused variable warnings — these will be wired in domain packages.
-	_ = pool
 	_ = rdb
 	_ = smsClient
 
