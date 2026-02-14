@@ -15,6 +15,7 @@ type Config struct {
 	Auth     AuthConfig
 	SMS      SMSConfig
 	S3       S3Config
+	Khalti   KhaltiConfig
 }
 
 type ServerConfig struct {
@@ -66,6 +67,11 @@ type S3Config struct {
 	SecretKey string
 	Region    string
 	UseSSL    bool
+}
+
+type KhaltiConfig struct {
+	SecretKey string
+	BaseURL   string
 }
 
 // Load reads configuration from environment variables.
@@ -145,6 +151,10 @@ func Load() (*Config, error) {
 	// SMS
 	cfg.SMS.AakashToken = envRequired("AAKASH_SMS_TOKEN")
 	cfg.SMS.AakashAPIURL = envOrDefault("AAKASH_SMS_API_URL", "https://sms.aakashsms.com/sms/v3/send")
+
+	// Khalti
+	cfg.Khalti.SecretKey = os.Getenv("KHALTI_SECRET_KEY")
+	cfg.Khalti.BaseURL = envOrDefault("KHALTI_BASE_URL", "https://a.khalti.com")
 
 	// S3 / MinIO
 	cfg.S3.Endpoint = envOrDefault("S3_ENDPOINT", "localhost:9000")
