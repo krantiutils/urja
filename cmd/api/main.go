@@ -16,7 +16,9 @@ import (
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/org"
+	"github.com/urja-gym/urja/internal/packages"
 	"github.com/urja-gym/urja/pkg/database"
+	"github.com/urja-gym/urja/pkg/khalti"
 	"github.com/urja-gym/urja/pkg/middleware"
 	uredis "github.com/urja-gym/urja/pkg/redis"
 	"github.com/urja-gym/urja/pkg/sms"
@@ -61,6 +63,12 @@ func main() {
 	// SMS client
 	smsClient := sms.NewClient(cfg.SMS.AakashToken, cfg.SMS.AakashAPIURL, logger)
 
+	// Khalti client
+	khaltiClient := khalti.NewClient(
+		cfg.Khalti.SecretKey, cfg.Khalti.BaseURL,
+		cfg.Khalti.WebsiteURL, cfg.Khalti.ReturnURL, logger,
+	)
+
 	// --- Domain wiring ---
 
 	// Auth
@@ -82,6 +90,11 @@ func main() {
 	attendanceRepo := attendance.NewRepository(pool)
 	attendanceService := attendance.NewService(attendanceRepo, logger)
 	attendanceHandler := attendance.NewHandler(attendanceService, logger)
+
+	// Packages
+	pkgRepo := packages.NewRepository(pool)
+	pkgService := packages.NewService(pkgRepo, khaltiClient, logger)
+	pkgHandler := packages.NewHandler(pkgService, logger)
 
 	// Router
 	r := chi.NewRouter()
@@ -107,6 +120,10 @@ func main() {
 			orgHandler.RegisterPublicRoutes(r)
 		})
 
+		r.Route("/packages", func(r chi.Router) {
+			pkgHandler.RegisterPublicRoutes(r)
+		})
+
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
@@ -116,11 +133,18 @@ func main() {
 				r.Route("/attendance", func(r chi.Router) {
 					attendanceHandler.RegisterSelfRoutes(r)
 				})
+				r.Route("/packages", func(r chi.Router) {
+					pkgHandler.RegisterSelfRoutes(r)
+				})
 			})
 
 			// Organization-scoped routes
 			r.Route("/orgs/{orgId}", func(r chi.Router) {
 				r.Use(middleware.OrgScope(orgService))
+
+				r.Route("/packages", func(r chi.Router) {
+					pkgHandler.RegisterOrgRoutes(r)
+				})
 
 				r.Route("/members", func(r chi.Router) {
 					memberHandler.RegisterOrgRoutes(r)

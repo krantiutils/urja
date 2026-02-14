@@ -15,6 +15,7 @@ type Config struct {
 	Auth     AuthConfig
 	SMS      SMSConfig
 	S3       S3Config
+	Khalti   KhaltiConfig
 }
 
 type ServerConfig struct {
@@ -66,6 +67,13 @@ type S3Config struct {
 	SecretKey string
 	Region    string
 	UseSSL    bool
+}
+
+type KhaltiConfig struct {
+	SecretKey  string
+	BaseURL    string
+	WebsiteURL string
+	ReturnURL  string
 }
 
 // Load reads configuration from environment variables.
@@ -153,6 +161,12 @@ func Load() (*Config, error) {
 	cfg.S3.SecretKey = os.Getenv("S3_SECRET_KEY")
 	cfg.S3.Region = envOrDefault("S3_REGION", "us-east-1")
 	cfg.S3.UseSSL = envOrDefault("S3_USE_SSL", "false") == "true"
+
+	// Khalti
+	cfg.Khalti.SecretKey = os.Getenv("KHALTI_SECRET_KEY")
+	cfg.Khalti.BaseURL = envOrDefault("KHALTI_BASE_URL", "https://dev.khalti.com/api/v2")
+	cfg.Khalti.WebsiteURL = os.Getenv("KHALTI_WEBSITE_URL")
+	cfg.Khalti.ReturnURL = os.Getenv("KHALTI_RETURN_URL")
 
 	if err := cfg.validate(); err != nil {
 		return nil, fmt.Errorf("config validation: %w", err)
