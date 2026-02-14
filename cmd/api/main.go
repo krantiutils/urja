@@ -202,9 +202,8 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
 
-			// Org management (super_admin create, org admin update)
+			// Org management (super_admin create)
 			r.Post("/orgs", orgHandler.Create)
-			r.Put("/orgs/{orgId}", orgHandler.Update)
 
 			// Billing subscribe (authenticated)
 			r.Post("/billing/subscribe", billingHandler.Subscribe)
@@ -223,6 +222,9 @@ func main() {
 			r.Route("/orgs/{orgId}", func(r chi.Router) {
 				r.Use(middleware.OrgScope(orgService))
 
+				// Org admin update (inside subrouter so OrgScope validates membership)
+				r.Put("/", orgHandler.Update)
+
 				r.Route("/packages", func(r chi.Router) {
 					pkgHandler.RegisterOrgRoutes(r)
 					subscriptionHandler.RegisterPackageRoutes(r)
@@ -232,6 +234,7 @@ func main() {
 					memberHandler.RegisterOrgRoutes(r)
 
 					r.Route("/{memberId}", func(r chi.Router) {
+						memberHandler.RegisterMemberRoutes(r)
 						subscriptionHandler.RegisterMemberRoutes(r)
 					})
 				})

@@ -15,6 +15,8 @@ func (h *Handler) RegisterSelfRoutes(r chi.Router) {
 
 // RegisterOrgRoutes mounts org-scoped member management routes (under /orgs/{orgId}/members).
 // OrgScope middleware is applied by the parent router group.
+// Note: PUT/DELETE for individual members are registered via RegisterMemberRoutes
+// inside the /{memberId} subrouter to avoid chi route shadowing.
 func (h *Handler) RegisterOrgRoutes(r chi.Router) {
 	// Any org member can list members
 	r.Get("/", h.ListByOrg)
@@ -23,7 +25,15 @@ func (h *Handler) RegisterOrgRoutes(r chi.Router) {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireOrgRole("staff", "admin"))
 		r.Post("/", h.CreateOrgMember)
-		r.Put("/{id}", h.UpdateOrgMember)
-		r.Delete("/{id}", h.DeleteOrgMember)
+	})
+}
+
+// RegisterMemberRoutes mounts routes for a specific member (under /orgs/{orgId}/members/{memberId}).
+// Must be called inside the /{memberId} subrouter.
+func (h *Handler) RegisterMemberRoutes(r chi.Router) {
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireOrgRole("staff", "admin"))
+		r.Put("/", h.UpdateOrgMember)
+		r.Delete("/", h.DeleteOrgMember)
 	})
 }

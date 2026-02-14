@@ -282,7 +282,6 @@ func TestMain(m *testing.M) {
 			r.Use(middleware.Auth(authSvc))
 
 			r.Post("/orgs", orgHandler.Create)
-			r.Put("/orgs/{orgId}", orgHandler.Update)
 			r.Post("/billing/subscribe", billingHandler.Subscribe)
 
 			r.Route("/members/me", func(r chi.Router) {
@@ -298,6 +297,8 @@ func TestMain(m *testing.M) {
 			r.Route("/orgs/{orgId}", func(r chi.Router) {
 				r.Use(middleware.OrgScope(orgSvc))
 
+				r.Put("/", orgHandler.Update)
+
 				r.Route("/packages", func(r chi.Router) {
 					pkgHandler.RegisterOrgRoutes(r)
 					subscriptionHandler.RegisterPackageRoutes(r)
@@ -306,6 +307,7 @@ func TestMain(m *testing.M) {
 				r.Route("/members", func(r chi.Router) {
 					memberHandler.RegisterOrgRoutes(r)
 					r.Route("/{memberId}", func(r chi.Router) {
+						memberHandler.RegisterMemberRoutes(r)
 						subscriptionHandler.RegisterMemberRoutes(r)
 					})
 				})

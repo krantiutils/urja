@@ -29,9 +29,11 @@
 | Subscription | 7 | subscription_test.go |
 | Billing | 4 | billing_test.go |
 
-## Known Application Bugs Found
+## All Known Bugs Fixed
 
-1. **Absentee List (500):** `absentee/repository.go` references `om.created_at` but `organization_members` table uses `om.joined_at` (migration 000004).
-2. **Org Update route unreachable:** `r.Put("/orgs/{orgId}")` is shadowed by `r.Route("/orgs/{orgId}")` subrouter in chi.
-3. **Member Delete route unreachable:** `r.Delete("/{id}")` in member routes shadowed by `r.Route("/{memberId}")` for subscription routes.
-4. **NFC Unassign (constraint violation):** `assigned_at` has NOT NULL constraint but `UnassignCard` sets it to NULL.
+All 4 bugs documented in the original E2E test run have been fixed:
+
+1. **Absentee List:** Fixed `om.created_at` → `om.joined_at` in SQL query.
+2. **Org Update route:** Moved PUT handler inside `/orgs/{orgId}` subrouter.
+3. **Member Delete route:** Moved PUT/DELETE into `/{memberId}` subrouter.
+4. **NFC Unassign:** Dropped NOT NULL constraint on `assigned_at` (migration 000025).

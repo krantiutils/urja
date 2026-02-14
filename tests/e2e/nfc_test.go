@@ -73,12 +73,7 @@ func TestNFC_UnassignCard(t *testing.T) {
 	// Then unassign
 	resp = doRequest(t, http.MethodPut,
 		"/api/v1/orgs/"+orgID+"/nfc-cards/"+cardID+"/unassign", nil, token)
-	// NOTE: Returns 400 due to app bug — assigned_at has NOT NULL constraint
-	// but UnassignCard sets it to NULL.
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
-		body := readBody(t, resp)
-		t.Fatalf("expected 200 or 400, got %d: %s", resp.StatusCode, body)
-	}
+	assertStatus(t, resp, http.StatusOK)
 }
 
 func TestNFC_ListDevices(t *testing.T) {

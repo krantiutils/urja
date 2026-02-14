@@ -175,12 +175,7 @@ func TestMember_DeleteOrgMember(t *testing.T) {
 	token := generateTestToken(adminID, "admin")
 
 	resp := doRequest(t, http.MethodDelete, "/api/v1/orgs/"+orgID+"/members/"+memberID, nil, token)
-	// NOTE: Returns 404 due to chi routing conflict — r.Delete("/{id}") in
-	// RegisterOrgRoutes is shadowed by r.Route("/{memberId}") for subscription routes.
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
-		body := readBody(t, resp)
-		t.Fatalf("expected 200 or 404, got %d: %s", resp.StatusCode, body)
-	}
+	assertStatus(t, resp, http.StatusOK)
 }
 
 func TestMember_OrgIsolation(t *testing.T) {

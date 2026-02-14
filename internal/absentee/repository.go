@@ -35,16 +35,16 @@ func (r *Repository) List(ctx context.Context, orgID string, minDays, limit, off
 		        EXTRACT(DAY FROM NOW() - COALESCE(
 		            (SELECT MAX(a.check_in_at) FROM attendance a
 		             WHERE a.user_id = u.id AND a.organization_id = $1),
-		            om.created_at
+		            om.joined_at
 		        ))::INTEGER AS absent_days,
-		        om.created_at AS joined_date
+		        om.joined_at AS joined_date
 		 FROM users u
 		 JOIN organization_members om ON om.user_id = u.id
 		 WHERE om.organization_id = $1 AND om.status = 'active'
 		   AND EXTRACT(DAY FROM NOW() - COALESCE(
 		       (SELECT MAX(a.check_in_at) FROM attendance a
 		        WHERE a.user_id = u.id AND a.organization_id = $1),
-		       om.created_at
+		       om.joined_at
 		   )) >= $2
 		 ORDER BY absent_days DESC
 		 LIMIT $3 OFFSET $4`,
