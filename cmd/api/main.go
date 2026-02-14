@@ -153,6 +153,14 @@ func main() {
 				r.Route("/attendance", func(r chi.Router) {
 					attendanceHandler.RegisterOrgRoutes(r)
 				})
+
+				r.Route("/workout-templates", func(r chi.Router) {
+					// Workout template management (TODO)
+				})
+
+				r.Route("/leaderboard", func(r chi.Router) {
+					// Leaderboard (TODO)
+				})
 			})
 		})
 	})
