@@ -30,6 +30,7 @@ import (
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/dues"
 	"github.com/urja-gym/urja/internal/feedback"
+	"github.com/urja-gym/urja/internal/leaderboard"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/nfc"
 	"github.com/urja-gym/urja/internal/notice"
@@ -257,6 +258,10 @@ func TestMain(m *testing.M) {
 	billingSvc := billing.NewService(billingRepo, khaltiClient, testLogger)
 	billingHandler := billing.NewHandler(billingSvc, testLogger)
 
+	leaderboardRepo := leaderboard.NewRepository(pool)
+	leaderboardSvc := leaderboard.NewService(leaderboardRepo, testLogger)
+	leaderboardHandler := leaderboard.NewHandler(leaderboardSvc, testLogger)
+
 	// --- Build chi router (mirrors main.go) ---
 	r := chi.NewRouter()
 
@@ -347,6 +352,10 @@ func TestMain(m *testing.M) {
 				nfcHandler.RegisterOrgRoutes(r)
 				activityLogHandler.RegisterOrgRoutes(r)
 				qrHandler.RegisterOrgRoutes(r)
+
+				r.Route("/leaderboard", func(r chi.Router) {
+					leaderboardHandler.RegisterOrgRoutes(r)
+				})
 			})
 		})
 	})
@@ -619,6 +628,7 @@ func cleanupTables(t *testing.T) {
 		"sms_campaigns", "sms_purchases", "sms_credits",
 		"feedbacks", "notices",
 		"payments", "dues", "transactions",
+		"member_achievements", "achievements", "streaks",
 		"attendance",
 		"member_packages", "packages",
 		"organization_members", "organizations",
