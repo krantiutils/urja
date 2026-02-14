@@ -20,6 +20,7 @@ import (
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/dues"
 	"github.com/urja-gym/urja/internal/feedback"
+	"github.com/urja-gym/urja/internal/guide"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/nfc"
 	"github.com/urja-gym/urja/internal/notice"
@@ -166,6 +167,11 @@ func main() {
 	billingService := billing.NewService(billingRepo, khaltiClient, logger)
 	billingHandler := billing.NewHandler(billingService, logger)
 
+	// Training Guides
+	guideRepo := guide.NewRepository(pool)
+	guideService := guide.NewService(guideRepo, logger)
+	guideHandler := guide.NewHandler(guideService, logger)
+
 	// Router
 	r := chi.NewRouter()
 
@@ -196,6 +202,10 @@ func main() {
 
 		r.Route("/billing", func(r chi.Router) {
 			billingHandler.RegisterPublicRoutes(r)
+		})
+
+		r.Route("/training-guides", func(r chi.Router) {
+			guideHandler.RegisterPublicRoutes(r)
 		})
 
 		// Authenticated routes
@@ -269,6 +279,10 @@ func main() {
 
 				r.Route("/absentees", func(r chi.Router) {
 					absenteeHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/training-guides", func(r chi.Router) {
+					guideHandler.RegisterOrgRoutes(r)
 				})
 
 				nfcHandler.RegisterOrgRoutes(r)

@@ -30,6 +30,7 @@ import (
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/dues"
 	"github.com/urja-gym/urja/internal/feedback"
+	"github.com/urja-gym/urja/internal/guide"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/nfc"
 	"github.com/urja-gym/urja/internal/notice"
@@ -257,6 +258,10 @@ func TestMain(m *testing.M) {
 	billingSvc := billing.NewService(billingRepo, khaltiClient, testLogger)
 	billingHandler := billing.NewHandler(billingSvc, testLogger)
 
+	guideRepo := guide.NewRepository(pool)
+	guideSvc := guide.NewService(guideRepo, testLogger)
+	guideHandler := guide.NewHandler(guideSvc, testLogger)
+
 	// --- Build chi router (mirrors main.go) ---
 	r := chi.NewRouter()
 
@@ -276,6 +281,10 @@ func TestMain(m *testing.M) {
 		})
 		r.Route("/billing", func(r chi.Router) {
 			billingHandler.RegisterPublicRoutes(r)
+		})
+
+		r.Route("/training-guides", func(r chi.Router) {
+			guideHandler.RegisterPublicRoutes(r)
 		})
 
 		r.Group(func(r chi.Router) {
@@ -342,6 +351,10 @@ func TestMain(m *testing.M) {
 
 				r.Route("/absentees", func(r chi.Router) {
 					absenteeHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/training-guides", func(r chi.Router) {
+					guideHandler.RegisterOrgRoutes(r)
 				})
 
 				nfcHandler.RegisterOrgRoutes(r)
@@ -583,6 +596,21 @@ func createTestNotice(t *testing.T, orgID, userID, title, content string) string
 	return id
 }
 
+// createTestGuide inserts a training guide and returns its ID.
+func createTestGuide(t *testing.T, authorID, title, content, category string, published bool) string {
+	t.Helper()
+	var id string
+	err := testPool.QueryRow(context.Background(),
+		`INSERT INTO training_guides (title, content, category, author_id, is_published)
+		 VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		title, content, category, authorID, published,
+	).Scan(&id)
+	if err != nil {
+		t.Fatalf("createTestGuide: %v", err)
+	}
+	return id
+}
+
 // createTestNFCCard inserts an NFC card for an org and returns its ID.
 func createTestNFCCard(t *testing.T, orgID, cardHex string) string {
 	t.Helper()
@@ -617,6 +645,7 @@ func cleanupTables(t *testing.T) {
 	tables := []string{
 		"activity_logs", "nfc_devices", "nfc_cards",
 		"sms_campaigns", "sms_purchases", "sms_credits",
+		"training_guides",
 		"feedbacks", "notices",
 		"payments", "dues", "transactions",
 		"attendance",
