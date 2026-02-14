@@ -21,6 +21,7 @@ import (
 	"github.com/urja-gym/urja/internal/dues"
 	"github.com/urja-gym/urja/internal/feedback"
 	"github.com/urja-gym/urja/internal/guide"
+	"github.com/urja-gym/urja/internal/leaderboard"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/nfc"
 	"github.com/urja-gym/urja/internal/notice"
@@ -162,6 +163,11 @@ func main() {
 	subscriptionService := subscription.NewService(subscriptionRepo, logger)
 	subscriptionHandler := subscription.NewHandler(subscriptionService, logger)
 
+	// Leaderboard
+	leaderboardRepo := leaderboard.NewRepository(pool)
+	leaderboardService := leaderboard.NewService(leaderboardRepo, logger)
+	leaderboardHandler := leaderboard.NewHandler(leaderboardService, logger)
+
 	// Billing
 	billingRepo := billing.NewRepository(pool)
 	billingService := billing.NewService(billingRepo, khaltiClient, logger)
@@ -294,7 +300,7 @@ func main() {
 				})
 
 				r.Route("/leaderboard", func(r chi.Router) {
-					// Leaderboard (TODO)
+					leaderboardHandler.RegisterOrgRoutes(r)
 				})
 			})
 		})
