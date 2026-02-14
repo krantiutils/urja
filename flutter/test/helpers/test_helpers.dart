@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -165,6 +168,19 @@ List<Override> authenticatedOverrides({
     isOnlineProvider.overrideWith((ref) => online),
     localeProvider.overrideWith((ref) => 'en'),
   ];
+}
+
+/// Loads the Inter font family so golden tests render readable text
+/// instead of Ahem rectangles.
+Future<void> loadInterFont() async {
+  final fontLoader = FontLoader('Inter');
+  final weights = ['Regular', 'Medium', 'SemiBold', 'Bold'];
+  for (final weight in weights) {
+    final file = File('assets/fonts/Inter-$weight.ttf');
+    final bytes = await file.readAsBytes();
+    fontLoader.addFont(Future.value(ByteData.view(bytes.buffer)));
+  }
+  await fontLoader.load();
 }
 
 /// Sets a deterministic surface size for golden file tests.
