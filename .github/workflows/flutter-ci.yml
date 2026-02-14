@@ -1,0 +1,56 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'flutter/**'
+      - '.github/workflows/flutter-ci.yml'
+  pull_request:
+    paths:
+      - 'flutter/**'
+      - '.github/workflows/flutter-ci.yml'
+
+defaults:
+  run:
+    working-directory: flutter
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run unit and widget tests
+        run: flutter test --reporter expanded
+
+      - name: Validate golden files
+        run: flutter test --reporter expanded
+        # Golden files are committed — test validates against them.
+        # If goldens drift, run `flutter test --update-goldens` locally and re-commit.
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: flutter/test/goldens/
+          retention-days: 14
+
+      - name: Upload golden failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: flutter/test/failures/
+          retention-days: 14
