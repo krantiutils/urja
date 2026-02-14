@@ -30,6 +30,7 @@ import (
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/dues"
 	"github.com/urja-gym/urja/internal/feedback"
+	"github.com/urja-gym/urja/internal/health"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/nfc"
 	"github.com/urja-gym/urja/internal/notice"
@@ -253,6 +254,10 @@ func TestMain(m *testing.M) {
 	subscriptionSvc := subscription.NewService(subscriptionRepo, testLogger)
 	subscriptionHandler := subscription.NewHandler(subscriptionSvc, testLogger)
 
+	healthRepo := health.NewRepository(pool)
+	healthSvc := health.NewService(healthRepo, filepath.Join(os.TempDir(), "urja-test-uploads"), testLogger)
+	healthHandler := health.NewHandler(healthSvc, testLogger)
+
 	billingRepo := billing.NewRepository(pool)
 	billingSvc := billing.NewService(billingRepo, khaltiClient, testLogger)
 	billingHandler := billing.NewHandler(billingSvc, testLogger)
@@ -291,6 +296,9 @@ func TestMain(m *testing.M) {
 				})
 				r.Route("/packages", func(r chi.Router) {
 					pkgHandler.RegisterSelfRoutes(r)
+				})
+				r.Route("/health", func(r chi.Router) {
+					healthHandler.RegisterSelfRoutes(r)
 				})
 			})
 
@@ -615,6 +623,7 @@ func initSMSCredits(t *testing.T, orgID string, balance int) {
 func cleanupTables(t *testing.T) {
 	t.Helper()
 	tables := []string{
+		"progress_photos", "health_metrics",
 		"activity_logs", "nfc_devices", "nfc_cards",
 		"sms_campaigns", "sms_purchases", "sms_credits",
 		"feedbacks", "notices",
