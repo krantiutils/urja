@@ -103,13 +103,7 @@ func TestOrg_Update_AsAdmin(t *testing.T) {
 	newName := "Updated Name"
 	resp := doRequest(t, http.MethodPut, "/api/v1/orgs/"+orgID,
 		map[string]interface{}{"name": &newName}, token)
-	// NOTE: Returns 404 due to chi routing conflict — r.Put("/orgs/{orgId}")
-	// is shadowed by r.Route("/orgs/{orgId}") subrouter mount.
-	// The subrouter (OrgScope) catches the PUT but has no root PUT handler.
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
-		body := readBody(t, resp)
-		t.Fatalf("expected 200 or 404, got %d: %s", resp.StatusCode, body)
-	}
+	assertStatus(t, resp, http.StatusOK)
 }
 
 func TestOrg_Update_NotMember(t *testing.T) {
@@ -124,11 +118,5 @@ func TestOrg_Update_NotMember(t *testing.T) {
 	newName := "Hacked Name"
 	resp := doRequest(t, http.MethodPut, "/api/v1/orgs/"+orgID,
 		map[string]interface{}{"name": &newName}, token)
-	// NOTE: Same chi routing conflict — the PUT is caught by the OrgScope subrouter.
-	// The outsider is not an org member, so OrgScope returns 403.
-	// But due to the route shadow, this actually returns 404 (subrouter has no PUT root).
-	if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusNotFound {
-		body := readBody(t, resp)
-		t.Fatalf("expected 403 or 404, got %d: %s", resp.StatusCode, body)
-	}
+	assertStatus(t, resp, http.StatusForbidden)
 }

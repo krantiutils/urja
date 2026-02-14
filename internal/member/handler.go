@@ -159,7 +159,7 @@ func (h *Handler) CreateOrgMember(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, member)
 }
 
-// UpdateOrgMember handles PUT /api/v1/orgs/{orgId}/members/{id}
+// UpdateOrgMember handles PUT /api/v1/orgs/{orgId}/members/{memberId}
 func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := middleware.OrgIDFromContext(r.Context())
 	if !ok {
@@ -167,7 +167,7 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	memberID := chi.URLParam(r, "id")
+	memberID := chi.URLParam(r, "memberId")
 	if memberID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing member ID"})
 		return
@@ -196,7 +196,7 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "member updated"})
 }
 
-// DeleteOrgMember handles DELETE /api/v1/orgs/{orgId}/members/{id}
+// DeleteOrgMember handles DELETE /api/v1/orgs/{orgId}/members/{memberId}
 func (h *Handler) DeleteOrgMember(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := middleware.OrgIDFromContext(r.Context())
 	if !ok {
@@ -204,7 +204,7 @@ func (h *Handler) DeleteOrgMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	memberID := chi.URLParam(r, "id")
+	memberID := chi.URLParam(r, "memberId")
 	if memberID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing member ID"})
 		return

@@ -13,12 +13,7 @@ func TestAbsentee_List(t *testing.T) {
 	token := generateTestToken(adminID, "admin")
 
 	resp := doRequest(t, http.MethodGet, "/api/v1/orgs/"+orgID+"/absentees", nil, token)
-	// NOTE: Returns 500 due to app bug — absentee repo references om.created_at
-	// but the column is om.joined_at (see migration 000004). Accept actual behavior.
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusInternalServerError {
-		body := readBody(t, resp)
-		t.Fatalf("expected 200 or 500, got %d: %s", resp.StatusCode, body)
-	}
+	assertStatus(t, resp, http.StatusOK)
 }
 
 func TestAbsentee_List_StaffAllowed(t *testing.T) {
@@ -32,11 +27,7 @@ func TestAbsentee_List_StaffAllowed(t *testing.T) {
 	token := generateTestToken(staffID, "staff")
 
 	resp := doRequest(t, http.MethodGet, "/api/v1/orgs/"+orgID+"/absentees", nil, token)
-	// NOTE: Same app bug as TestAbsentee_List — om.created_at vs om.joined_at.
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusInternalServerError {
-		body := readBody(t, resp)
-		t.Fatalf("expected 200 or 500, got %d: %s", resp.StatusCode, body)
-	}
+	assertStatus(t, resp, http.StatusOK)
 }
 
 func TestAbsentee_List_MemberForbidden(t *testing.T) {
