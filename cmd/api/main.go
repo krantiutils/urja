@@ -11,7 +11,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 
+	"github.com/urja-gym/urja/internal/attendance"
+	"github.com/urja-gym/urja/internal/auth"
 	"github.com/urja-gym/urja/internal/config"
+	"github.com/urja-gym/urja/internal/member"
+	"github.com/urja-gym/urja/internal/org"
 	"github.com/urja-gym/urja/pkg/database"
 	"github.com/urja-gym/urja/pkg/middleware"
 	uredis "github.com/urja-gym/urja/pkg/redis"
@@ -57,6 +61,28 @@ func main() {
 	// SMS client
 	smsClient := sms.NewClient(cfg.SMS.AakashToken, cfg.SMS.AakashAPIURL, logger)
 
+	// --- Domain wiring ---
+
+	// Auth
+	authRepo := auth.NewRepository(pool, rdb)
+	authService := auth.NewService(authRepo, smsClient, cfg.Auth, logger)
+	authHandler := auth.NewHandler(authService, logger)
+
+	// Organization
+	orgRepo := org.NewRepository(pool)
+	orgService := org.NewService(orgRepo, logger)
+	orgHandler := org.NewHandler(orgService, logger)
+
+	// Member
+	memberRepo := member.NewRepository(pool)
+	memberService := member.NewService(memberRepo, logger)
+	memberHandler := member.NewHandler(memberService, logger)
+
+	// Attendance
+	attendanceRepo := attendance.NewRepository(pool)
+	attendanceService := attendance.NewService(attendanceRepo, logger)
+	attendanceHandler := attendance.NewHandler(attendanceService, logger)
+
 	// Router
 	r := chi.NewRouter()
 
@@ -75,56 +101,37 @@ func main() {
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// Public routes
-		r.Route("/auth", func(r chi.Router) {
-			// Auth routes will be registered by the auth domain
-		})
-
+		// Public routes (no auth required)
+		authHandler.RegisterRoutes(r, authService)
 		r.Route("/gyms", func(r chi.Router) {
-			// Public gym listing routes
-		})
-
-		r.Route("/packages", func(r chi.Router) {
-			// Public package listing routes
+			orgHandler.RegisterPublicRoutes(r)
 		})
 
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
-			// Auth middleware will be added here once TokenValidator is implemented
-			// r.Use(middleware.Auth(authService))
+			r.Use(middleware.Auth(authService))
 
 			r.Route("/members/me", func(r chi.Router) {
-				// Member self-service routes
+				memberHandler.RegisterSelfRoutes(r)
+				r.Route("/attendance", func(r chi.Router) {
+					attendanceHandler.RegisterSelfRoutes(r)
+				})
 			})
 
 			// Organization-scoped routes
 			r.Route("/orgs/{orgId}", func(r chi.Router) {
-				// Org scope middleware will be added here
-				// r.Use(middleware.OrgScope(orgService))
+				r.Use(middleware.OrgScope(orgService))
 
 				r.Route("/members", func(r chi.Router) {
-					// Staff/admin member management
+					memberHandler.RegisterOrgRoutes(r)
 				})
 
 				r.Route("/attendance", func(r chi.Router) {
-					// Attendance management
-				})
-
-				r.Route("/workout-templates", func(r chi.Router) {
-					// Workout template management
-				})
-
-				r.Route("/leaderboard", func(r chi.Router) {
-					// Leaderboard
+					attendanceHandler.RegisterOrgRoutes(r)
 				})
 			})
 		})
 	})
-
-	// Suppress unused variable warnings — these will be wired in domain packages.
-	_ = pool
-	_ = rdb
-	_ = smsClient
 
 	srv := &http.Server{
 		Addr:         cfg.Server.Addr(),

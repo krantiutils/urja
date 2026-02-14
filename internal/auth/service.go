@@ -3,13 +3,15 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"math/big"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/pkg/sms"
-
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -31,9 +33,24 @@ func NewService(repo *Repository, smsClient *sms.Client, cfg config.AuthConfig, 
 	}
 }
 
+// AccessTokenClaims holds the claims embedded in a JWT access token.
+type AccessTokenClaims struct {
+	jwt.RegisteredClaims
+	Phone string `json:"phone"`
+	Role  string `json:"role"`
+	OrgID string `json:"org_id,omitempty"`
+}
+
+// RefreshTokenClaims holds the claims embedded in a JWT refresh token.
+type RefreshTokenClaims struct {
+	jwt.RegisteredClaims
+	TokenID string `json:"jti"`
+}
+
 // RequestOTP generates a 6-digit OTP, hashes it, stores it in Redis, and sends via SMS.
 // It enforces rate limiting: max OTPHourlyLimit requests per hour per phone.
 func (s *Service) RequestOTP(ctx context.Context, phone string) error {
+	phone = sms.NormalizePhone(phone)
 	if !sms.ValidatePhone(phone) {
 		return fmt.Errorf("invalid phone number")
 	}
@@ -75,6 +92,8 @@ func (s *Service) RequestOTP(ctx context.Context, phone string) error {
 // VerifyOTP verifies the OTP against the stored hash and issues tokens.
 // It enforces max attempts per verification window.
 func (s *Service) VerifyOTP(ctx context.Context, phone, otp string) (accessToken, refreshToken string, err error) {
+	phone = sms.NormalizePhone(phone)
+
 	// Check attempt count
 	attempts, err := s.repo.IncrementOTPAttempts(ctx, phone, s.cfg.OTPExpiry)
 	if err != nil {
@@ -107,18 +126,175 @@ func (s *Service) VerifyOTP(ctx context.Context, phone, otp string) (accessToken
 	}
 
 	// Issue tokens (PRD: tokens only issued AFTER OTP verification)
-	// TODO: Implement JWT token generation
-	_ = userID
-	_ = role
+	accessToken, err = s.generateAccessToken(userID, phone, role)
+	if err != nil {
+		return "", "", fmt.Errorf("generating access token: %w", err)
+	}
 
-	return "", "", fmt.Errorf("JWT token generation not yet implemented")
+	refreshToken, tokenID, err := s.generateRefreshToken(userID)
+	if err != nil {
+		return "", "", fmt.Errorf("generating refresh token: %w", err)
+	}
+
+	// Store refresh token in Redis for revocation tracking
+	if err := s.repo.StoreRefreshToken(ctx, userID, tokenID, s.cfg.RefreshTokenExpiry); err != nil {
+		return "", "", fmt.Errorf("storing refresh token: %w", err)
+	}
+
+	s.logger.Info("user authenticated", "user_id", userID, "phone", phone[:4]+"******")
+	return accessToken, refreshToken, nil
+}
+
+// RefreshAccessToken validates a refresh token and issues a new access token pair.
+func (s *Service) RefreshAccessToken(ctx context.Context, refreshTokenStr string) (newAccessToken, newRefreshToken string, err error) {
+	// Parse the refresh token
+	token, err := jwt.ParseWithClaims(refreshTokenStr, &RefreshTokenClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return []byte(s.cfg.JWTSecret), nil
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("invalid refresh token")
+	}
+
+	claims, ok := token.Claims.(*RefreshTokenClaims)
+	if !ok || !token.Valid {
+		return "", "", fmt.Errorf("invalid refresh token claims")
+	}
+
+	userID := claims.Subject
+	tokenID := claims.TokenID
+
+	// Check if this refresh token is still valid in Redis (not revoked)
+	valid, err := s.repo.ValidateRefreshToken(ctx, userID, tokenID)
+	if err != nil {
+		return "", "", fmt.Errorf("validating refresh token: %w", err)
+	}
+	if !valid {
+		return "", "", fmt.Errorf("refresh token has been revoked")
+	}
+
+	// Revoke old refresh token (single-use rotation)
+	if err := s.repo.RevokeRefreshToken(ctx, userID, tokenID); err != nil {
+		s.logger.Warn("failed to revoke old refresh token", "error", err, "user_id", userID)
+	}
+
+	// Look up user to get current role and phone
+	phone, role, err := s.repo.GetUserByID(ctx, userID)
+	if err != nil {
+		return "", "", fmt.Errorf("looking up user: %w", err)
+	}
+
+	// Issue new token pair
+	newAccessToken, err = s.generateAccessToken(userID, phone, role)
+	if err != nil {
+		return "", "", fmt.Errorf("generating access token: %w", err)
+	}
+
+	newRefreshToken, newTokenID, err := s.generateRefreshToken(userID)
+	if err != nil {
+		return "", "", fmt.Errorf("generating refresh token: %w", err)
+	}
+
+	if err := s.repo.StoreRefreshToken(ctx, userID, newTokenID, s.cfg.RefreshTokenExpiry); err != nil {
+		return "", "", fmt.Errorf("storing refresh token: %w", err)
+	}
+
+	return newAccessToken, newRefreshToken, nil
+}
+
+// Logout revokes a specific refresh token.
+func (s *Service) Logout(ctx context.Context, userID, refreshTokenStr string) error {
+	token, err := jwt.ParseWithClaims(refreshTokenStr, &RefreshTokenClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return []byte(s.cfg.JWTSecret), nil
+	})
+	if err != nil {
+		return fmt.Errorf("invalid refresh token")
+	}
+
+	claims, ok := token.Claims.(*RefreshTokenClaims)
+	if !ok || !token.Valid {
+		return fmt.Errorf("invalid refresh token claims")
+	}
+
+	// Ensure the token belongs to this user
+	if claims.Subject != userID {
+		return fmt.Errorf("token does not belong to this user")
+	}
+
+	return s.repo.RevokeRefreshToken(ctx, userID, claims.TokenID)
+}
+
+// LogoutAll revokes all refresh tokens for the user.
+func (s *Service) LogoutAll(ctx context.Context, userID string) error {
+	return s.repo.RevokeAllRefreshTokens(ctx, userID)
 }
 
 // ValidateAccessToken validates a JWT access token and returns the user ID and role.
 // This implements the middleware.TokenValidator interface.
-func (s *Service) ValidateAccessToken(_ string) (string, string, error) {
-	// TODO: Implement JWT validation
-	return "", "", fmt.Errorf("not implemented")
+func (s *Service) ValidateAccessToken(tokenString string) (string, string, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &AccessTokenClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return []byte(s.cfg.JWTSecret), nil
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("invalid access token: %w", err)
+	}
+
+	claims, ok := token.Claims.(*AccessTokenClaims)
+	if !ok || !token.Valid {
+		return "", "", fmt.Errorf("invalid token claims")
+	}
+
+	return claims.Subject, claims.Role, nil
+}
+
+func (s *Service) generateAccessToken(userID, phone, role string) (string, error) {
+	now := time.Now()
+	claims := AccessTokenClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.cfg.AccessTokenExpiry)),
+			Issuer:    "urja",
+		},
+		Phone: phone,
+		Role:  role,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(s.cfg.JWTSecret))
+}
+
+func (s *Service) generateRefreshToken(userID string) (tokenStr string, tokenID string, err error) {
+	tokenID, err = generateTokenID()
+	if err != nil {
+		return "", "", fmt.Errorf("generating token ID: %w", err)
+	}
+
+	now := time.Now()
+	claims := RefreshTokenClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.cfg.RefreshTokenExpiry)),
+			Issuer:    "urja",
+		},
+		TokenID: tokenID,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenStr, err = token.SignedString([]byte(s.cfg.JWTSecret))
+	if err != nil {
+		return "", "", err
+	}
+	return tokenStr, tokenID, nil
 }
 
 // generateOTP generates a cryptographically secure 6-digit OTP.
@@ -128,4 +304,13 @@ func generateOTP() (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("%06d", n.Int64()+100000), nil
+}
+
+// generateTokenID generates a cryptographically secure random token ID.
+func generateTokenID() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }

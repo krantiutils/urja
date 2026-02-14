@@ -101,7 +101,18 @@ func (c *Client) send(ctx context.Context, phone, message string) error {
 	return nil
 }
 
+// NormalizePhone strips the +977 prefix from Nepal phone numbers and trims whitespace.
+// Handles formats like "+9779801234567", "9779801234567", "+977 9801234567", " 9801234567 ".
+func NormalizePhone(phone string) string {
+	phone = strings.TrimSpace(phone)
+	phone = strings.TrimPrefix(phone, "+977")
+	phone = strings.TrimPrefix(phone, "977")
+	phone = strings.TrimSpace(phone)
+	return phone
+}
+
 // ValidatePhone checks if a phone number is a valid Nepal mobile number.
+// Expects a normalized 10-digit number starting with 9[6-9].
 func ValidatePhone(phone string) bool {
 	return nepalPhoneRegex.MatchString(phone)
 }

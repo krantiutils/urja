@@ -101,6 +101,21 @@ func (r *Repository) RevokeAllRefreshTokens(ctx context.Context, userID string) 
 	return iter.Err()
 }
 
+// GetUserByID retrieves a user's phone and role by their ID.
+func (r *Repository) GetUserByID(ctx context.Context, userID string) (phone, role string, err error) {
+	err = r.db.QueryRow(ctx,
+		`SELECT u.phone, COALESCE(
+			(SELECT om.role FROM organization_members om WHERE om.user_id = u.id LIMIT 1),
+			'member'
+		) FROM users u WHERE u.id = $1`,
+		userID,
+	).Scan(&phone, &role)
+	if err != nil {
+		return "", "", fmt.Errorf("user not found: %w", err)
+	}
+	return phone, role, nil
+}
+
 // FindOrCreateUserByPhone looks up a user by phone number, creating one if not found.
 // Returns the user ID and role.
 func (r *Repository) FindOrCreateUserByPhone(ctx context.Context, phone string) (string, string, error) {

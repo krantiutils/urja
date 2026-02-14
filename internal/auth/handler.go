@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+
+	"github.com/urja-gym/urja/pkg/middleware"
 )
 
 // Handler handles HTTP requests for authentication endpoints.
@@ -36,8 +38,20 @@ type tokenResponse struct {
 	TokenType    string `json:"token_type"`
 }
 
+type refreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type logoutRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
 type errorResponse struct {
 	Error string `json:"error"`
+}
+
+type messageResponse struct {
+	Message string `json:"message"`
 }
 
 // Login handles POST /api/v1/auth/login — requests an OTP.
@@ -89,11 +103,82 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Refresh handles POST /api/v1/auth/refresh — issues new token pair from refresh token.
+func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var req refreshRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid request body"})
+		return
+	}
+
+	if req.RefreshToken == "" {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "refresh_token is required"})
+		return
+	}
+
+	accessToken, refreshToken, err := h.service.RefreshAccessToken(r.Context(), req.RefreshToken)
+	if err != nil {
+		h.logger.Warn("token refresh failed", "error", err)
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, tokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+	})
+}
+
+// Logout handles POST /api/v1/auth/logout — revokes the provided refresh token.
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "authentication required"})
+		return
+	}
+
+	var req logoutRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid request body"})
+		return
+	}
+
+	if req.RefreshToken == "" {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "refresh_token is required"})
+		return
+	}
+
+	if err := h.service.Logout(r.Context(), userID, req.RefreshToken); err != nil {
+		h.logger.Warn("logout failed", "error", err, "user_id", userID)
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, messageResponse{Message: "logged out successfully"})
+}
+
+// LogoutAll handles POST /api/v1/auth/logout-all — revokes all refresh tokens for the user.
+func (h *Handler) LogoutAll(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "authentication required"})
+		return
+	}
+
+	if err := h.service.LogoutAll(r.Context(), userID); err != nil {
+		h.logger.Error("logout-all failed", "error", err, "user_id", userID)
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "failed to logout all devices"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, messageResponse{Message: "logged out from all devices"})
+}
+
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		// At this point headers are already sent; log the error.
 		slog.Error("failed to encode JSON response", "error", err)
 	}
 }

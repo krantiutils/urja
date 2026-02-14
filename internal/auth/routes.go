@@ -7,14 +7,27 @@ import (
 )
 
 // RegisterRoutes mounts the auth routes on the given chi router.
-func (h *Handler) RegisterRoutes(r chi.Router) {
+// validator is used for the authenticated logout routes.
+func (h *Handler) RegisterRoutes(r chi.Router, validator middleware.TokenValidator) {
 	// Auth-specific rate limiter: 5 requests per 15 minutes per IP
 	authLimiter := middleware.NewRateLimiter(5.0/(15*60), 5)
 
 	r.Route("/auth", func(r chi.Router) {
-		r.Use(authLimiter.Limit())
-		r.Post("/login", h.Login)
-		r.Post("/verify-otp", h.VerifyOTP)
-		// TODO: POST /refresh, POST /logout, POST /logout-all
+		// Public endpoints (rate limited)
+		r.Group(func(r chi.Router) {
+			r.Use(authLimiter.Limit())
+			r.Post("/login", h.Login)
+			r.Post("/verify-otp", h.VerifyOTP)
+		})
+
+		// Refresh endpoint (no auth required, token is in the body)
+		r.Post("/refresh", h.Refresh)
+
+		// Authenticated endpoints
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.Auth(validator))
+			r.Post("/logout", h.Logout)
+			r.Post("/logout-all", h.LogoutAll)
+		})
 	})
 }
