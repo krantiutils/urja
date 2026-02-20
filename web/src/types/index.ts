@@ -202,3 +202,112 @@ export interface UpdateStaffRequest {
   avatar_url?: string;
   staff_role?: StaffRole;
 }
+
+// --- Member Profile (from GET /members/me) ---
+
+export interface MemberProfile {
+  id: string;
+  phone: string;
+  name: string;
+  name_ne: string | null;
+  email: string | null;
+  date_of_birth: string | null;
+  gender: string | null;
+  avatar_url: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  privacy_settings: PrivacySettings;
+  organizations: OrgMembership[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PrivacySettings {
+  show_email: boolean;
+  show_phone: boolean;
+  show_profile: boolean;
+  show_attendance: boolean;
+  show_on_leaderboard: boolean;
+}
+
+export interface OrgMembership {
+  org_id: string;
+  org_name: string;
+  role: string;
+  status: string;
+  joined_at: string;
+}
+
+export interface MemberAttendanceRecord {
+  id: string;
+  user_id: string;
+  org_id: string;
+  check_in_at: string;
+  method: "qr" | "nfc" | "manual";
+}
+
+export interface MemberStreak {
+  id: string;
+  member_id: string;
+  org_id: string;
+  current_streak: number;
+  longest_streak: number;
+  last_check_in: string | null;
+  updated_at: string;
+}
+
+export interface MemberPackage {
+  id: string;
+  user_id: string;
+  package_id: string;
+  organization_id: string;
+  start_date: string;
+  end_date: string;
+  payment_method: string | null;
+  payment_reference: string | null;
+  amount_paid: string;
+  status: "pending" | "active" | "expired" | "cancelled";
+  created_at: string;
+  package_name: string | null;
+  org_name: string | null;
+}
+
+export interface HealthMetric {
+  id: string;
+  member_id: string;
+  metric_type: string;
+  value: Record<string, unknown>;
+  recorded_at: string;
+}
+
+export interface WorkoutLog {
+  id: string;
+  user_id: string;
+  workout_template_id: string | null;
+  organization_id: string;
+  exercises: unknown[];
+  duration_minutes: number | null;
+  notes: string;
+  logged_at: string;
+}
+
+export interface WorkoutPlan {
+  id: string;
+  user_id: string;
+  organization_id: string;
+  workout_template_id: string;
+  assigned_by: string | null;
+  assigned_at: string;
+  template: WorkoutTemplate | null;
+}
+
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  name_ne: string | null;
+  description: string | null;
+  category: string | null;
+  difficulty: string | null;
+  duration_minutes: number | null;
+  exercises: unknown[];
+}

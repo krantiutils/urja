@@ -16,6 +16,13 @@ import type {
   StaffMember,
   CreateStaffRequest,
   UpdateStaffRequest,
+  MemberProfile,
+  MemberAttendanceRecord,
+  MemberStreak,
+  MemberPackage,
+  HealthMetric,
+  WorkoutLog,
+  WorkoutPlan,
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -242,6 +249,61 @@ class ApiClient {
     return this.request(`/api/v1/orgs/${orgId}/staff/${staffId}`, {
       method: "DELETE",
     });
+  }
+
+  // --- Member (self) ---
+
+  async getMyProfile(): Promise<MemberProfile> {
+    return this.request("/api/v1/members/me");
+  }
+
+  async getMyAttendance(
+    params: { limit?: number; offset?: number } = {}
+  ): Promise<{ data: MemberAttendanceRecord[] }> {
+    const q = new URLSearchParams();
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/attendance${qs ? `?${qs}` : ""}`);
+  }
+
+  async getMyStreaks(): Promise<{ data: MemberStreak[] }> {
+    return this.request("/api/v1/members/me/streaks");
+  }
+
+  async getMyPackages(
+    params: { limit?: number; offset?: number } = {}
+  ): Promise<{ data: MemberPackage[] }> {
+    const q = new URLSearchParams();
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/packages${qs ? `?${qs}` : ""}`);
+  }
+
+  async getMyHealth(
+    params: { type?: string; limit?: number } = {}
+  ): Promise<{ data: HealthMetric[] }> {
+    const q = new URLSearchParams();
+    if (params.type) q.set("type", params.type);
+    if (params.limit) q.set("limit", String(params.limit));
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/health${qs ? `?${qs}` : ""}`);
+  }
+
+  async getMyWorkoutLogs(
+    params: { organization_id?: string; limit?: number; offset?: number } = {}
+  ): Promise<{ data: WorkoutLog[] }> {
+    const q = new URLSearchParams();
+    if (params.organization_id) q.set("organization_id", params.organization_id);
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/workout-logs${qs ? `?${qs}` : ""}`);
+  }
+
+  async getMyWorkoutPlan(orgId: string): Promise<WorkoutPlan> {
+    return this.request(`/api/v1/members/me/workout-plan?organization_id=${orgId}`);
   }
 }
 
