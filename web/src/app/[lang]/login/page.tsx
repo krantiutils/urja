@@ -30,6 +30,16 @@ export default function LoginPage({
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          if (payload.role === "member") {
+            router.replace(`/${locale}/member`);
+            return;
+          }
+        } catch {}
+      }
       router.replace(`/${locale}/dashboard`);
     }
   }, [isAuthenticated, authLoading, router, locale]);
@@ -87,6 +97,16 @@ export default function LoginPage({
       try {
         const cleaned = phone.replace(/\s+/g, "");
         await verifyOtp(cleaned, otp);
+        const token = localStorage.getItem("access_token");
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            if (payload.role === "member") {
+              router.replace(`/${locale}/member`);
+              return;
+            }
+          } catch {}
+        }
         router.replace(`/${locale}/dashboard`);
       } catch (err) {
         if (err instanceof ApiRequestError) {
