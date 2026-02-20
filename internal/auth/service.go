@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -53,6 +54,19 @@ func (s *Service) RequestOTP(ctx context.Context, phone string) error {
 	phone = sms.NormalizePhone(phone)
 	if !sms.ValidatePhone(phone) {
 		return fmt.Errorf("invalid phone number")
+	}
+
+	// Dev bypass: skip SMS for test phones (9800*)
+	if s.cfg.DevOTPBypass && strings.HasPrefix(phone, "9800") {
+		hash, err := bcrypt.GenerateFromPassword([]byte("123456"), s.cfg.BcryptCost)
+		if err != nil {
+			return fmt.Errorf("hashing dev OTP: %w", err)
+		}
+		if err := s.repo.StoreOTPHash(ctx, phone, string(hash), s.cfg.OTPExpiry); err != nil {
+			return fmt.Errorf("storing dev OTP: %w", err)
+		}
+		s.logger.Info("dev OTP bypass: stored test OTP", "phone", phone[:4]+"******")
+		return nil
 	}
 
 	// Check hourly rate limit

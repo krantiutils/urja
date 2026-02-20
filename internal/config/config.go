@@ -54,6 +54,7 @@ type AuthConfig struct {
 	OTPCooldown        time.Duration
 	OTPHourlyLimit     int
 	BcryptCost         int
+	DevOTPBypass       bool
 }
 
 type SMSConfig struct {
@@ -151,6 +152,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("BCRYPT_COST: %w", err)
 	}
 	cfg.Auth.BcryptCost = bcryptCost
+	cfg.Auth.DevOTPBypass = envOrDefault("DEV_OTP_BYPASS", "false") == "true"
 
 	// SMS
 	cfg.SMS.AakashToken = envRequired("AAKASH_SMS_TOKEN")
