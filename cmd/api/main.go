@@ -57,6 +57,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if cfg.Auth.DevOTPBypass {
+		logger.Warn("DEV_OTP_BYPASS is enabled — test phones accept static OTP. Do NOT use in production.")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
