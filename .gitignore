@@ -2,6 +2,7 @@
 .claude/
 .beads/
 .logs/
+.worktrees/
 
 # Go
 bin/
