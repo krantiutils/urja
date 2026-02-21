@@ -23,6 +23,8 @@ import type {
   HealthMetric,
   WorkoutLog,
   WorkoutPlan,
+  AttendanceCalendar,
+  LeaderboardResponse,
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -304,6 +306,35 @@ class ApiClient {
 
   async getMyWorkoutPlan(orgId: string): Promise<WorkoutPlan> {
     return this.request(`/api/v1/members/me/workout-plan?organization_id=${orgId}`);
+  }
+
+  async getMyAttendanceCalendar(
+    params: { month?: string } = {}
+  ): Promise<AttendanceCalendar> {
+    const q = new URLSearchParams();
+    if (params.month) q.set("month", params.month);
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/attendance/calendar${qs ? `?${qs}` : ""}`);
+  }
+
+  async getMyLeaderboard(
+    params: { period?: string; limit?: number } = {}
+  ): Promise<LeaderboardResponse> {
+    const q = new URLSearchParams();
+    if (params.period) q.set("period", params.period);
+    if (params.limit) q.set("limit", String(params.limit));
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/leaderboard${qs ? `?${qs}` : ""}`);
+  }
+
+  async submitFeedback(
+    orgId: string,
+    data: { message: string }
+  ): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/feedbacks`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 }
 

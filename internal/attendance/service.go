@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -209,4 +211,43 @@ func (s *Service) ListByOrg(ctx context.Context, orgID string, limit, offset int
 // GetStreaks returns all attendance streaks for a user across organizations.
 func (s *Service) GetStreaks(ctx context.Context, userID string) ([]Streak, error) {
 	return s.repo.GetStreaksByUser(ctx, userID)
+}
+
+// CalendarResponse represents a monthly attendance calendar.
+type CalendarResponse struct {
+	Month         string `json:"month"`
+	DaysInMonth   int    `json:"days_in_month"`
+	CheckInDays   []int  `json:"check_in_days"`
+	TotalCheckIns int    `json:"total_check_ins"`
+}
+
+var monthRegex = regexp.MustCompile(`^\d{4}-(0[1-9]|1[0-2])$`)
+
+// GetMonthlyCalendar returns the attendance calendar for a given user and month.
+func (s *Service) GetMonthlyCalendar(ctx context.Context, userID, month string) (*CalendarResponse, error) {
+	if !monthRegex.MatchString(month) {
+		return nil, fmt.Errorf("invalid month format: expected YYYY-MM")
+	}
+
+	// Parse year and month to compute days in month.
+	parts := strings.SplitN(month, "-", 2)
+	year, _ := strconv.Atoi(parts[0])
+	monthNum, _ := strconv.Atoi(parts[1])
+	daysInMonth := time.Date(year, time.Month(monthNum)+1, 0, 0, 0, 0, 0, time.UTC).Day()
+
+	days, err := s.repo.GetMonthlyCalendar(ctx, userID, month)
+	if err != nil {
+		return nil, fmt.Errorf("getting monthly calendar: %w", err)
+	}
+
+	if days == nil {
+		days = []int{}
+	}
+
+	return &CalendarResponse{
+		Month:         month,
+		DaysInMonth:   daysInMonth,
+		CheckInDays:   days,
+		TotalCheckIns: len(days),
+	}, nil
 }

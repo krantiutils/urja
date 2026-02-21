@@ -15,4 +15,5 @@ func (h *Handler) RegisterSelfRoutes(r chi.Router) {
 	r.Post("/check-in", h.SelfCheckIn)
 	r.Get("/attendance", h.ListMine)
 	r.Get("/streaks", h.GetMyStreaks)
+	r.Get("/calendar", h.GetMyCalendar)
 }

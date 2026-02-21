@@ -24,7 +24,7 @@ func setOrgContext(r *http.Request, orgID string) *http.Request {
 }
 
 func TestGetMe_Unauthorized(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/members/me", nil)
 	rec := httptest.NewRecorder()
@@ -45,7 +45,7 @@ func TestGetMe_Unauthorized(t *testing.T) {
 }
 
 func TestUpdateMe_Unauthorized(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, nil, nil)
 
 	body := `{"name": "Ram"}`
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/members/me", bytes.NewBufferString(body))
@@ -59,7 +59,7 @@ func TestUpdateMe_Unauthorized(t *testing.T) {
 }
 
 func TestUpdateMe_InvalidBody(t *testing.T) {
-	h := NewHandler(&Service{}, nil)
+	h := NewHandler(&Service{}, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/members/me", bytes.NewBufferString("not json"))
 	req = setAuthContext(req, "user-123")
@@ -73,7 +73,7 @@ func TestUpdateMe_InvalidBody(t *testing.T) {
 }
 
 func TestUpdatePrivacy_Unauthorized(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, nil, nil)
 
 	body := `{"show_email": true}`
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/members/me/privacy", bytes.NewBufferString(body))
@@ -87,7 +87,7 @@ func TestUpdatePrivacy_Unauthorized(t *testing.T) {
 }
 
 func TestUpdatePrivacy_InvalidBody(t *testing.T) {
-	h := NewHandler(&Service{}, nil)
+	h := NewHandler(&Service{}, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/members/me/privacy", bytes.NewBufferString("{bad"))
 	req = setAuthContext(req, "user-123")
@@ -101,7 +101,7 @@ func TestUpdatePrivacy_InvalidBody(t *testing.T) {
 }
 
 func TestListByOrg_MissingOrg(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/orgs/xxx/members", nil)
 	rec := httptest.NewRecorder()
@@ -114,7 +114,7 @@ func TestListByOrg_MissingOrg(t *testing.T) {
 }
 
 func TestCreateOrgMember_MissingOrg(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, nil, nil)
 
 	body := `{"phone": "9841234567", "name": "Ram"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/orgs/xxx/members", bytes.NewBufferString(body))
@@ -128,7 +128,7 @@ func TestCreateOrgMember_MissingOrg(t *testing.T) {
 }
 
 func TestCreateOrgMember_InvalidBody(t *testing.T) {
-	h := NewHandler(&Service{}, nil)
+	h := NewHandler(&Service{}, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/orgs/xxx/members", bytes.NewBufferString("not json"))
 	req = setOrgContext(req, "org-123")
@@ -142,7 +142,7 @@ func TestCreateOrgMember_InvalidBody(t *testing.T) {
 }
 
 func TestDeleteOrgMember_MissingOrg(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/orgs/xxx/members/yyy", nil)
 	rec := httptest.NewRecorder()

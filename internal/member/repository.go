@@ -357,6 +357,24 @@ func (r *Repository) DeleteOrgMember(ctx context.Context, orgID, userID string) 
 	return nil
 }
 
+// GetPrimaryOrgID returns the organization ID for the user's earliest active membership.
+func (r *Repository) GetPrimaryOrgID(ctx context.Context, userID string) (string, error) {
+	var orgID string
+	err := r.db.QueryRow(ctx,
+		`SELECT organization_id FROM organization_members
+		 WHERE user_id = $1 AND status = 'active'
+		 ORDER BY joined_at LIMIT 1`,
+		userID,
+	).Scan(&orgID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", fmt.Errorf("no active organization membership found")
+		}
+		return "", fmt.Errorf("getting primary org: %w", err)
+	}
+	return orgID, nil
+}
+
 func nilIfEmpty(s string) *string {
 	if s == "" {
 		return nil

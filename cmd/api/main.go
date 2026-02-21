@@ -104,7 +104,6 @@ func main() {
 	// Member
 	memberRepo := member.NewRepository(pool)
 	memberService := member.NewService(memberRepo, logger)
-	memberHandler := member.NewHandler(memberService, logger)
 
 	// Attendance
 	attendanceRepo := attendance.NewRepository(pool)
@@ -173,6 +172,9 @@ func main() {
 	leaderboardRepo := leaderboard.NewRepository(pool)
 	leaderboardService := leaderboard.NewService(leaderboardRepo, logger)
 	leaderboardHandler := leaderboard.NewHandler(leaderboardService, logger)
+
+	// Member handler (created after leaderboard so it can use leaderboardService)
+	memberHandler := member.NewHandler(memberService, leaderboardService, logger)
 
 	// Health
 	healthRepo := health.NewRepository(pool)

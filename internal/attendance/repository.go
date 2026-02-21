@@ -194,6 +194,34 @@ func (r *Repository) IsOrgMember(ctx context.Context, userID, orgID string) (boo
 	return exists, err
 }
 
+// GetMonthlyCalendar returns the distinct days in a month on which a user checked in.
+// month must be in "YYYY-MM" format.
+func (r *Repository) GetMonthlyCalendar(ctx context.Context, userID, month string) ([]int, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT DISTINCT EXTRACT(DAY FROM check_in_at AT TIME ZONE 'Asia/Kathmandu')::int AS day
+		 FROM attendance
+		 WHERE user_id = $1
+		   AND check_in_at >= ($2 || '-01')::date
+		   AND check_in_at < (($2 || '-01')::date + INTERVAL '1 month')
+		 ORDER BY day`,
+		userID, month,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying monthly calendar: %w", err)
+	}
+	defer rows.Close()
+
+	var days []int
+	for rows.Next() {
+		var day int
+		if err := rows.Scan(&day); err != nil {
+			return nil, fmt.Errorf("scanning calendar day: %w", err)
+		}
+		days = append(days, day)
+	}
+	return days, rows.Err()
+}
+
 // GetOrgRole returns the user's role in an organization.
 func (r *Repository) GetOrgRole(ctx context.Context, userID, orgID string) (string, error) {
 	var role string

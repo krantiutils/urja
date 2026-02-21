@@ -311,3 +311,28 @@ export interface WorkoutTemplate {
   duration_minutes: number | null;
   exercises: unknown[];
 }
+
+// --- Attendance Calendar (from GET /api/v1/members/me/attendance/calendar) ---
+
+export interface AttendanceCalendar {
+  month: string;
+  days_in_month: number;
+  check_in_days: number[];
+  total_check_ins: number;
+}
+
+// --- Leaderboard (from GET /api/v1/members/me/leaderboard) ---
+
+export interface LeaderboardEntry {
+  rank: number;
+  member_id: string;
+  name: string;
+  avatar_url: string | null;
+  value: number;
+  metric: string;
+}
+
+export interface LeaderboardResponse {
+  period: string;
+  rankings: LeaderboardEntry[];
+}

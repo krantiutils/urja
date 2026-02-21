@@ -8,18 +8,20 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/urja-gym/urja/internal/leaderboard"
 	"github.com/urja-gym/urja/pkg/middleware"
 )
 
 // Handler handles HTTP requests for member endpoints.
 type Handler struct {
-	service *Service
-	logger  *slog.Logger
+	service            *Service
+	leaderboardService *leaderboard.Service
+	logger             *slog.Logger
 }
 
 // NewHandler creates a new member handler.
-func NewHandler(service *Service, logger *slog.Logger) *Handler {
-	return &Handler{service: service, logger: logger}
+func NewHandler(service *Service, leaderboardService *leaderboard.Service, logger *slog.Logger) *Handler {
+	return &Handler{service: service, leaderboardService: leaderboardService, logger: logger}
 }
 
 // GetMe handles GET /api/v1/members/me
@@ -101,6 +103,41 @@ func (h *Handler) UpdatePrivacy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "privacy settings updated"})
+}
+
+// GetMyLeaderboard handles GET /api/v1/members/me/leaderboard
+func (h *Handler) GetMyLeaderboard(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	period := r.URL.Query().Get("period")
+	if period == "" {
+		period = "monthly"
+	}
+
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit <= 0 {
+		limit = 3
+	}
+
+	orgID, err := h.service.GetPrimaryOrgID(r.Context(), userID)
+	if err != nil {
+		h.logger.Error("failed to get primary org", "error", err, "user_id", userID)
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no active organization membership found"})
+		return
+	}
+
+	result, err := h.leaderboardService.GetLeaderboard(r.Context(), orgID, period, limit, 0)
+	if err != nil {
+		h.logger.Error("failed to get leaderboard", "error", err, "org_id", orgID)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 // ListByOrg handles GET /api/v1/orgs/{orgId}/members

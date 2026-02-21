@@ -147,6 +147,11 @@ func (s *Service) DeleteOrgMember(ctx context.Context, orgID, userID string) err
 	return nil
 }
 
+// GetPrimaryOrgID returns the user's primary (earliest active) organization ID.
+func (s *Service) GetPrimaryOrgID(ctx context.Context, userID string) (string, error) {
+	return s.repo.GetPrimaryOrgID(ctx, userID)
+}
+
 func validateProfileUpdate(upd *ProfileUpdate) error {
 	if upd.Name != nil && *upd.Name == "" {
 		return errors.New("name cannot be empty")

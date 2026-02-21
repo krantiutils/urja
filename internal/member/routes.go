@@ -11,6 +11,7 @@ func (h *Handler) RegisterSelfRoutes(r chi.Router) {
 	r.Get("/", h.GetMe)
 	r.Put("/", h.UpdateMe)
 	r.Put("/privacy", h.UpdatePrivacy)
+	r.Get("/leaderboard", h.GetMyLeaderboard)
 }
 
 // RegisterOrgRoutes mounts org-scoped member management routes (under /orgs/{orgId}/members).

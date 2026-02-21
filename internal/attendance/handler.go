@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/urja-gym/urja/pkg/middleware"
 )
@@ -145,6 +146,29 @@ func (h *Handler) GetMyStreaks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{"data": streaks})
+}
+
+// GetMyCalendar handles GET /api/v1/members/me/attendance/calendar
+func (h *Handler) GetMyCalendar(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	month := r.URL.Query().Get("month")
+	if month == "" {
+		month = time.Now().In(nptLocation).Format("2006-01")
+	}
+
+	result, err := h.service.GetMonthlyCalendar(r.Context(), userID, month)
+	if err != nil {
+		h.logger.Error("failed to get calendar", "error", err, "user_id", userID, "month", month)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
