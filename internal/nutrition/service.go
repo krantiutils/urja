@@ -105,40 +105,16 @@ func (s *Service) LookupBarcode(ctx context.Context, barcode string) (*FoodItem,
 		return nil, fmt.Errorf("food not found for barcode %s", barcode)
 	}
 
-	// Save to local DB as a verified food item.
-	input := &CreateCustomFoodInput{
-		Name:            offProduct.Name,
-		CaloriesPer100g: offProduct.CaloriesPer100g,
-		ProteinPer100g:  offProduct.ProteinPer100g,
-		CarbsPer100g:    offProduct.CarbsPer100g,
-		FatPer100g:      offProduct.FatPer100g,
-		FiberPer100g:    offProduct.FiberPer100g,
-		Barcode:         barcode,
-	}
-
-	// Insert directly via repo with no user (system-created from OFF).
-	var saved FoodItem
-	err = s.repo.db.QueryRow(ctx,
-		`INSERT INTO food_items (name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, barcode, is_verified)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-		 RETURNING id, organization_id, name, COALESCE(name_ne, ''), COALESCE(category, ''),
-		           COALESCE(calories_per_100g, 0), COALESCE(protein_per_100g, 0),
-		           COALESCE(carbs_per_100g, 0), COALESCE(fat_per_100g, 0),
-		           COALESCE(fiber_per_100g, 0), COALESCE(serving_size_g, 0),
-		           COALESCE(serving_label, ''), COALESCE(serving_label_ne, ''),
-		           is_verified, COALESCE(barcode, ''), created_by, created_at, updated_at`,
-		input.Name, input.CaloriesPer100g, input.ProteinPer100g, input.CarbsPer100g,
-		input.FatPer100g, input.FiberPer100g, barcode,
-	).Scan(&saved.ID, &saved.OrgID, &saved.Name, &saved.NameNe, &saved.Category,
-		&saved.CaloriesPer100g, &saved.ProteinPer100g, &saved.CarbsPer100g, &saved.FatPer100g,
-		&saved.FiberPer100g, &saved.ServingSizeG, &saved.ServingLabel, &saved.ServingLabelNe,
-		&saved.IsVerified, &saved.Barcode, &saved.CreatedBy, &saved.CreatedAt, &saved.UpdatedAt)
+	// Save to local DB as a verified food item (system-created from OFF).
+	saved, err := s.repo.CreateVerifiedFoodFromBarcode(ctx, offProduct.Name,
+		offProduct.CaloriesPer100g, offProduct.ProteinPer100g, offProduct.CarbsPer100g,
+		offProduct.FatPer100g, offProduct.FiberPer100g, barcode)
 	if err != nil {
 		return nil, fmt.Errorf("saving barcode food: %w", err)
 	}
 
 	s.logger.Info("food imported from Open Food Facts", "food_id", saved.ID, "barcode", barcode, "name", saved.Name)
-	return &saved, nil
+	return saved, nil
 }
 
 // GetNutritionStreak retrieves the nutrition logging streak for a user.
@@ -178,6 +154,9 @@ func (s *Service) CreateFoodLog(ctx context.Context, userID string, input *Creat
 	}
 	if input.LoggedDate == "" {
 		return nil, fmt.Errorf("logged_date is required (YYYY-MM-DD)")
+	}
+	if _, err := time.Parse("2006-01-02", input.LoggedDate); err != nil {
+		return nil, fmt.Errorf("logged_date must be in YYYY-MM-DD format")
 	}
 
 	// Lookup food item to get per-100g values.

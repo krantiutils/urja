@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 )
 
 // Service handles water tracking business logic.
@@ -30,6 +31,9 @@ func (s *Service) CreateWaterLog(ctx context.Context, userID string, input *Crea
 	}
 	if input.Date == "" {
 		return nil, fmt.Errorf("date is required (YYYY-MM-DD)")
+	}
+	if _, err := time.Parse("2006-01-02", input.Date); err != nil {
+		return nil, fmt.Errorf("date must be in YYYY-MM-DD format")
 	}
 
 	l, err := s.repo.CreateWaterLog(ctx, userID, input.AmountML, input.Date)

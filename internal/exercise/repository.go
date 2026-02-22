@@ -324,9 +324,9 @@ func (r *Repository) CompleteDay(ctx context.Context, userID string) (*UserProgr
 	err = r.db.QueryRow(ctx,
 		`UPDATE user_program_enrollments
 		 SET current_week = $1, current_day = $2, status = $3
-		 WHERE user_id = $4 AND status = 'active'
+		 WHERE user_id = $4 AND status = 'active' AND current_week = $5 AND current_day = $6
 		 RETURNING id, user_id, program_id, started_at, current_week, current_day, status`,
-		nextWeek, nextDay, newStatus, userID,
+		nextWeek, nextDay, newStatus, userID, enrollment.CurrentWeek, enrollment.CurrentDay,
 	).Scan(&updated.ID, &updated.UserID, &updated.ProgramID, &updated.StartedAt,
 		&updated.CurrentWeek, &updated.CurrentDay, &updated.Status)
 	if err != nil {

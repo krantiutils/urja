@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"math"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 // UserProfile is the response shape after onboarding.
@@ -155,6 +157,9 @@ func (s *Service) JoinGym(ctx context.Context, userID string, input *JoinGymInpu
 	if input.OrgID == "" {
 		return fmt.Errorf("org_id is required")
 	}
+	if _, err := uuid.Parse(input.OrgID); err != nil {
+		return fmt.Errorf("invalid org_id format")
+	}
 	if err := s.repo.JoinGym(ctx, userID, input.OrgID); err != nil {
 		return err
 	}
@@ -166,6 +171,9 @@ func (s *Service) JoinGym(ctx context.Context, userID string, input *JoinGymInpu
 func (s *Service) LeaveGym(ctx context.Context, userID string, input *LeaveGymInput) error {
 	if input.OrgID == "" {
 		return fmt.Errorf("org_id is required")
+	}
+	if _, err := uuid.Parse(input.OrgID); err != nil {
+		return fmt.Errorf("invalid org_id format")
 	}
 	if err := s.repo.LeaveGym(ctx, userID, input.OrgID); err != nil {
 		return err

@@ -3,9 +3,13 @@ package nutrition
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"regexp"
 	"time"
 )
+
+var barcodePattern = regexp.MustCompile(`^\d{4,13}$`)
 
 // offProduct holds parsed nutrition data from Open Food Facts.
 type offProduct struct {
@@ -36,6 +40,9 @@ var offHTTPClient = &http.Client{Timeout: 10 * time.Second}
 
 // fetchOpenFoodFacts fetches food data from the Open Food Facts API by barcode.
 func fetchOpenFoodFacts(barcode string) (*offProduct, error) {
+	if !barcodePattern.MatchString(barcode) {
+		return nil, fmt.Errorf("invalid barcode format")
+	}
 	url := fmt.Sprintf("https://world.openfoodfacts.org/api/v0/product/%s.json", barcode)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -55,7 +62,7 @@ func fetchOpenFoodFacts(barcode string) (*offProduct, error) {
 	}
 
 	var apiResp offAPIResponse
-	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&apiResp); err != nil {
 		return nil, fmt.Errorf("decoding OFF response: %w", err)
 	}
 

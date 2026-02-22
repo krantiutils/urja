@@ -622,6 +622,30 @@ func (r *Repository) CreateCustomFood(ctx context.Context, userID string, input 
 	return &f, nil
 }
 
+// CreateVerifiedFoodFromBarcode inserts a system-created food item from barcode lookup (e.g. Open Food Facts).
+func (r *Repository) CreateVerifiedFoodFromBarcode(ctx context.Context, name string, caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g, fiberPer100g float64, barcode string) (*FoodItem, error) {
+	var f FoodItem
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO food_items (name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, barcode, is_verified)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+		 RETURNING id, organization_id, name, COALESCE(name_ne, ''), COALESCE(category, ''),
+		           COALESCE(calories_per_100g, 0), COALESCE(protein_per_100g, 0),
+		           COALESCE(carbs_per_100g, 0), COALESCE(fat_per_100g, 0),
+		           COALESCE(fiber_per_100g, 0), COALESCE(serving_size_g, 0),
+		           COALESCE(serving_label, ''), COALESCE(serving_label_ne, ''),
+		           is_verified, COALESCE(barcode, ''), created_by, created_at, updated_at`,
+		name, caloriesPer100g, proteinPer100g, carbsPer100g,
+		fatPer100g, fiberPer100g, barcode,
+	).Scan(&f.ID, &f.OrgID, &f.Name, &f.NameNe, &f.Category,
+		&f.CaloriesPer100g, &f.ProteinPer100g, &f.CarbsPer100g, &f.FatPer100g,
+		&f.FiberPer100g, &f.ServingSizeG, &f.ServingLabel, &f.ServingLabelNe,
+		&f.IsVerified, &f.Barcode, &f.CreatedBy, &f.CreatedAt, &f.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("creating verified food from barcode: %w", err)
+	}
+	return &f, nil
+}
+
 // GetFoodByBarcode retrieves a food item by barcode.
 func (r *Repository) GetFoodByBarcode(ctx context.Context, barcode string) (*FoodItem, error) {
 	var f FoodItem
@@ -655,19 +679,19 @@ func (r *Repository) UpdateNutritionStreak(ctx context.Context, userID, logDate 
 		 VALUES ($1, 1, 1, $2::date, NOW())
 		 ON CONFLICT (user_id) DO UPDATE SET
 		   current_streak = CASE
-		     WHEN nutrition_streaks.last_log_date = $2::date THEN nutrition_streaks.current_streak
+		     WHEN $2::date <= nutrition_streaks.last_log_date THEN nutrition_streaks.current_streak
 		     WHEN nutrition_streaks.last_log_date = $2::date - INTERVAL '1 day' THEN nutrition_streaks.current_streak + 1
 		     ELSE 1
 		   END,
 		   longest_streak = GREATEST(
 		     nutrition_streaks.longest_streak,
 		     CASE
-		       WHEN nutrition_streaks.last_log_date = $2::date THEN nutrition_streaks.current_streak
+		       WHEN $2::date <= nutrition_streaks.last_log_date THEN nutrition_streaks.current_streak
 		       WHEN nutrition_streaks.last_log_date = $2::date - INTERVAL '1 day' THEN nutrition_streaks.current_streak + 1
 		       ELSE 1
 		     END
 		   ),
-		   last_log_date = $2::date,
+		   last_log_date = GREATEST(nutrition_streaks.last_log_date, $2::date),
 		   updated_at = NOW()
 		 RETURNING user_id, current_streak, longest_streak, last_log_date::text, updated_at`,
 		userID, logDate,
