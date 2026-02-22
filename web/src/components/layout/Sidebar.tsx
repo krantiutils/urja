@@ -76,9 +76,10 @@ interface SidebarProps {
   locale: Locale;
   isOpen: boolean;
   onClose: () => void;
+  orgName?: string;
 }
 
-export function Sidebar({ t, locale, isOpen, onClose }: SidebarProps) {
+export function Sidebar({ t, locale, isOpen, onClose, orgName }: SidebarProps) {
   const pathname = usePathname();
   const sections = buildNavSections(t, locale);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -119,7 +120,7 @@ export function Sidebar({ t, locale, isOpen, onClose }: SidebarProps) {
               <h2 className="text-sm font-semibold text-fg truncate">
                 {t.common.appName}
               </h2>
-              <p className="text-xs text-fg-muted truncate">Gym Name</p>
+              <p className="text-xs text-fg-muted truncate">{orgName || t.common.appName}</p>
             </div>
           </div>
           <button

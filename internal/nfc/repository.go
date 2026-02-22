@@ -206,6 +206,78 @@ func (r *Repository) GetCardByID(ctx context.Context, cardID, orgID string) (*Ca
 	return &c, nil
 }
 
+// RegisterDevice creates a new NFC device with an auto-generated API key.
+func (r *Repository) RegisterDevice(ctx context.Context, orgID, name, deviceIdentifier, apiKey string) (*Device, error) {
+	var d Device
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO nfc_devices (organization_id, name, device_identifier, api_key, status, door_state)
+		 VALUES ($1, $2, $3, $4, 'offline', 'closed')
+		 RETURNING id, organization_id, name, device_identifier, status, door_state,
+		           last_sync_at, uptime_seconds, created_at, updated_at`,
+		orgID, name, deviceIdentifier, apiKey,
+	).Scan(&d.ID, &d.OrgID, &d.Name, &d.DeviceIdentifier,
+		&d.Status, &d.DoorState, &d.LastSyncAt, &d.UptimeSeconds,
+		&d.CreatedAt, &d.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("registering nfc device: %w", err)
+	}
+	return &d, nil
+}
+
+// LookupDeviceByKey finds a device by its API key.
+func (r *Repository) LookupDeviceByKey(ctx context.Context, apiKey string) (*Device, error) {
+	var d Device
+	err := r.db.QueryRow(ctx,
+		`SELECT id, organization_id, name, device_identifier, status, door_state,
+		        last_sync_at, uptime_seconds, created_at, updated_at
+		 FROM nfc_devices
+		 WHERE api_key = $1`,
+		apiKey,
+	).Scan(&d.ID, &d.OrgID, &d.Name, &d.DeviceIdentifier,
+		&d.Status, &d.DoorState, &d.LastSyncAt, &d.UptimeSeconds,
+		&d.CreatedAt, &d.UpdatedAt)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("invalid device key")
+		}
+		return nil, fmt.Errorf("looking up device: %w", err)
+	}
+	return &d, nil
+}
+
+// UpdateDeviceHeartbeat updates the device status and uptime.
+func (r *Repository) UpdateDeviceHeartbeat(ctx context.Context, deviceID string, uptimeSeconds int64) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE nfc_devices
+		 SET status = 'online', last_sync_at = NOW(), uptime_seconds = $1, updated_at = NOW()
+		 WHERE id = $2`,
+		uptimeSeconds, deviceID,
+	)
+	if err != nil {
+		return fmt.Errorf("updating device heartbeat: %w", err)
+	}
+	return nil
+}
+
+// LookupCardMember finds the member user_id and name for an active NFC card.
+func (r *Repository) LookupCardMember(ctx context.Context, orgID, cardHex string) (string, string, error) {
+	var userID, userName string
+	err := r.db.QueryRow(ctx,
+		`SELECT c.user_id, COALESCE(u.name, '')
+		 FROM nfc_cards c
+		 LEFT JOIN users u ON c.user_id = u.id
+		 WHERE c.organization_id = $1 AND c.card_hex = $2 AND c.is_active = true AND c.user_id IS NOT NULL`,
+		orgID, cardHex,
+	).Scan(&userID, &userName)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", "", fmt.Errorf("card not found, inactive, or unassigned")
+		}
+		return "", "", fmt.Errorf("looking up card member: %w", err)
+	}
+	return userID, userName, nil
+}
+
 // ListDevices retrieves NFC devices for an organization.
 func (r *Repository) ListDevices(ctx context.Context, orgID string) ([]Device, error) {
 	rows, err := r.db.Query(ctx,

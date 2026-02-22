@@ -2059,6 +2059,702 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'S'**
   String get sat;
+
+  /// No description provided for @account.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get account;
+
+  /// No description provided for @editMyProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit My Profile'**
+  String get editMyProfile;
+
+  /// No description provided for @subscriptionHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription History'**
+  String get subscriptionHistory;
+
+  /// No description provided for @participationSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Participation Settings'**
+  String get participationSettings;
+
+  /// No description provided for @reviewsFeedbacks.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviews & Feedbacks'**
+  String get reviewsFeedbacks;
+
+  /// No description provided for @contactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Support'**
+  String get contactSupport;
+
+  /// No description provided for @changePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Photo'**
+  String get changePhoto;
+
+  /// No description provided for @camera.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get camera;
+
+  /// No description provided for @gallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get gallery;
+
+  /// No description provided for @removePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Photo'**
+  String get removePhoto;
+
+  /// No description provided for @myNutrition.
+  ///
+  /// In en, this message translates to:
+  /// **'My Nutrition'**
+  String get myNutrition;
+
+  /// No description provided for @nutrition.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition'**
+  String get nutrition;
+
+  /// No description provided for @workoutMyPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'My Plan'**
+  String get workoutMyPlan;
+
+  /// No description provided for @workoutBrowsePlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Plans'**
+  String get workoutBrowsePlans;
+
+  /// No description provided for @workoutFindMyPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Find My Plan'**
+  String get workoutFindMyPlan;
+
+  /// No description provided for @workoutCurrentPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Workout Plan'**
+  String get workoutCurrentPlan;
+
+  /// No description provided for @workoutNoPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'No workout plan assigned yet'**
+  String get workoutNoPlan;
+
+  /// No description provided for @workoutChoosePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose This Plan'**
+  String get workoutChoosePlan;
+
+  /// No description provided for @workoutPlanAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan assigned successfully!'**
+  String get workoutPlanAssigned;
+
+  /// No description provided for @workoutExercises.
+  ///
+  /// In en, this message translates to:
+  /// **'Exercises'**
+  String get workoutExercises;
+
+  /// No description provided for @workoutSets.
+  ///
+  /// In en, this message translates to:
+  /// **'sets'**
+  String get workoutSets;
+
+  /// No description provided for @workoutReps.
+  ///
+  /// In en, this message translates to:
+  /// **'reps'**
+  String get workoutReps;
+
+  /// No description provided for @workoutRest.
+  ///
+  /// In en, this message translates to:
+  /// **'rest'**
+  String get workoutRest;
+
+  /// No description provided for @workoutSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'sec'**
+  String get workoutSeconds;
+
+  /// No description provided for @workoutMuscleGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Muscle Groups'**
+  String get workoutMuscleGroups;
+
+  /// No description provided for @workoutFilterByGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by Goal'**
+  String get workoutFilterByGoal;
+
+  /// No description provided for @workoutFilterByDifficulty.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by Difficulty'**
+  String get workoutFilterByDifficulty;
+
+  /// No description provided for @workoutAllGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'All Goals'**
+  String get workoutAllGoals;
+
+  /// No description provided for @workoutAllDifficulties.
+  ///
+  /// In en, this message translates to:
+  /// **'All Levels'**
+  String get workoutAllDifficulties;
+
+  /// No description provided for @workoutLoseWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Lose Weight'**
+  String get workoutLoseWeight;
+
+  /// No description provided for @workoutBuildMuscle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build Muscle'**
+  String get workoutBuildMuscle;
+
+  /// No description provided for @workoutStayFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay Fit'**
+  String get workoutStayFit;
+
+  /// No description provided for @workoutBeginner.
+  ///
+  /// In en, this message translates to:
+  /// **'Beginner'**
+  String get workoutBeginner;
+
+  /// No description provided for @workoutIntermediate.
+  ///
+  /// In en, this message translates to:
+  /// **'Intermediate'**
+  String get workoutIntermediate;
+
+  /// No description provided for @workoutAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get workoutAdvanced;
+
+  /// No description provided for @workoutQuestionnaire.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Assessment'**
+  String get workoutQuestionnaire;
+
+  /// No description provided for @workoutWhatIsYourGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'What is your fitness goal?'**
+  String get workoutWhatIsYourGoal;
+
+  /// No description provided for @workoutExperienceLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'What is your experience level?'**
+  String get workoutExperienceLevel;
+
+  /// No description provided for @workoutDaysPerWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'How many days per week can you train?'**
+  String get workoutDaysPerWeek;
+
+  /// No description provided for @workoutDays23.
+  ///
+  /// In en, this message translates to:
+  /// **'2-3 days'**
+  String get workoutDays23;
+
+  /// No description provided for @workoutDays45.
+  ///
+  /// In en, this message translates to:
+  /// **'4-5 days'**
+  String get workoutDays45;
+
+  /// No description provided for @workoutDays67.
+  ///
+  /// In en, this message translates to:
+  /// **'6-7 days'**
+  String get workoutDays67;
+
+  /// No description provided for @workoutGetRecommendation.
+  ///
+  /// In en, this message translates to:
+  /// **'Get My Plan'**
+  String get workoutGetRecommendation;
+
+  /// No description provided for @workoutRecommendedPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended Plan'**
+  String get workoutRecommendedPlan;
+
+  /// No description provided for @workoutSelfAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Self-assigned'**
+  String get workoutSelfAssigned;
+
+  /// No description provided for @workoutQuestionnaireAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get workoutQuestionnaireAssigned;
+
+  /// No description provided for @workoutStaffAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned by staff'**
+  String get workoutStaffAssigned;
+
+  /// No description provided for @workoutTargetMuscles.
+  ///
+  /// In en, this message translates to:
+  /// **'Target Muscles'**
+  String get workoutTargetMuscles;
+
+  /// No description provided for @workoutBodyMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Body Map'**
+  String get workoutBodyMap;
+
+  /// No description provided for @nutritionDailyIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Intake'**
+  String get nutritionDailyIntake;
+
+  /// No description provided for @nutritionCaloriesRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get nutritionCaloriesRemaining;
+
+  /// No description provided for @nutritionCaloriesConsumed.
+  ///
+  /// In en, this message translates to:
+  /// **'Consumed'**
+  String get nutritionCaloriesConsumed;
+
+  /// No description provided for @nutritionCalorieGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get nutritionCalorieGoal;
+
+  /// No description provided for @nutritionProtein.
+  ///
+  /// In en, this message translates to:
+  /// **'Protein'**
+  String get nutritionProtein;
+
+  /// No description provided for @nutritionCarbs.
+  ///
+  /// In en, this message translates to:
+  /// **'Carbs'**
+  String get nutritionCarbs;
+
+  /// No description provided for @nutritionFat.
+  ///
+  /// In en, this message translates to:
+  /// **'Fat'**
+  String get nutritionFat;
+
+  /// No description provided for @nutritionBreakfast.
+  ///
+  /// In en, this message translates to:
+  /// **'Breakfast'**
+  String get nutritionBreakfast;
+
+  /// No description provided for @nutritionLunch.
+  ///
+  /// In en, this message translates to:
+  /// **'Lunch'**
+  String get nutritionLunch;
+
+  /// No description provided for @nutritionDinner.
+  ///
+  /// In en, this message translates to:
+  /// **'Dinner'**
+  String get nutritionDinner;
+
+  /// No description provided for @nutritionSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Snack'**
+  String get nutritionSnack;
+
+  /// No description provided for @nutritionAddFood.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Food'**
+  String get nutritionAddFood;
+
+  /// No description provided for @nutritionSearchFood.
+  ///
+  /// In en, this message translates to:
+  /// **'Search food...'**
+  String get nutritionSearchFood;
+
+  /// No description provided for @nutritionQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity (g)'**
+  String get nutritionQuantity;
+
+  /// No description provided for @nutritionCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Calories'**
+  String get nutritionCalories;
+
+  /// No description provided for @nutritionNoLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'No food logged yet'**
+  String get nutritionNoLogs;
+
+  /// No description provided for @nutritionLogFood.
+  ///
+  /// In en, this message translates to:
+  /// **'Log Food'**
+  String get nutritionLogFood;
+
+  /// No description provided for @nutritionWeeklyProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Progress'**
+  String get nutritionWeeklyProgress;
+
+  /// No description provided for @nutritionSetGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Nutrition Goal'**
+  String get nutritionSetGoal;
+
+  /// No description provided for @nutritionEditGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Goal'**
+  String get nutritionEditGoal;
+
+  /// No description provided for @nutritionWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight (kg)'**
+  String get nutritionWeight;
+
+  /// No description provided for @nutritionHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Height (cm)'**
+  String get nutritionHeight;
+
+  /// No description provided for @nutritionAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
+  String get nutritionAge;
+
+  /// No description provided for @nutritionGender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get nutritionGender;
+
+  /// No description provided for @nutritionMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get nutritionMale;
+
+  /// No description provided for @nutritionFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get nutritionFemale;
+
+  /// No description provided for @nutritionActivityLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Level'**
+  String get nutritionActivityLevel;
+
+  /// No description provided for @nutritionSedentary.
+  ///
+  /// In en, this message translates to:
+  /// **'Sedentary'**
+  String get nutritionSedentary;
+
+  /// No description provided for @nutritionLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightly Active'**
+  String get nutritionLight;
+
+  /// No description provided for @nutritionModerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderately Active'**
+  String get nutritionModerate;
+
+  /// No description provided for @nutritionActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get nutritionActive;
+
+  /// No description provided for @nutritionVeryActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Very Active'**
+  String get nutritionVeryActive;
+
+  /// No description provided for @nutritionGoalType.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get nutritionGoalType;
+
+  /// No description provided for @nutritionLoseWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Lose Weight'**
+  String get nutritionLoseWeight;
+
+  /// No description provided for @nutritionMaintain.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintain Weight'**
+  String get nutritionMaintain;
+
+  /// No description provided for @nutritionBuildMuscle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build Muscle'**
+  String get nutritionBuildMuscle;
+
+  /// No description provided for @nutritionCalculateGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculate Goal'**
+  String get nutritionCalculateGoal;
+
+  /// No description provided for @nutritionGoalSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition goal set!'**
+  String get nutritionGoalSet;
+
+  /// No description provided for @nutritionDailyCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Calories'**
+  String get nutritionDailyCalories;
+
+  /// No description provided for @nutritionMealTemplates.
+  ///
+  /// In en, this message translates to:
+  /// **'Meal Templates'**
+  String get nutritionMealTemplates;
+
+  /// No description provided for @nutritionCreateTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Template'**
+  String get nutritionCreateTemplate;
+
+  /// No description provided for @nutritionTemplateName.
+  ///
+  /// In en, this message translates to:
+  /// **'Template Name'**
+  String get nutritionTemplateName;
+
+  /// No description provided for @nutritionQuickLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Log'**
+  String get nutritionQuickLog;
+
+  /// No description provided for @nutritionNoTemplates.
+  ///
+  /// In en, this message translates to:
+  /// **'No meal templates yet'**
+  String get nutritionNoTemplates;
+
+  /// No description provided for @nutritionPer100g.
+  ///
+  /// In en, this message translates to:
+  /// **'per 100g'**
+  String get nutritionPer100g;
+
+  /// No description provided for @nutritionServingSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Serving'**
+  String get nutritionServingSize;
+
+  /// No description provided for @nutritionDeleteLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get nutritionDeleteLog;
+
+  /// No description provided for @nutritionKcal.
+  ///
+  /// In en, this message translates to:
+  /// **'kcal'**
+  String get nutritionKcal;
+
+  /// No description provided for @nutritionGrams.
+  ///
+  /// In en, this message translates to:
+  /// **'g'**
+  String get nutritionGrams;
+
+  /// No description provided for @nutritionNoGoalSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your nutrition goal to track progress'**
+  String get nutritionNoGoalSet;
+
+  /// No description provided for @nutritionToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get nutritionToday;
+
+  /// No description provided for @progressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get progressTitle;
+
+  /// No description provided for @progressLogWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Log Weight'**
+  String get progressLogWeight;
+
+  /// No description provided for @progressWeightKg.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight (kg)'**
+  String get progressWeightKg;
+
+  /// No description provided for @progressWeightLogged.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight logged successfully!'**
+  String get progressWeightLogged;
+
+  /// No description provided for @progressCurrentWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get progressCurrentWeight;
+
+  /// No description provided for @progressStartWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get progressStartWeight;
+
+  /// No description provided for @progressChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get progressChange;
+
+  /// No description provided for @progressBmi.
+  ///
+  /// In en, this message translates to:
+  /// **'BMI'**
+  String get progressBmi;
+
+  /// No description provided for @progressWeightTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight Trend'**
+  String get progressWeightTrend;
+
+  /// No description provided for @progressNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No weight data yet. Log your first entry!'**
+  String get progressNoData;
+
+  /// No description provided for @progressPeriod30.
+  ///
+  /// In en, this message translates to:
+  /// **'30 Days'**
+  String get progressPeriod30;
+
+  /// No description provided for @progressPeriod90.
+  ///
+  /// In en, this message translates to:
+  /// **'90 Days'**
+  String get progressPeriod90;
+
+  /// No description provided for @progressPeriod180.
+  ///
+  /// In en, this message translates to:
+  /// **'180 Days'**
+  String get progressPeriod180;
+
+  /// No description provided for @progressNutritionStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition Streak'**
+  String get progressNutritionStreak;
+
+  /// No description provided for @progressEntries.
+  ///
+  /// In en, this message translates to:
+  /// **'entries'**
+  String get progressEntries;
+
+  /// No description provided for @progressKg.
+  ///
+  /// In en, this message translates to:
+  /// **'kg'**
+  String get progressKg;
 }
 
 class _AppLocalizationsDelegate

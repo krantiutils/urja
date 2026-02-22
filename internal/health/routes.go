@@ -10,6 +10,8 @@ func (h *Handler) RegisterSelfRoutes(r chi.Router) {
 	r.Get("/", h.GetMetrics)
 	r.Post("/bmi", h.LogBMI)
 	r.Post("/measurements", h.LogMeasurements)
+	r.Post("/weight", h.QuickLogWeight)
+	r.Get("/weight-trend", h.GetWeightTrend)
 	r.Route("/photos", func(r chi.Router) {
 		r.Post("/", h.UploadPhoto)
 		r.Get("/", h.ListPhotos)

@@ -33,4 +33,7 @@ func (h *Handler) RegisterSelfRoutes(r chi.Router) {
 	r.Get("/workout-plan", h.GetMyPlan)
 	r.Get("/workout-logs", h.ListMyLogs)
 	r.Post("/workout-logs", h.CreateMyLog)
+	r.Get("/workout-templates", h.BrowseTemplates)
+	r.Post("/workout-plan", h.SelfAssignPlan)
+	r.Post("/workout-plan/recommend", h.RecommendPlan)
 }

@@ -5,6 +5,7 @@ import '../models/leaderboard.dart';
 import '../models/member.dart';
 import '../models/package.dart';
 import '../models/streak.dart';
+import '../models/weight.dart';
 import '../models/workout.dart';
 import 'api_client.dart';
 
@@ -126,5 +127,20 @@ class MemberService {
       'limit': limit.toString(),
     });
     return LeaderboardResponse.fromJson(response.data);
+  }
+
+  Future<HealthMetric> quickLogWeight(double weightKg) async {
+    final response = await _api.post('/members/me/health/weight', data: {
+      'weight_kg': weightKg,
+    });
+    return HealthMetric.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<WeightTrend> getWeightTrend({int days = 30}) async {
+    final response = await _api
+        .get('/members/me/health/weight-trend', queryParameters: {
+      'days': days,
+    });
+    return WeightTrend.fromJson(response.data as Map<String, dynamic>);
   }
 }

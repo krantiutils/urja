@@ -110,7 +110,7 @@ func (s *Service) checkInQR(ctx context.Context, userID, qrToken string) (*Check
 		return nil, fmt.Errorf("not a member of this organization")
 	}
 
-	return s.recordCheckIn(ctx, userID, payload.OrgID, "qr")
+	return s.RecordCheckIn(ctx, userID, payload.OrgID, "qr")
 }
 
 // checkInNFC verifies an NFC card and records a check-in.
@@ -131,7 +131,7 @@ func (s *Service) checkInNFC(ctx context.Context, userID, orgID, cardUID string)
 		return nil, fmt.Errorf("NFC card is not registered to this user")
 	}
 
-	return s.recordCheckIn(ctx, userID, orgID, "nfc")
+	return s.RecordCheckIn(ctx, userID, orgID, "nfc")
 }
 
 // ManualCheckIn allows staff to manually check in a member at an org.
@@ -156,11 +156,11 @@ func (s *Service) ManualCheckIn(ctx context.Context, staffUserID, memberUserID, 
 		return nil, fmt.Errorf("target user is not a member of this organization")
 	}
 
-	return s.recordCheckIn(ctx, memberUserID, orgID, "manual")
+	return s.RecordCheckIn(ctx, memberUserID, orgID, "manual")
 }
 
-// recordCheckIn inserts the attendance row and upserts the streak.
-func (s *Service) recordCheckIn(ctx context.Context, userID, orgID, method string) (*CheckInResult, error) {
+// RecordCheckIn inserts the attendance row and upserts the streak.
+func (s *Service) RecordCheckIn(ctx context.Context, userID, orgID, method string) (*CheckInResult, error) {
 	rec, err := s.repo.CheckIn(ctx, userID, orgID, method)
 	if err != nil {
 		return nil, fmt.Errorf("recording check-in: %w", err)

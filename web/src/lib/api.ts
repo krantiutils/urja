@@ -1,6 +1,8 @@
 import type {
   AuthTokens,
   ApiError,
+  Organization,
+  UpdateOrganizationRequest,
   OrgMemberList,
   OrgMember,
   CreateMemberRequest,
@@ -16,6 +18,8 @@ import type {
   StaffMember,
   CreateStaffRequest,
   UpdateStaffRequest,
+  ProfileUpdateRequest,
+  PrivacySettingsUpdate,
   MemberProfile,
   MemberAttendanceRecord,
   MemberStreak,
@@ -23,8 +27,37 @@ import type {
   HealthMetric,
   WorkoutLog,
   WorkoutPlan,
+  WorkoutTemplate,
+  WorkoutQuestionnaireInput,
+  FoodItem,
+  FoodLog,
+  MealTemplate,
+  NutritionGoal,
+  DailySummary,
+  WeeklySummaryDay,
+  DueList,
+  TransactionList,
+  AccountsSummary,
+  Notice,
+  Feedback,
+  NfcCard,
+  NfcDevice,
+  SmsBalance,
+  PackageSummaryItem,
+  ExpiringPackageEntry,
+  ExpiredPackageEntry,
   AttendanceCalendar,
   LeaderboardResponse,
+  WaterLog,
+  WaterDailySummary,
+  OnboardingInput,
+  ExerciseItem,
+  WorkoutProgram,
+  UserProgramEnrollment,
+  NutritionStreak,
+  DailyDashboard,
+  WeightTrend,
+  CreateCustomFoodInput,
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -91,6 +124,22 @@ class ApiClient {
     return this.request("/api/v1/auth/logout", {
       method: "POST",
       body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+  }
+
+  // --- Organization ---
+
+  async getOrg(orgId: string): Promise<Organization> {
+    return this.request(`/api/v1/gyms/${orgId}`);
+  }
+
+  async updateOrg(
+    orgId: string,
+    data: UpdateOrganizationRequest
+  ): Promise<Organization> {
+    return this.request(`/api/v1/orgs/${orgId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
     });
   }
 
@@ -259,6 +308,24 @@ class ApiClient {
     return this.request("/api/v1/members/me");
   }
 
+  async updateMyProfile(
+    data: ProfileUpdateRequest
+  ): Promise<{ message: string }> {
+    return this.request("/api/v1/members/me", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateMyPrivacy(
+    data: PrivacySettingsUpdate
+  ): Promise<{ message: string }> {
+    return this.request("/api/v1/members/me/privacy", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   async getMyAttendance(
     params: { limit?: number; offset?: number } = {}
   ): Promise<{ data: MemberAttendanceRecord[] }> {
@@ -304,8 +371,176 @@ class ApiClient {
     return this.request(`/api/v1/members/me/workout-logs${qs ? `?${qs}` : ""}`);
   }
 
-  async getMyWorkoutPlan(orgId: string): Promise<WorkoutPlan> {
-    return this.request(`/api/v1/members/me/workout-plan?organization_id=${orgId}`);
+  async getMyWorkoutPlan(orgId?: string): Promise<WorkoutPlan> {
+    const q = new URLSearchParams();
+    if (orgId) q.set("organization_id", orgId);
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/workout-plan${qs ? `?${qs}` : ""}`);
+  }
+
+  // --- Workout Planner ---
+
+  async browseTemplates(params: {
+    organization_id?: string;
+    goal?: string;
+    difficulty?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ data: WorkoutTemplate[] }> {
+    const q = new URLSearchParams();
+    if (params.organization_id) q.set("organization_id", params.organization_id);
+    if (params.goal) q.set("goal", params.goal);
+    if (params.difficulty) q.set("difficulty", params.difficulty);
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    return this.request(`/api/v1/members/me/workout-templates?${q.toString()}`);
+  }
+
+  async selfAssignPlan(data: {
+    organization_id?: string;
+    workout_template_id: string;
+  }): Promise<WorkoutPlan> {
+    return this.request("/api/v1/members/me/workout-plan", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async recommendPlan(data: WorkoutQuestionnaireInput): Promise<WorkoutPlan> {
+    return this.request("/api/v1/members/me/workout-plan/recommend", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // --- Nutrition ---
+
+  async searchFoods(params: {
+    organization_id?: string;
+    q?: string;
+    category?: string;
+    limit?: number;
+  }): Promise<{ data: FoodItem[] }> {
+    const q = new URLSearchParams();
+    if (params.organization_id) q.set("organization_id", params.organization_id);
+    if (params.q) q.set("q", params.q);
+    if (params.category) q.set("category", params.category);
+    if (params.limit) q.set("limit", String(params.limit));
+    return this.request(`/api/v1/members/me/foods?${q.toString()}`);
+  }
+
+  async getFoodItem(id: string): Promise<FoodItem> {
+    return this.request(`/api/v1/members/me/foods/${id}`);
+  }
+
+  async logFood(data: {
+    organization_id?: string;
+    food_item_id: string;
+    meal_type: string;
+    quantity_grams: number;
+    logged_date: string;
+    notes?: string;
+  }): Promise<FoodLog> {
+    return this.request("/api/v1/members/me/food-logs", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMyFoodLogs(params: {
+    organization_id?: string;
+    date?: string;
+    meal_type?: string;
+  }): Promise<{ data: FoodLog[] }> {
+    const q = new URLSearchParams();
+    if (params.organization_id) q.set("organization_id", params.organization_id);
+    if (params.date) q.set("date", params.date);
+    if (params.meal_type) q.set("meal_type", params.meal_type);
+    return this.request(`/api/v1/members/me/food-logs?${q.toString()}`);
+  }
+
+  async deleteFoodLog(id: string): Promise<{ message: string }> {
+    return this.request(`/api/v1/members/me/food-logs/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getDailySummary(params: {
+    organization_id?: string;
+    date: string;
+  }): Promise<DailySummary> {
+    const q = new URLSearchParams();
+    if (params.organization_id) q.set("organization_id", params.organization_id);
+    q.set("date", params.date);
+    return this.request(`/api/v1/members/me/nutrition/summary?${q.toString()}`);
+  }
+
+  async getWeeklySummary(params: {
+    organization_id?: string;
+    from: string;
+  }): Promise<{ data: WeeklySummaryDay[] }> {
+    const q = new URLSearchParams();
+    if (params.organization_id) q.set("organization_id", params.organization_id);
+    q.set("from", params.from);
+    return this.request(`/api/v1/members/me/nutrition/weekly?${q.toString()}`);
+  }
+
+  async setNutritionGoal(data: {
+    organization_id?: string;
+    weight_kg: number;
+    height_cm: number;
+    age: number;
+    gender: string;
+    activity_level: string;
+    goal_type: string;
+  }): Promise<NutritionGoal> {
+    return this.request("/api/v1/members/me/nutrition/goal", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getNutritionGoal(orgId?: string): Promise<NutritionGoal> {
+    const q = new URLSearchParams();
+    if (orgId) q.set("organization_id", orgId);
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/nutrition/goal${qs ? `?${qs}` : ""}`);
+  }
+
+  async createMealTemplate(data: {
+    organization_id?: string;
+    name: string;
+    name_ne?: string;
+    meal_type: string;
+    items: { food_item_id: string; quantity_grams: number }[];
+  }): Promise<MealTemplate> {
+    return this.request("/api/v1/members/me/meal-templates", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMyMealTemplates(orgId?: string): Promise<{ data: MealTemplate[] }> {
+    const q = new URLSearchParams();
+    if (orgId) q.set("organization_id", orgId);
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/meal-templates${qs ? `?${qs}` : ""}`);
+  }
+
+  async deleteMealTemplate(id: string): Promise<{ message: string }> {
+    return this.request(`/api/v1/members/me/meal-templates/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async logMealTemplate(
+    id: string,
+    data: { organization_id?: string; logged_date: string }
+  ): Promise<{ data: FoodLog[] }> {
+    return this.request(`/api/v1/members/me/meal-templates/${id}/log`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 
   async getMyAttendanceCalendar(
@@ -335,6 +570,424 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
+  }
+
+  // --- Dues ---
+
+  async listDues(
+    orgId: string,
+    params: { status?: string; search?: string; limit?: number; offset?: number } = {}
+  ): Promise<DueList> {
+    const q = new URLSearchParams();
+    if (params.status) q.set("status", params.status);
+    if (params.search) q.set("search", params.search);
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/dues${qs ? `?${qs}` : ""}`);
+  }
+
+  async payDue(
+    orgId: string,
+    dueId: string,
+    data: { amount: string; payment_method: string; payment_reference?: string }
+  ): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/dues/${dueId}/pay`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // --- Accounts / Transactions ---
+
+  async listTransactions(
+    orgId: string,
+    params: { category?: string; transaction_type?: string; from?: string; to?: string; limit?: number; offset?: number } = {}
+  ): Promise<TransactionList> {
+    const q = new URLSearchParams();
+    if (params.category) q.set("category", params.category);
+    if (params.transaction_type) q.set("transaction_type", params.transaction_type);
+    if (params.from) q.set("from", params.from);
+    if (params.to) q.set("to", params.to);
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/accounts${qs ? `?${qs}` : ""}`);
+  }
+
+  async createTransaction(
+    orgId: string,
+    data: { category: string; description: string; transaction_date: string; transaction_type: string; amount: string; payment_type: string; reference?: string }
+  ): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/accounts`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTransaction(
+    orgId: string,
+    id: string,
+    data: { category?: string; description?: string; transaction_date?: string; transaction_type?: string; amount?: string; payment_type?: string; reference?: string }
+  ): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/accounts/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTransaction(
+    orgId: string,
+    id: string
+  ): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/accounts/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getAccountsSummary(
+    orgId: string,
+    params: { from?: string; to?: string } = {}
+  ): Promise<AccountsSummary> {
+    const q = new URLSearchParams();
+    if (params.from) q.set("from", params.from);
+    if (params.to) q.set("to", params.to);
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/accounts/summary${qs ? `?${qs}` : ""}`);
+  }
+
+  // --- Notices ---
+
+  async listNotices(
+    orgId: string,
+    params: { limit?: number; offset?: number } = {}
+  ): Promise<{ data: Notice[]; total: number }> {
+    const q = new URLSearchParams();
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/notices${qs ? `?${qs}` : ""}`);
+  }
+
+  async createNotice(
+    orgId: string,
+    data: { title: string; title_ne?: string; content: string; content_ne?: string; is_active?: boolean }
+  ): Promise<Notice> {
+    return this.request(`/api/v1/orgs/${orgId}/notices`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateNotice(
+    orgId: string,
+    id: string,
+    data: { title?: string; title_ne?: string; content?: string; content_ne?: string; is_active?: boolean }
+  ): Promise<Notice> {
+    return this.request(`/api/v1/orgs/${orgId}/notices/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteNotice(
+    orgId: string,
+    id: string
+  ): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/notices/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  // --- Feedbacks ---
+
+  async listFeedbacks(
+    orgId: string,
+    params: { limit?: number; offset?: number } = {}
+  ): Promise<{ data: Feedback[]; total: number }> {
+    const q = new URLSearchParams();
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/feedbacks${qs ? `?${qs}` : ""}`);
+  }
+
+  async deleteFeedback(
+    orgId: string,
+    id: string
+  ): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/feedbacks/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  // --- NFC ---
+
+  async listNfcCards(
+    orgId: string,
+    params: { status?: string; limit?: number; offset?: number } = {}
+  ): Promise<{ data: NfcCard[]; total: number }> {
+    const q = new URLSearchParams();
+    if (params.status) q.set("status", params.status);
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/nfc-cards${qs ? `?${qs}` : ""}`);
+  }
+
+  async registerNfcCard(
+    orgId: string,
+    data: { card_number: string }
+  ): Promise<NfcCard> {
+    return this.request(`/api/v1/orgs/${orgId}/nfc-cards`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async assignNfcCard(
+    orgId: string,
+    cardId: string,
+    userId: string
+  ): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/nfc-cards/${cardId}/assign`, {
+      method: "PUT",
+      body: JSON.stringify({ user_id: userId }),
+    });
+  }
+
+  async unassignNfcCard(
+    orgId: string,
+    cardId: string
+  ): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/nfc-cards/${cardId}/unassign`, {
+      method: "PUT",
+    });
+  }
+
+  async listNfcDevices(
+    orgId: string
+  ): Promise<{ data: NfcDevice[] }> {
+    return this.request(`/api/v1/orgs/${orgId}/nfc-devices`);
+  }
+
+  // --- SMS ---
+
+  async getSmsBalance(orgId: string): Promise<SmsBalance> {
+    return this.request(`/api/v1/orgs/${orgId}/sms/balance`);
+  }
+
+  async sendSms(
+    orgId: string,
+    data: { message: string; member_ids: string[] }
+  ): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/sms/send`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getSmsHistory(
+    orgId: string,
+    params: { limit?: number; offset?: number } = {}
+  ): Promise<{ data: unknown[]; total: number }> {
+    const q = new URLSearchParams();
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/sms/history${qs ? `?${qs}` : ""}`);
+  }
+
+  // --- Dashboard Summary ---
+
+  async getPackageSummary(
+    orgId: string
+  ): Promise<PackageSummaryItem[]> {
+    return this.request(`/api/v1/orgs/${orgId}/packages/summary`);
+  }
+
+  async getExpiringPackages(
+    orgId: string,
+    params: { days?: number; limit?: number; offset?: number } = {}
+  ): Promise<{ data: ExpiringPackageEntry[] }> {
+    const q = new URLSearchParams();
+    if (params.days) q.set("days", String(params.days));
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/packages/expiring${qs ? `?${qs}` : ""}`);
+  }
+
+  async getExpiredPackages(
+    orgId: string,
+    params: { limit?: number; offset?: number } = {}
+  ): Promise<{ data: ExpiredPackageEntry[] }> {
+    const q = new URLSearchParams();
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/packages/expired${qs ? `?${qs}` : ""}`);
+  }
+
+  // --- Onboarding ---
+
+  async submitOnboarding(data: OnboardingInput): Promise<MemberProfile> {
+    return this.request("/api/v1/members/me/onboarding", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async joinGym(orgId: string): Promise<{ message: string }> {
+    return this.request("/api/v1/members/me/join-gym", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId }),
+    });
+  }
+
+  async leaveGym(orgId: string): Promise<{ message: string }> {
+    return this.request("/api/v1/members/me/leave-gym", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId }),
+    });
+  }
+
+  // --- Water Tracking ---
+
+  async logWater(data: {
+    amount_ml: number;
+    date?: string;
+  }): Promise<WaterLog> {
+    return this.request("/api/v1/members/me/water-logs", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getWaterLogs(date: string): Promise<{ data: WaterLog[] }> {
+    return this.request(`/api/v1/members/me/water-logs?date=${date}`);
+  }
+
+  async deleteWaterLog(id: string): Promise<{ message: string }> {
+    return this.request(`/api/v1/members/me/water-logs/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getWaterSummary(date: string): Promise<WaterDailySummary> {
+    return this.request(`/api/v1/members/me/water-logs/summary?date=${date}`);
+  }
+
+  // --- Exercise Library ---
+
+  async listExercises(params?: {
+    type?: string;
+    equipment?: string;
+    muscle_group?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ data: ExerciseItem[] }> {
+    const q = new URLSearchParams();
+    if (params?.type) q.set("type", params.type);
+    if (params?.equipment) q.set("equipment", params.equipment);
+    if (params?.muscle_group) q.set("muscle_group", params.muscle_group);
+    if (params?.limit) q.set("limit", String(params.limit));
+    if (params?.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/exercises${qs ? `?${qs}` : ""}`);
+  }
+
+  async getExercise(id: string): Promise<ExerciseItem> {
+    return this.request(`/api/v1/members/me/exercises/${id}`);
+  }
+
+  async listPrograms(params?: {
+    type?: string;
+    difficulty?: string;
+    equipment?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ data: WorkoutProgram[] }> {
+    const q = new URLSearchParams();
+    if (params?.type) q.set("type", params.type);
+    if (params?.difficulty) q.set("difficulty", params.difficulty);
+    if (params?.equipment) q.set("equipment", params.equipment);
+    if (params?.limit) q.set("limit", String(params.limit));
+    if (params?.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/programs${qs ? `?${qs}` : ""}`);
+  }
+
+  async getProgram(id: string): Promise<WorkoutProgram> {
+    return this.request(`/api/v1/members/me/programs/${id}`);
+  }
+
+  async enrollInProgram(programId: string): Promise<UserProgramEnrollment> {
+    return this.request(`/api/v1/members/me/programs/${programId}/enroll`, {
+      method: "POST",
+    });
+  }
+
+  async getCurrentProgram(): Promise<UserProgramEnrollment> {
+    return this.request(`/api/v1/members/me/programs/current`);
+  }
+
+  async completeProgramDay(): Promise<UserProgramEnrollment> {
+    return this.request(`/api/v1/members/me/programs/current/complete-day`, {
+      method: "POST",
+    });
+  }
+
+  // --- Custom Foods + Barcode ---
+
+  async createCustomFood(input: CreateCustomFoodInput): Promise<FoodItem> {
+    return this.request(`/api/v1/members/me/foods`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  async lookupBarcode(barcode: string): Promise<FoodItem> {
+    return this.request(`/api/v1/members/me/foods/barcode/${barcode}`);
+  }
+
+  // --- Nutrition Streak ---
+
+  async getNutritionStreak(): Promise<NutritionStreak> {
+    return this.request(`/api/v1/members/me/nutrition/streak`);
+  }
+
+  // --- Daily Dashboard ---
+
+  async getDailyDashboard(params?: {
+    organization_id?: string;
+    date?: string;
+  }): Promise<DailyDashboard> {
+    const q = new URLSearchParams();
+    if (params?.organization_id) q.set("organization_id", params.organization_id);
+    if (params?.date) q.set("date", params.date);
+    const qs = q.toString();
+    return this.request(`/api/v1/members/me/nutrition/daily-dashboard${qs ? `?${qs}` : ""}`);
+  }
+
+  // --- Weight Trend ---
+
+  async quickLogWeight(weightKg: number): Promise<HealthMetric> {
+    return this.request(`/api/v1/members/me/health/weight`, {
+      method: "POST",
+      body: JSON.stringify({ weight_kg: weightKg }),
+    });
+  }
+
+  async getWeightTrend(days?: number): Promise<WeightTrend> {
+    const q = days ? `?days=${days}` : "";
+    return this.request(`/api/v1/members/me/health/weight-trend${q}`);
+  }
+
+  // --- QR Code ---
+
+  getQrCodeUrl(orgId: string): string {
+    return `${this.baseUrl}/api/v1/orgs/${orgId}/qr-code`;
   }
 }
 

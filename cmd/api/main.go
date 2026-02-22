@@ -19,19 +19,23 @@ import (
 	"github.com/urja-gym/urja/internal/billing"
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/dues"
+	"github.com/urja-gym/urja/internal/exercise"
 	"github.com/urja-gym/urja/internal/feedback"
 	"github.com/urja-gym/urja/internal/guide"
 	"github.com/urja-gym/urja/internal/health"
 	"github.com/urja-gym/urja/internal/leaderboard"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/nfc"
+	"github.com/urja-gym/urja/internal/nutrition"
 	"github.com/urja-gym/urja/internal/notice"
+	"github.com/urja-gym/urja/internal/onboarding"
 	"github.com/urja-gym/urja/internal/org"
 	"github.com/urja-gym/urja/internal/packages"
 	"github.com/urja-gym/urja/internal/qrcode"
 	"github.com/urja-gym/urja/internal/smsapi"
 	"github.com/urja-gym/urja/internal/staff"
 	"github.com/urja-gym/urja/internal/subscription"
+	"github.com/urja-gym/urja/internal/water"
 	"github.com/urja-gym/urja/internal/workout"
 	"github.com/urja-gym/urja/pkg/database"
 	"github.com/urja-gym/urja/pkg/khalti"
@@ -117,7 +121,7 @@ func main() {
 
 	// NFC
 	nfcRepo := nfc.NewRepository(pool)
-	nfcService := nfc.NewService(nfcRepo, logger)
+	nfcService := nfc.NewService(nfcRepo, attendanceService, logger)
 	nfcHandler := nfc.NewHandler(nfcService, logger)
 
 	// Activity Log
@@ -191,10 +195,30 @@ func main() {
 	guideService := guide.NewService(guideRepo, logger)
 	guideHandler := guide.NewHandler(guideService, logger)
 
+	// Onboarding
+	onboardingRepo := onboarding.NewRepository(pool)
+	onboardingService := onboarding.NewService(onboardingRepo, logger)
+	onboardingHandler := onboarding.NewHandler(onboardingService, logger)
+
 	// Workout
 	workoutRepo := workout.NewRepository(pool)
 	workoutService := workout.NewService(workoutRepo, logger)
 	workoutHandler := workout.NewHandler(workoutService, logger)
+
+	// Exercise
+	exerciseRepo := exercise.NewRepository(pool)
+	exerciseService := exercise.NewService(exerciseRepo, logger)
+	exerciseHandler := exercise.NewHandler(exerciseService, logger)
+
+	// Nutrition
+	nutritionRepo := nutrition.NewRepository(pool)
+	nutritionService := nutrition.NewService(nutritionRepo, logger)
+	nutritionHandler := nutrition.NewHandler(nutritionService, logger)
+
+	// Water
+	waterRepo := water.NewRepository(pool)
+	waterService := water.NewService(waterRepo, logger)
+	waterHandler := water.NewHandler(waterService, logger)
 
 	// Router
 	r := chi.NewRouter()
@@ -246,6 +270,11 @@ func main() {
 			guideHandler.RegisterPublicRoutes(r)
 		})
 
+		// Device routes (no JWT — authenticated via X-Device-Key header)
+		r.Route("/devices", func(r chi.Router) {
+			nfcHandler.RegisterDeviceRoutes(r)
+		})
+
 		// Authenticated routes
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
@@ -258,10 +287,12 @@ func main() {
 
 			r.Route("/members/me", func(r chi.Router) {
 				memberHandler.RegisterSelfRoutes(r)
+				onboardingHandler.RegisterSelfRoutes(r)
 				workoutHandler.RegisterSelfRoutes(r)
-				r.Route("/attendance", func(r chi.Router) {
-					attendanceHandler.RegisterSelfRoutes(r)
-				})
+				exerciseHandler.RegisterSelfRoutes(r)
+				nutritionHandler.RegisterSelfRoutes(r)
+				waterHandler.RegisterSelfRoutes(r)
+				attendanceHandler.RegisterSelfRoutes(r)
 				r.Route("/packages", func(r chi.Router) {
 					pkgHandler.RegisterSelfRoutes(r)
 				})

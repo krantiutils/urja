@@ -1,0 +1,1 @@
+ALTER TABLE nfc_devices DROP COLUMN IF EXISTS api_key;

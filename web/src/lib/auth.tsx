@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { User, JWTPayload } from "@/types";
+import type { User, UserType, JWTPayload } from "@/types";
 import { api, ApiRequestError } from "./api";
 
 interface AuthState {
@@ -19,7 +19,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (phone: string) => Promise<void>;
-  verifyOtp: (phone: string, otp: string) => Promise<void>;
+  verifyOtp: (phone: string, otp: string) => Promise<{ is_new_user: boolean; onboarding_completed: boolean }>;
   logout: () => Promise<void>;
 }
 
@@ -54,6 +54,26 @@ function getUserFromToken(token: string): User | null {
   };
 }
 
+async function resolveOrgDetails(user: User): Promise<User> {
+  try {
+    const profile = await api.getMyProfile();
+    const orgs = profile.organizations ?? [];
+    const resolved: User = {
+      ...user,
+      user_type: profile.user_type as UserType | undefined,
+      onboarding_completed: profile.onboarding_completed,
+    };
+    if (orgs.length > 0) {
+      resolved.org_id = user.org_id || orgs[0].org_id;
+      resolved.org_name = orgs[0].org_name;
+    }
+    return resolved;
+  } catch {
+    // If profile fetch fails, return user as-is
+  }
+  return user;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -75,11 +95,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Try refreshing
       api
         .refreshToken(refreshToken)
-        .then((tokens) => {
+        .then(async (tokens) => {
           localStorage.setItem("access_token", tokens.access_token);
           localStorage.setItem("refresh_token", tokens.refresh_token);
           const user = getUserFromToken(tokens.access_token);
-          setState({ user, isLoading: false, isAuthenticated: !!user });
+          if (!user) {
+            setState({ user: null, isLoading: false, isAuthenticated: false });
+            return;
+          }
+          const resolved = await resolveOrgDetails(user);
+          setState({ user: resolved, isLoading: false, isAuthenticated: true });
         })
         .catch(() => {
           localStorage.removeItem("access_token");
@@ -88,7 +113,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
     } else {
       const user = getUserFromToken(accessToken);
-      setState({ user, isLoading: false, isAuthenticated: !!user });
+      if (!user) {
+        setState({ user: null, isLoading: false, isAuthenticated: false });
+        return;
+      }
+      resolveOrgDetails(user).then((resolved) => {
+        setState({ user: resolved, isLoading: false, isAuthenticated: true });
+      });
     }
   }, []);
 
@@ -115,7 +146,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("access_token", tokens.access_token);
         localStorage.setItem("refresh_token", tokens.refresh_token);
         const user = getUserFromToken(tokens.access_token);
-        setState({ user, isLoading: false, isAuthenticated: !!user });
+        if (user) {
+          const resolved = await resolveOrgDetails(user);
+          setState({ user: resolved, isLoading: false, isAuthenticated: true });
+        } else {
+          setState({ user: null, isLoading: false, isAuthenticated: false });
+        }
       } catch {
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
@@ -135,7 +171,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("access_token", tokens.access_token);
     localStorage.setItem("refresh_token", tokens.refresh_token);
     const user = getUserFromToken(tokens.access_token);
-    setState({ user, isLoading: false, isAuthenticated: !!user });
+    if (!user) {
+      setState({ user: null, isLoading: false, isAuthenticated: false });
+      return { is_new_user: false, onboarding_completed: false };
+    }
+    // Enrich user with onboarding status from token response
+    const enrichedUser: User = {
+      ...user,
+      onboarding_completed: tokens.onboarding_completed,
+    };
+    const resolved = await resolveOrgDetails(enrichedUser);
+    setState({ user: resolved, isLoading: false, isAuthenticated: true });
+    return {
+      is_new_user: tokens.is_new_user,
+      onboarding_completed: tokens.onboarding_completed,
+    };
   }, []);
 
   const logout = useCallback(async () => {

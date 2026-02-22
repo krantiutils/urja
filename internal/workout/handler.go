@@ -205,10 +205,6 @@ func (h *Handler) GetMyPlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgID := r.URL.Query().Get("organization_id")
-	if orgID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization_id query parameter is required"})
-		return
-	}
 
 	plan, err := h.service.GetPlan(r.Context(), userID, orgID)
 	if err != nil {
@@ -253,10 +249,6 @@ func (h *Handler) ListMyLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	orgID := r.URL.Query().Get("organization_id")
-	if orgID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organization_id query parameter is required"})
-		return
-	}
 
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
@@ -289,6 +281,87 @@ func (h *Handler) ListMyLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{"data": logs})
+}
+
+// --- Browse, self-assign, and recommend handlers ---
+
+// BrowseTemplates handles GET /api/v1/members/me/workout-templates
+func (h *Handler) BrowseTemplates(w http.ResponseWriter, r *http.Request) {
+	orgID := r.URL.Query().Get("organization_id")
+
+	goal := r.URL.Query().Get("goal")
+	difficulty := r.URL.Query().Get("difficulty")
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+
+	templates, err := h.service.BrowseTemplates(r.Context(), orgID, goal, difficulty, limit, offset)
+	if err != nil {
+		h.logger.Error("failed to browse templates", "error", err, "org_id", orgID)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"data": templates})
+}
+
+type selfAssignPlanRequest struct {
+	OrgID             string `json:"organization_id"`
+	WorkoutTemplateID string `json:"workout_template_id"`
+}
+
+// SelfAssignPlan handles POST /api/v1/members/me/workout-plan
+func (h *Handler) SelfAssignPlan(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	var req selfAssignPlanRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	p, err := h.service.SelfAssignPlan(r.Context(), userID, req.OrgID, req.WorkoutTemplateID)
+	if err != nil {
+		h.logger.Error("failed to self-assign plan", "error", err, "user_id", userID, "org_id", req.OrgID)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, p)
+}
+
+type recommendPlanRequest struct {
+	OrgID       string `json:"organization_id"`
+	Goal        string `json:"goal"`
+	Experience  string `json:"experience"`
+	DaysPerWeek string `json:"days_per_week"`
+}
+
+// RecommendPlan handles POST /api/v1/members/me/workout-plan/recommend
+func (h *Handler) RecommendPlan(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	var req recommendPlanRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	p, err := h.service.RecommendPlan(r.Context(), userID, req.OrgID, req.Goal, req.Experience, req.DaysPerWeek)
+	if err != nil {
+		h.logger.Error("failed to recommend plan", "error", err, "user_id", userID, "org_id", req.OrgID)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, p)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

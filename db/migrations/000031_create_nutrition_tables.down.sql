@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS nutrition_goals;
+DROP TABLE IF EXISTS meal_templates;
+DROP TABLE IF EXISTS food_logs;
+DROP TABLE IF EXISTS food_items;
+DROP EXTENSION IF EXISTS pg_trgm;

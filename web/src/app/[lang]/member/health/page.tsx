@@ -24,11 +24,11 @@ interface MeasurementValues {
   waist_hip_ratio?: number;
 }
 
-function getBmiCategory(bmi: number): string {
-  if (bmi < 18.5) return "Underweight";
-  if (bmi < 25) return "Normal";
-  if (bmi < 30) return "Overweight";
-  return "Obese";
+function getBmiCategoryKey(bmi: number): "underweight" | "normal" | "overweight" | "obese" {
+  if (bmi < 18.5) return "underweight";
+  if (bmi < 25) return "normal";
+  if (bmi < 30) return "overweight";
+  return "obese";
 }
 
 export default function MemberHealthPage({
@@ -80,7 +80,7 @@ export default function MemberHealthPage({
     <div className="space-y-6">
       {/* Page title */}
       <h1 className="text-2xl font-semibold text-fg">
-        {t.memberPages.health}
+        {t.memberPages.healthTitle}
       </h1>
 
       {!hasData ? (
@@ -107,25 +107,31 @@ export default function MemberHealthPage({
               <div className="p-5">
                 <div className="flex items-baseline gap-3 mb-4">
                   <span className="text-3xl font-bold text-fg">
-                    {bmi.bmi?.toFixed(1)}
+                    {bmi.bmi != null ? bmi.bmi.toFixed(1) : "—"}
                   </span>
                   <span className="text-sm text-accent font-medium">
-                    {bmi.category || getBmiCategory(bmi.bmi)}
+                    {bmi.bmi != null
+                      ? t.memberPages.health[getBmiCategoryKey(bmi.bmi)]
+                      : "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-fg-muted">Height</span>
-                    <p className="text-fg font-medium">{bmi.height_cm} cm</p>
+                    <span className="text-fg-muted">{t.memberPages.health.height}</span>
+                    <p className="text-fg font-medium">
+                      {bmi.height_cm != null ? `${bmi.height_cm} cm` : "—"}
+                    </p>
                   </div>
                   <div>
-                    <span className="text-fg-muted">Weight</span>
-                    <p className="text-fg font-medium">{bmi.weight_kg} kg</p>
+                    <span className="text-fg-muted">{t.memberPages.health.weight}</span>
+                    <p className="text-fg font-medium">
+                      {bmi.weight_kg != null ? `${bmi.weight_kg} kg` : "—"}
+                    </p>
                   </div>
                 </div>
                 {bmiMetric?.recorded_at && (
                   <p className="text-xs text-fg-muted mt-4">
-                    Recorded{" "}
+                    {t.memberPages.health.recorded}{" "}
                     {new Date(bmiMetric.recorded_at).toLocaleDateString()}
                   </p>
                 )}
@@ -145,7 +151,7 @@ export default function MemberHealthPage({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                   {measurements.chest_cm != null && (
                     <div>
-                      <span className="text-fg-muted">Chest</span>
+                      <span className="text-fg-muted">{t.memberPages.health.chest}</span>
                       <p className="text-fg font-medium">
                         {measurements.chest_cm} cm
                       </p>
@@ -153,7 +159,7 @@ export default function MemberHealthPage({
                   )}
                   {measurements.waist_cm != null && (
                     <div>
-                      <span className="text-fg-muted">Waist</span>
+                      <span className="text-fg-muted">{t.memberPages.health.waist}</span>
                       <p className="text-fg font-medium">
                         {measurements.waist_cm} cm
                       </p>
@@ -161,7 +167,7 @@ export default function MemberHealthPage({
                   )}
                   {measurements.hips_cm != null && (
                     <div>
-                      <span className="text-fg-muted">Hips</span>
+                      <span className="text-fg-muted">{t.memberPages.health.hips}</span>
                       <p className="text-fg font-medium">
                         {measurements.hips_cm} cm
                       </p>
@@ -169,7 +175,7 @@ export default function MemberHealthPage({
                   )}
                   {measurements.left_arm_cm != null && (
                     <div>
-                      <span className="text-fg-muted">Left Arm</span>
+                      <span className="text-fg-muted">{t.memberPages.health.leftArm}</span>
                       <p className="text-fg font-medium">
                         {measurements.left_arm_cm} cm
                       </p>
@@ -177,7 +183,7 @@ export default function MemberHealthPage({
                   )}
                   {measurements.right_arm_cm != null && (
                     <div>
-                      <span className="text-fg-muted">Right Arm</span>
+                      <span className="text-fg-muted">{t.memberPages.health.rightArm}</span>
                       <p className="text-fg font-medium">
                         {measurements.right_arm_cm} cm
                       </p>
@@ -185,7 +191,7 @@ export default function MemberHealthPage({
                   )}
                   {measurements.left_thigh_cm != null && (
                     <div>
-                      <span className="text-fg-muted">Left Thigh</span>
+                      <span className="text-fg-muted">{t.memberPages.health.leftThigh}</span>
                       <p className="text-fg font-medium">
                         {measurements.left_thigh_cm} cm
                       </p>
@@ -193,7 +199,7 @@ export default function MemberHealthPage({
                   )}
                   {measurements.right_thigh_cm != null && (
                     <div>
-                      <span className="text-fg-muted">Right Thigh</span>
+                      <span className="text-fg-muted">{t.memberPages.health.rightThigh}</span>
                       <p className="text-fg font-medium">
                         {measurements.right_thigh_cm} cm
                       </p>
@@ -201,7 +207,7 @@ export default function MemberHealthPage({
                   )}
                   {measurements.waist_hip_ratio != null && (
                     <div>
-                      <span className="text-fg-muted">WHR</span>
+                      <span className="text-fg-muted">{t.memberPages.health.whr}</span>
                       <p className="text-fg font-medium">
                         {measurements.waist_hip_ratio.toFixed(2)}
                       </p>
@@ -210,7 +216,7 @@ export default function MemberHealthPage({
                 </div>
                 {measurementMetric?.recorded_at && (
                   <p className="text-xs text-fg-muted mt-4">
-                    Recorded{" "}
+                    {t.memberPages.health.recorded}{" "}
                     {new Date(
                       measurementMetric.recorded_at
                     ).toLocaleDateString()}

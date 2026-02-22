@@ -1,16 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getDictionary } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { api, ApiRequestError } from "@/lib/api";
-import type { Locale, OrgAttendance } from "@/types";
+import type { Locale, OrgAttendance, OrgMember } from "@/types";
 import {
   CalendarCheck,
   UserPlus,
   X,
   Loader2,
   Calendar,
+  Search,
+  ChevronDown,
 } from "lucide-react";
 
 type MethodFilter = "all" | "qr" | "nfc" | "manual";
@@ -65,6 +67,10 @@ export default function AttendancePage({
   const { user } = useAuth();
 
   const [records, setRecords] = useState<OrgAttendance[]>([]);
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [memberNameMap, setMemberNameMap] = useState<Map<string, string>>(
+    new Map()
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [methodFilter, setMethodFilter] = useState<MethodFilter>("all");
@@ -78,15 +84,34 @@ export default function AttendancePage({
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [checkInError, setCheckInError] = useState<string | null>(null);
 
+  // Member picker state
+  const [memberSearch, setMemberSearch] = useState("");
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [selectedMemberName, setSelectedMemberName] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const orgId = user?.org_id;
 
-  const fetchAttendance = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await api.listAttendance(orgId, { limit: 100 });
-      setRecords(res.data ?? []);
+      const [attendanceRes, membersRes] = await Promise.all([
+        api.listAttendance(orgId, { limit: 100 }),
+        api.listMembers(orgId, { limit: 200 }),
+      ]);
+      setRecords(attendanceRes.data ?? []);
+
+      const membersList = membersRes.data ?? [];
+      setMembers(membersList);
+
+      const nameMap = new Map<string, string>();
+      for (const m of membersList) {
+        nameMap.set(m.id, m.name);
+      }
+      setMemberNameMap(nameMap);
     } catch (err) {
       setError(
         err instanceof ApiRequestError ? err.message : t.common.error
@@ -97,8 +122,22 @@ export default function AttendancePage({
   }, [orgId, t.common.error]);
 
   useEffect(() => {
-    fetchAttendance();
-  }, [fetchAttendance]);
+    fetchData();
+  }, [fetchData]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowMemberDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Filter by method and date
   const filtered = records.filter((r) => {
@@ -113,16 +152,41 @@ export default function AttendancePage({
 
   const todayCount = records.filter((r) => isToday(r.check_in_at)).length;
 
+  // Filtered members for the picker dropdown
+  const filteredMembers = memberSearch
+    ? members.filter(
+        (m) =>
+          m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+          m.phone.includes(memberSearch)
+      )
+    : members;
+
+  const handleSelectMember = (member: OrgMember) => {
+    setCheckInMemberId(member.id);
+    setSelectedMemberName(member.name);
+    setMemberSearch("");
+    setShowMemberDropdown(false);
+  };
+
+  const handleClearMember = () => {
+    setCheckInMemberId("");
+    setSelectedMemberName("");
+    setMemberSearch("");
+    setShowMemberDropdown(false);
+  };
+
   const handleManualCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orgId) return;
+    if (!orgId || !checkInMemberId) return;
     setCheckInLoading(true);
     setCheckInError(null);
     try {
       await api.manualCheckIn(orgId, { member_id: checkInMemberId });
       setShowCheckIn(false);
       setCheckInMemberId("");
-      fetchAttendance();
+      setSelectedMemberName("");
+      setMemberSearch("");
+      fetchData();
     } catch (err) {
       setCheckInError(
         err instanceof ApiRequestError ? err.message : t.common.error
@@ -262,7 +326,7 @@ export default function AttendancePage({
                     className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
                   >
                     <td className="px-5 py-3 text-fg">
-                      {record.member_name ?? record.user_id}
+                      {memberNameMap.get(record.user_id) ?? record.user_id}
                     </td>
                     <td className="px-5 py-3 text-fg-muted font-mono text-xs">
                       {formatDate(record.check_in_at)}
@@ -290,7 +354,11 @@ export default function AttendancePage({
                 {t.attendance.manualCheckIn}
               </h2>
               <button
-                onClick={() => setShowCheckIn(false)}
+                onClick={() => {
+                  setShowCheckIn(false);
+                  handleClearMember();
+                  setCheckInError(null);
+                }}
                 className="p-1 rounded-lg hover:bg-surface text-fg-muted transition-colors"
               >
                 <X className="w-4 h-4" />
@@ -306,26 +374,95 @@ export default function AttendancePage({
                 <label className="block text-xs text-fg-muted mb-1.5">
                   {t.attendance.checkInMember}
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={checkInMemberId}
-                  onChange={(e) => setCheckInMemberId(e.target.value)}
-                  placeholder={t.attendance.memberIdPlaceholder}
-                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
-                />
+
+                {/* Searchable member picker */}
+                <div ref={dropdownRef} className="relative">
+                  {selectedMemberName ? (
+                    /* Selected member display */
+                    <div className="w-full px-3 py-2.5 bg-input-bg border border-accent/30 rounded-xl text-sm text-fg flex items-center justify-between">
+                      <span>{selectedMemberName}</span>
+                      <button
+                        type="button"
+                        onClick={handleClearMember}
+                        className="p-0.5 rounded hover:bg-surface text-fg-muted transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    /* Search input */
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={memberSearch}
+                        onChange={(e) => {
+                          setMemberSearch(e.target.value);
+                          setShowMemberDropdown(true);
+                        }}
+                        onFocus={() => setShowMemberDropdown(true)}
+                        placeholder={t.members?.searchPlaceholder ?? "Search by name or phone..."}
+                        className="w-full pl-9 pr-8 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                      />
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted pointer-events-none" />
+                    </div>
+                  )}
+
+                  {/* Dropdown */}
+                  {showMemberDropdown && !selectedMemberName && (
+                    <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-bg-elevated border border-white/[0.06] rounded-xl shadow-card">
+                      {filteredMembers.length === 0 ? (
+                        <div className="px-3 py-3 text-sm text-fg-muted text-center">
+                          {t.members?.noMembers ?? "No members found"}
+                        </div>
+                      ) : (
+                        filteredMembers.map((member) => (
+                          <button
+                            key={member.id}
+                            type="button"
+                            onClick={() => handleSelectMember(member)}
+                            className="w-full text-left px-3 py-2.5 hover:bg-surface transition-colors flex items-center justify-between gap-2 border-b border-white/[0.03] last:border-0"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm text-fg truncate">
+                                {member.name}
+                              </p>
+                              <p className="text-xs text-fg-muted font-mono">
+                                {member.phone}
+                              </p>
+                            </div>
+                            <span
+                              className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono uppercase border ${
+                                member.status === "active"
+                                  ? "bg-accent/10 text-accent border-accent/20"
+                                  : "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                              }`}
+                            >
+                              {member.status}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowCheckIn(false)}
+                  onClick={() => {
+                    setShowCheckIn(false);
+                    handleClearMember();
+                    setCheckInError(null);
+                  }}
                   className="flex-1 px-4 py-2.5 bg-surface border border-white/[0.06] text-fg text-sm rounded-xl hover:bg-surface-hover transition-colors"
                 >
                   {t.common.cancel}
                 </button>
                 <button
                   type="submit"
-                  disabled={checkInLoading}
+                  disabled={checkInLoading || !checkInMemberId}
                   className="flex-1 px-4 py-2.5 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {checkInLoading && (

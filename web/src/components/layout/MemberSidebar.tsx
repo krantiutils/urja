@@ -10,6 +10,10 @@ import {
   Package,
   Heart,
   Dumbbell,
+  Apple,
+  TrendingUp,
+  BookOpen,
+  ClipboardList,
   X,
 } from "lucide-react";
 
@@ -27,6 +31,10 @@ function buildNavItems(t: Dictionary, locale: Locale): NavItem[] {
     { label: t.memberNav.myPackages, href: `${base}/packages`, icon: <Package className="w-4 h-4" /> },
     { label: t.memberNav.myHealth, href: `${base}/health`, icon: <Heart className="w-4 h-4" /> },
     { label: t.memberNav.myWorkouts, href: `${base}/workouts`, icon: <Dumbbell className="w-4 h-4" /> },
+    { label: t.memberNav.myNutrition, href: `${base}/nutrition`, icon: <Apple className="w-4 h-4" /> },
+    { label: t.memberNav.myExercises, href: `${base}/exercises`, icon: <BookOpen className="w-4 h-4" /> },
+    { label: t.memberNav.myPrograms, href: `${base}/programs`, icon: <ClipboardList className="w-4 h-4" /> },
+    { label: t.memberNav.myProgress, href: `${base}/progress`, icon: <TrendingUp className="w-4 h-4" /> },
   ];
 }
 

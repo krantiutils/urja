@@ -103,29 +103,37 @@ func (s *Service) RequestOTP(ctx context.Context, phone string) error {
 	return nil
 }
 
+// VerifyOTPResult contains the result of OTP verification.
+type VerifyOTPResult struct {
+	AccessToken         string `json:"access_token"`
+	RefreshToken        string `json:"refresh_token"`
+	IsNewUser           bool   `json:"is_new_user"`
+	OnboardingCompleted bool   `json:"onboarding_completed"`
+}
+
 // VerifyOTP verifies the OTP against the stored hash and issues tokens.
 // It enforces max attempts per verification window.
-func (s *Service) VerifyOTP(ctx context.Context, phone, otp string) (accessToken, refreshToken string, err error) {
+func (s *Service) VerifyOTP(ctx context.Context, phone, otp string) (*VerifyOTPResult, error) {
 	phone = sms.NormalizePhone(phone)
 
 	// Check attempt count
 	attempts, err := s.repo.IncrementOTPAttempts(ctx, phone, s.cfg.OTPExpiry)
 	if err != nil {
-		return "", "", fmt.Errorf("checking OTP attempts: %w", err)
+		return nil, fmt.Errorf("checking OTP attempts: %w", err)
 	}
 	if attempts > int64(s.cfg.OTPMaxAttempts) {
-		return "", "", fmt.Errorf("too many OTP attempts")
+		return nil, fmt.Errorf("too many OTP attempts")
 	}
 
 	// Get stored hash
 	storedHash, err := s.repo.GetOTPHash(ctx, phone)
 	if err != nil {
-		return "", "", fmt.Errorf("OTP expired or not found")
+		return nil, fmt.Errorf("OTP expired or not found")
 	}
 
 	// Verify
 	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(otp)); err != nil {
-		return "", "", fmt.Errorf("invalid OTP")
+		return nil, fmt.Errorf("invalid OTP")
 	}
 
 	// OTP verified — clean up
@@ -134,29 +142,43 @@ func (s *Service) VerifyOTP(ctx context.Context, phone, otp string) (accessToken
 	}
 
 	// Find or create user
-	userID, role, err := s.repo.FindOrCreateUserByPhone(ctx, phone)
+	userID, role, isNew, err := s.repo.FindOrCreateUserByPhone(ctx, phone)
 	if err != nil {
-		return "", "", fmt.Errorf("finding user: %w", err)
+		return nil, fmt.Errorf("finding user: %w", err)
+	}
+
+	// Check onboarding status
+	var onboardingCompleted bool
+	if !isNew {
+		onboardingCompleted, err = s.repo.GetUserOnboardingStatus(ctx, userID)
+		if err != nil {
+			s.logger.Warn("failed to get onboarding status, defaulting to false", "error", err)
+		}
 	}
 
 	// Issue tokens (PRD: tokens only issued AFTER OTP verification)
-	accessToken, err = s.generateAccessToken(userID, phone, role)
+	accessToken, err := s.generateAccessToken(userID, phone, role)
 	if err != nil {
-		return "", "", fmt.Errorf("generating access token: %w", err)
+		return nil, fmt.Errorf("generating access token: %w", err)
 	}
 
 	refreshToken, tokenID, err := s.generateRefreshToken(userID)
 	if err != nil {
-		return "", "", fmt.Errorf("generating refresh token: %w", err)
+		return nil, fmt.Errorf("generating refresh token: %w", err)
 	}
 
 	// Store refresh token in Redis for revocation tracking
 	if err := s.repo.StoreRefreshToken(ctx, userID, tokenID, s.cfg.RefreshTokenExpiry); err != nil {
-		return "", "", fmt.Errorf("storing refresh token: %w", err)
+		return nil, fmt.Errorf("storing refresh token: %w", err)
 	}
 
-	s.logger.Info("user authenticated", "user_id", userID, "phone", phone[:4]+"******")
-	return accessToken, refreshToken, nil
+	s.logger.Info("user authenticated", "user_id", userID, "phone", phone[:4]+"******", "is_new", isNew)
+	return &VerifyOTPResult{
+		AccessToken:         accessToken,
+		RefreshToken:        refreshToken,
+		IsNewUser:           isNew,
+		OnboardingCompleted: onboardingCompleted,
+	}, nil
 }
 
 // RefreshAccessToken validates a refresh token and issues a new access token pair.

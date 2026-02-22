@@ -13,5 +13,15 @@ func (h *Handler) RegisterOrgRoutes(r chi.Router) {
 		r.Put("/{id}/unassign", h.UnassignCard)
 	})
 
-	r.Get("/nfc-devices", h.ListDevices)
+	r.Route("/nfc-devices", func(r chi.Router) {
+		r.Get("/", h.ListDevices)
+		r.Post("/", h.RegisterDevice)
+	})
+}
+
+// RegisterDeviceRoutes mounts device-level routes (no JWT auth, uses X-Device-Key).
+// These are mounted outside the authenticated route group.
+func (h *Handler) RegisterDeviceRoutes(r chi.Router) {
+	r.Post("/check-in", h.DeviceCheckIn)
+	r.Post("/heartbeat", h.DeviceHeartbeat)
 }

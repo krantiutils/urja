@@ -54,6 +54,8 @@ type CreateTemplateInput struct {
 	Difficulty      string          `json:"difficulty"`
 	DurationMinutes *int            `json:"duration_minutes"`
 	Exercises       json.RawMessage `json:"exercises"`
+	Goal            string          `json:"goal"`
+	DaysPerWeek     string          `json:"days_per_week"`
 }
 
 // CreateTemplate creates a new org-scoped workout template.
@@ -78,7 +80,8 @@ func (s *Service) CreateTemplate(ctx context.Context, orgID string, input *Creat
 
 	t, err := s.repo.CreateTemplate(ctx, orgID, name, strings.TrimSpace(input.NameNe),
 		strings.TrimSpace(input.Description), strings.TrimSpace(input.DescriptionNe),
-		strings.TrimSpace(input.Category), input.Difficulty, input.DurationMinutes, exercises, createdBy)
+		strings.TrimSpace(input.Category), input.Difficulty, input.DurationMinutes, exercises, createdBy,
+		strings.TrimSpace(input.Goal), strings.TrimSpace(input.DaysPerWeek))
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +100,8 @@ type UpdateTemplateInput struct {
 	Difficulty      string          `json:"difficulty"`
 	DurationMinutes *int            `json:"duration_minutes"`
 	Exercises       json.RawMessage `json:"exercises"`
+	Goal            string          `json:"goal"`
+	DaysPerWeek     string          `json:"days_per_week"`
 }
 
 // UpdateTemplate modifies an existing org-scoped template.
@@ -121,7 +126,8 @@ func (s *Service) UpdateTemplate(ctx context.Context, orgID, templateID string, 
 
 	t, err := s.repo.UpdateTemplate(ctx, orgID, templateID, name, strings.TrimSpace(input.NameNe),
 		strings.TrimSpace(input.Description), strings.TrimSpace(input.DescriptionNe),
-		strings.TrimSpace(input.Category), input.Difficulty, input.DurationMinutes, exercises)
+		strings.TrimSpace(input.Category), input.Difficulty, input.DurationMinutes, exercises,
+		strings.TrimSpace(input.Goal), strings.TrimSpace(input.DaysPerWeek))
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +174,114 @@ func (s *Service) GetPlan(ctx context.Context, userID, orgID string) (*MemberWor
 	return s.repo.GetPlan(ctx, userID, orgID)
 }
 
+// --- Browse and self-assign ---
+
+// BrowseTemplates returns templates filtered by goal and difficulty.
+// If orgID is empty, only preset templates are returned.
+func (s *Service) BrowseTemplates(ctx context.Context, orgID, goal, difficulty string, limit, offset int) ([]WorkoutTemplate, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if orgID == "" {
+		return s.repo.ListPresetTemplatesByFilters(ctx, goal, difficulty, limit, offset)
+	}
+	return s.repo.ListTemplatesByFilters(ctx, orgID, goal, difficulty, limit, offset)
+}
+
+// SelfAssignPlan allows a member to assign a workout template to themselves.
+func (s *Service) SelfAssignPlan(ctx context.Context, userID, orgID, templateID string) (*MemberWorkoutPlan, error) {
+	if templateID == "" {
+		return nil, fmt.Errorf("workout_template_id is required")
+	}
+
+	// Verify the template exists and is accessible to this org.
+	_, err := s.repo.GetTemplate(ctx, orgID, templateID)
+	if err != nil {
+		return nil, fmt.Errorf("template not found or not accessible")
+	}
+
+	p, err := s.repo.SelfAssignPlan(ctx, userID, orgID, templateID, "self")
+	if err != nil {
+		return nil, err
+	}
+
+	s.logger.Info("workout plan self-assigned", "user_id", userID, "template_id", templateID, "org_id", orgID)
+	return p, nil
+}
+
+var validGoals = map[string]bool{
+	"lose_weight":  true,
+	"build_muscle": true,
+	"stay_fit":     true,
+}
+
+var validDaysPerWeek = map[string]bool{
+	"2-3": true,
+	"4-5": true,
+	"6-7": true,
+}
+
+// RecommendPlan uses a questionnaire to recommend and assign a workout plan.
+func (s *Service) RecommendPlan(ctx context.Context, userID, orgID, goal, experience, daysPerWeek string) (*MemberWorkoutPlan, error) {
+	if !validGoals[goal] {
+		return nil, fmt.Errorf("goal must be lose_weight, build_muscle, or stay_fit")
+	}
+	if !validDifficulties[experience] {
+		return nil, fmt.Errorf("experience must be beginner, intermediate, or advanced")
+	}
+	if !validDaysPerWeek[daysPerWeek] {
+		return nil, fmt.Errorf("days_per_week must be 2-3, 4-5, or 6-7")
+	}
+
+	// Fetch all templates for this org (+ presets) with a high limit.
+	templates, err := s.repo.ListTemplates(ctx, orgID, 1000, 0)
+	if err != nil {
+		return nil, fmt.Errorf("fetching templates: %w", err)
+	}
+
+	if len(templates) == 0 {
+		return nil, fmt.Errorf("no templates available")
+	}
+
+	// Score each template and pick the best match.
+	bestIdx := 0
+	bestScore := -1
+	for i, t := range templates {
+		score := 0
+		if t.Goal == goal {
+			score += 3
+		}
+		if t.Difficulty == experience {
+			score += 3
+		}
+		if t.DaysPerWeek == daysPerWeek {
+			score += 2
+		}
+		if score > bestScore {
+			bestScore = score
+			bestIdx = i
+		}
+	}
+
+	chosen := templates[bestIdx]
+
+	// Assign using questionnaire method.
+	p, err := s.repo.SelfAssignPlan(ctx, userID, orgID, chosen.ID, "questionnaire")
+	if err != nil {
+		return nil, err
+	}
+	p.Template = &chosen
+
+	s.logger.Info("workout plan recommended and assigned",
+		"user_id", userID, "template_id", chosen.ID, "org_id", orgID,
+		"goal", goal, "experience", experience, "days_per_week", daysPerWeek,
+		"score", bestScore)
+	return p, nil
+}
+
 // --- Workout logging ---
 
 // CreateLogInput holds input for logging a workout.
@@ -181,10 +295,6 @@ type CreateLogInput struct {
 
 // CreateLog logs a workout session.
 func (s *Service) CreateLog(ctx context.Context, userID string, input *CreateLogInput) (*WorkoutLog, error) {
-	if input.OrgID == "" {
-		return nil, fmt.Errorf("organization_id is required")
-	}
-
 	exercises := input.Exercises
 	if len(exercises) == 0 {
 		exercises = json.RawMessage(`[]`)

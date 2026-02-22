@@ -996,4 +996,353 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sat => 'S';
+
+  @override
+  String get account => 'Account';
+
+  @override
+  String get editMyProfile => 'Edit My Profile';
+
+  @override
+  String get subscriptionHistory => 'Subscription History';
+
+  @override
+  String get participationSettings => 'Participation Settings';
+
+  @override
+  String get reviewsFeedbacks => 'Reviews & Feedbacks';
+
+  @override
+  String get contactSupport => 'Contact Support';
+
+  @override
+  String get changePhoto => 'Change Photo';
+
+  @override
+  String get camera => 'Camera';
+
+  @override
+  String get gallery => 'Gallery';
+
+  @override
+  String get removePhoto => 'Remove Photo';
+
+  @override
+  String get myNutrition => 'My Nutrition';
+
+  @override
+  String get nutrition => 'Nutrition';
+
+  @override
+  String get workoutMyPlan => 'My Plan';
+
+  @override
+  String get workoutBrowsePlans => 'Browse Plans';
+
+  @override
+  String get workoutFindMyPlan => 'Find My Plan';
+
+  @override
+  String get workoutCurrentPlan => 'Current Workout Plan';
+
+  @override
+  String get workoutNoPlan => 'No workout plan assigned yet';
+
+  @override
+  String get workoutChoosePlan => 'Choose This Plan';
+
+  @override
+  String get workoutPlanAssigned => 'Plan assigned successfully!';
+
+  @override
+  String get workoutExercises => 'Exercises';
+
+  @override
+  String get workoutSets => 'sets';
+
+  @override
+  String get workoutReps => 'reps';
+
+  @override
+  String get workoutRest => 'rest';
+
+  @override
+  String get workoutSeconds => 'sec';
+
+  @override
+  String get workoutMuscleGroups => 'Muscle Groups';
+
+  @override
+  String get workoutFilterByGoal => 'Filter by Goal';
+
+  @override
+  String get workoutFilterByDifficulty => 'Filter by Difficulty';
+
+  @override
+  String get workoutAllGoals => 'All Goals';
+
+  @override
+  String get workoutAllDifficulties => 'All Levels';
+
+  @override
+  String get workoutLoseWeight => 'Lose Weight';
+
+  @override
+  String get workoutBuildMuscle => 'Build Muscle';
+
+  @override
+  String get workoutStayFit => 'Stay Fit';
+
+  @override
+  String get workoutBeginner => 'Beginner';
+
+  @override
+  String get workoutIntermediate => 'Intermediate';
+
+  @override
+  String get workoutAdvanced => 'Advanced';
+
+  @override
+  String get workoutQuestionnaire => 'Quick Assessment';
+
+  @override
+  String get workoutWhatIsYourGoal => 'What is your fitness goal?';
+
+  @override
+  String get workoutExperienceLevel => 'What is your experience level?';
+
+  @override
+  String get workoutDaysPerWeek => 'How many days per week can you train?';
+
+  @override
+  String get workoutDays23 => '2-3 days';
+
+  @override
+  String get workoutDays45 => '4-5 days';
+
+  @override
+  String get workoutDays67 => '6-7 days';
+
+  @override
+  String get workoutGetRecommendation => 'Get My Plan';
+
+  @override
+  String get workoutRecommendedPlan => 'Recommended Plan';
+
+  @override
+  String get workoutSelfAssigned => 'Self-assigned';
+
+  @override
+  String get workoutQuestionnaireAssigned => 'Recommended';
+
+  @override
+  String get workoutStaffAssigned => 'Assigned by staff';
+
+  @override
+  String get workoutTargetMuscles => 'Target Muscles';
+
+  @override
+  String get workoutBodyMap => 'Body Map';
+
+  @override
+  String get nutritionDailyIntake => 'Daily Intake';
+
+  @override
+  String get nutritionCaloriesRemaining => 'Remaining';
+
+  @override
+  String get nutritionCaloriesConsumed => 'Consumed';
+
+  @override
+  String get nutritionCalorieGoal => 'Goal';
+
+  @override
+  String get nutritionProtein => 'Protein';
+
+  @override
+  String get nutritionCarbs => 'Carbs';
+
+  @override
+  String get nutritionFat => 'Fat';
+
+  @override
+  String get nutritionBreakfast => 'Breakfast';
+
+  @override
+  String get nutritionLunch => 'Lunch';
+
+  @override
+  String get nutritionDinner => 'Dinner';
+
+  @override
+  String get nutritionSnack => 'Snack';
+
+  @override
+  String get nutritionAddFood => 'Add Food';
+
+  @override
+  String get nutritionSearchFood => 'Search food...';
+
+  @override
+  String get nutritionQuantity => 'Quantity (g)';
+
+  @override
+  String get nutritionCalories => 'Calories';
+
+  @override
+  String get nutritionNoLogs => 'No food logged yet';
+
+  @override
+  String get nutritionLogFood => 'Log Food';
+
+  @override
+  String get nutritionWeeklyProgress => 'Weekly Progress';
+
+  @override
+  String get nutritionSetGoal => 'Set Nutrition Goal';
+
+  @override
+  String get nutritionEditGoal => 'Edit Goal';
+
+  @override
+  String get nutritionWeight => 'Weight (kg)';
+
+  @override
+  String get nutritionHeight => 'Height (cm)';
+
+  @override
+  String get nutritionAge => 'Age';
+
+  @override
+  String get nutritionGender => 'Gender';
+
+  @override
+  String get nutritionMale => 'Male';
+
+  @override
+  String get nutritionFemale => 'Female';
+
+  @override
+  String get nutritionActivityLevel => 'Activity Level';
+
+  @override
+  String get nutritionSedentary => 'Sedentary';
+
+  @override
+  String get nutritionLight => 'Lightly Active';
+
+  @override
+  String get nutritionModerate => 'Moderately Active';
+
+  @override
+  String get nutritionActive => 'Active';
+
+  @override
+  String get nutritionVeryActive => 'Very Active';
+
+  @override
+  String get nutritionGoalType => 'Goal';
+
+  @override
+  String get nutritionLoseWeight => 'Lose Weight';
+
+  @override
+  String get nutritionMaintain => 'Maintain Weight';
+
+  @override
+  String get nutritionBuildMuscle => 'Build Muscle';
+
+  @override
+  String get nutritionCalculateGoal => 'Calculate Goal';
+
+  @override
+  String get nutritionGoalSet => 'Nutrition goal set!';
+
+  @override
+  String get nutritionDailyCalories => 'Daily Calories';
+
+  @override
+  String get nutritionMealTemplates => 'Meal Templates';
+
+  @override
+  String get nutritionCreateTemplate => 'Create Template';
+
+  @override
+  String get nutritionTemplateName => 'Template Name';
+
+  @override
+  String get nutritionQuickLog => 'Quick Log';
+
+  @override
+  String get nutritionNoTemplates => 'No meal templates yet';
+
+  @override
+  String get nutritionPer100g => 'per 100g';
+
+  @override
+  String get nutritionServingSize => 'Serving';
+
+  @override
+  String get nutritionDeleteLog => 'Remove';
+
+  @override
+  String get nutritionKcal => 'kcal';
+
+  @override
+  String get nutritionGrams => 'g';
+
+  @override
+  String get nutritionNoGoalSet =>
+      'Set up your nutrition goal to track progress';
+
+  @override
+  String get nutritionToday => 'Today';
+
+  @override
+  String get progressTitle => 'Progress';
+
+  @override
+  String get progressLogWeight => 'Log Weight';
+
+  @override
+  String get progressWeightKg => 'Weight (kg)';
+
+  @override
+  String get progressWeightLogged => 'Weight logged successfully!';
+
+  @override
+  String get progressCurrentWeight => 'Current';
+
+  @override
+  String get progressStartWeight => 'Start';
+
+  @override
+  String get progressChange => 'Change';
+
+  @override
+  String get progressBmi => 'BMI';
+
+  @override
+  String get progressWeightTrend => 'Weight Trend';
+
+  @override
+  String get progressNoData => 'No weight data yet. Log your first entry!';
+
+  @override
+  String get progressPeriod30 => '30 Days';
+
+  @override
+  String get progressPeriod90 => '90 Days';
+
+  @override
+  String get progressPeriod180 => '180 Days';
+
+  @override
+  String get progressNutritionStreak => 'Nutrition Streak';
+
+  @override
+  String get progressEntries => 'entries';
+
+  @override
+  String get progressKg => 'kg';
 }

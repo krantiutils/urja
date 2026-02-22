@@ -208,6 +208,54 @@ func (h *Handler) ListPhotos(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// QuickLogWeight handles POST /api/v1/members/me/health/weight
+func (h *Handler) QuickLogWeight(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	var input WeightInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	metric, err := h.service.QuickLogWeight(r.Context(), userID, input.WeightKG)
+	if err != nil {
+		if isValidationError(err) {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		h.logger.Error("failed to log weight", "error", err, "user_id", userID)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, metric)
+}
+
+// GetWeightTrend handles GET /api/v1/members/me/health/weight-trend?days=30
+func (h *Handler) GetWeightTrend(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	days, _ := strconv.Atoi(r.URL.Query().Get("days"))
+
+	trend, err := h.service.GetWeightTrend(r.Context(), userID, days)
+	if err != nil {
+		h.logger.Error("failed to get weight trend", "error", err, "user_id", userID)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, trend)
+}
+
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

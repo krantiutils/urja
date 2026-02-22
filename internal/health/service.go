@@ -57,6 +57,32 @@ type PhotoInput struct {
 	FileData io.Reader
 }
 
+// WeightInput is the input for quick weight logging.
+type WeightInput struct {
+	WeightKG float64 `json:"weight_kg"`
+}
+
+// WeightEntry is a simplified weight data point for trends.
+type WeightEntry struct {
+	Date     string  `json:"date"`
+	WeightKG float64 `json:"weight_kg"`
+}
+
+// WeightTrend holds weight entries and summary stats.
+type WeightTrend struct {
+	Entries []WeightEntry      `json:"entries"`
+	Summary WeightTrendSummary `json:"summary"`
+}
+
+// WeightTrendSummary provides overview stats for weight trend.
+type WeightTrendSummary struct {
+	CurrentKG    float64 `json:"current_kg"`
+	StartKG      float64 `json:"start_kg"`
+	ChangeKG     float64 `json:"change_kg"`
+	BMI          float64 `json:"bmi,omitempty"`
+	EntriesCount int     `json:"entries_count"`
+}
+
 // Service handles health business logic.
 type Service struct {
 	repo     *Repository
@@ -207,6 +233,67 @@ func (s *Service) ListPhotos(ctx context.Context, memberID, category string, lim
 	}
 
 	return s.repo.ListPhotos(ctx, memberID, category, limit, offset)
+}
+
+// QuickLogWeight records a simple weight entry.
+func (s *Service) QuickLogWeight(ctx context.Context, memberID string, weightKG float64) (*HealthMetric, error) {
+	if weightKG <= 0 || weightKG > 700 {
+		return nil, errors.New("weight_kg must be between 0 and 700")
+	}
+
+	valueJSON, err := json.Marshal(map[string]float64{"weight_kg": weightKG})
+	if err != nil {
+		return nil, fmt.Errorf("marshaling weight value: %w", err)
+	}
+
+	metric, err := s.repo.InsertMetric(ctx, memberID, "weight", valueJSON)
+	if err != nil {
+		return nil, fmt.Errorf("logging weight: %w", err)
+	}
+	return metric, nil
+}
+
+// GetWeightTrend returns weight data points over the last N days with summary stats.
+func (s *Service) GetWeightTrend(ctx context.Context, memberID string, days int) (*WeightTrend, error) {
+	if days <= 0 {
+		days = 30
+	}
+	if days > 365 {
+		days = 365
+	}
+
+	entries, err := s.repo.GetWeightEntries(ctx, memberID, days)
+	if err != nil {
+		return nil, fmt.Errorf("getting weight entries: %w", err)
+	}
+	if entries == nil {
+		entries = []WeightEntry{}
+	}
+
+	trend := &WeightTrend{
+		Entries: entries,
+		Summary: WeightTrendSummary{
+			EntriesCount: len(entries),
+		},
+	}
+
+	if len(entries) > 0 {
+		trend.Summary.StartKG = entries[0].WeightKG
+		trend.Summary.CurrentKG = entries[len(entries)-1].WeightKG
+		trend.Summary.ChangeKG = math.Round((trend.Summary.CurrentKG-trend.Summary.StartKG)*100) / 100
+
+		// Compute BMI from current weight and latest known height
+		heightCM, err := s.repo.GetLatestHeight(ctx, memberID)
+		if err != nil {
+			s.logger.Warn("failed to get latest height for BMI calculation", "error", err, "member_id", memberID)
+		}
+		if heightCM > 0 {
+			bmi := trend.Summary.CurrentKG / math.Pow(heightCM/100.0, 2)
+			trend.Summary.BMI = math.Round(bmi*100) / 100
+		}
+	}
+
+	return trend, nil
 }
 
 func validateBMIInput(input *BMIInput) error {

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/urja-gym/urja/pkg/middleware"
@@ -27,6 +28,20 @@ type registerCardRequest struct {
 
 type assignCardRequest struct {
 	UserID string `json:"user_id"`
+}
+
+type registerDeviceRequest struct {
+	Name             string `json:"name"`
+	DeviceIdentifier string `json:"device_identifier"`
+	DeviceSecret     string `json:"device_secret"`
+}
+
+type deviceCheckInRequest struct {
+	CardUID string `json:"card_uid"`
+}
+
+type deviceHeartbeatRequest struct {
+	UptimeSeconds int64 `json:"uptime_seconds"`
 }
 
 // ListCards handles GET /api/v1/orgs/{orgId}/nfc-cards
@@ -147,6 +162,80 @@ func (h *Handler) ListDevices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{"data": devices})
+}
+
+// RegisterDevice handles POST /api/v1/orgs/{orgId}/nfc-devices
+// Admin provides the device_secret from the ESP32's serial output.
+func (h *Handler) RegisterDevice(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+
+	var req registerDeviceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	device, err := h.service.RegisterDevice(r.Context(), orgID, req.Name, req.DeviceIdentifier, req.DeviceSecret)
+	if err != nil {
+		h.logger.Error("failed to register nfc device", "error", err, "org_id", orgID)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, device)
+}
+
+// DeviceCheckIn handles POST /api/v1/devices/check-in
+// No JWT auth — authenticates via X-Device-Key header (the ESP32's secret).
+func (h *Handler) DeviceCheckIn(w http.ResponseWriter, r *http.Request) {
+	deviceSecret := strings.TrimSpace(r.Header.Get("X-Device-Key"))
+	if deviceSecret == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "missing X-Device-Key header"})
+		return
+	}
+
+	var req deviceCheckInRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	result, err := h.service.DeviceCheckIn(r.Context(), deviceSecret, req.CardUID)
+	if err != nil {
+		h.logger.Error("device check-in failed", "error", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, result)
+}
+
+// DeviceHeartbeat handles POST /api/v1/devices/heartbeat
+// No JWT auth — authenticates via X-Device-Key header.
+func (h *Handler) DeviceHeartbeat(w http.ResponseWriter, r *http.Request) {
+	deviceSecret := strings.TrimSpace(r.Header.Get("X-Device-Key"))
+	if deviceSecret == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "missing X-Device-Key header"})
+		return
+	}
+
+	var req deviceHeartbeatRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	if err := h.service.DeviceHeartbeat(r.Context(), deviceSecret, req.UptimeSeconds); err != nil {
+		h.logger.Error("device heartbeat failed", "error", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

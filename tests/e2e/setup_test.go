@@ -216,7 +216,7 @@ func TestMain(m *testing.M) {
 	pkgHandler := packages.NewHandler(pkgSvc, testLogger)
 
 	nfcRepo := nfc.NewRepository(pool)
-	nfcSvc := nfc.NewService(nfcRepo, testLogger)
+	nfcSvc := nfc.NewService(nfcRepo, attendanceSvc, testLogger)
 	nfcHandler := nfc.NewHandler(nfcSvc, testLogger)
 
 	activityLogRepo := activitylog.NewRepository(pool)

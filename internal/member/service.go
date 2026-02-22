@@ -78,6 +78,9 @@ func (s *Service) GetProfile(ctx context.Context, userID string) (*Member, error
 	if err != nil {
 		return nil, fmt.Errorf("getting org memberships: %w", err)
 	}
+	if orgs == nil {
+		orgs = []OrgMembership{}
+	}
 	m.Organizations = orgs
 
 	return m, nil

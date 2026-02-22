@@ -1,0 +1,68 @@
+-- Revert preset exercises to original (without muscle_groups) and clear goal/days_per_week.
+
+-- 1. Full Body Beginner
+UPDATE workout_templates SET
+    exercises = '[
+        {"name": "Bodyweight Squats", "name_ne": "बडीवेट स्क्वाट", "sets": 3, "reps": 12, "rest_seconds": 60},
+        {"name": "Push-ups", "name_ne": "पुश-अप", "sets": 3, "reps": 10, "rest_seconds": 60},
+        {"name": "Dumbbell Rows", "name_ne": "डम्बेल रो", "sets": 3, "reps": 10, "rest_seconds": 60},
+        {"name": "Plank", "name_ne": "प्ल्यांक", "sets": 3, "reps": 1, "rest_seconds": 45, "notes": "Hold for 30 seconds"},
+        {"name": "Lunges", "name_ne": "लन्ज", "sets": 3, "reps": 10, "rest_seconds": 60}
+    ]'::jsonb,
+    goal = NULL,
+    days_per_week = NULL
+WHERE id = 'b1b2c3d4-e5f6-7890-abcd-ef1234567801';
+
+-- 2. Upper Body Strength
+UPDATE workout_templates SET
+    exercises = '[
+        {"name": "Bench Press", "name_ne": "बेन्च प्रेस", "sets": 4, "reps": 8, "rest_seconds": 90},
+        {"name": "Overhead Press", "name_ne": "ओभरहेड प्रेस", "sets": 3, "reps": 10, "rest_seconds": 90},
+        {"name": "Barbell Rows", "name_ne": "बारबेल रो", "sets": 4, "reps": 8, "rest_seconds": 90},
+        {"name": "Dumbbell Curls", "name_ne": "डम्बेल कर्ल", "sets": 3, "reps": 12, "rest_seconds": 60},
+        {"name": "Tricep Dips", "name_ne": "ट्राइसेप डिप्स", "sets": 3, "reps": 10, "rest_seconds": 60},
+        {"name": "Lateral Raises", "name_ne": "ल्याटरल रेज", "sets": 3, "reps": 12, "rest_seconds": 60}
+    ]'::jsonb,
+    goal = NULL,
+    days_per_week = NULL
+WHERE id = 'b1b2c3d4-e5f6-7890-abcd-ef1234567802';
+
+-- 3. Lower Body Power
+UPDATE workout_templates SET
+    exercises = '[
+        {"name": "Barbell Squats", "name_ne": "बारबेल स्क्वाट", "sets": 4, "reps": 8, "rest_seconds": 120},
+        {"name": "Romanian Deadlifts", "name_ne": "रोमानियन डेडलिफ्ट", "sets": 4, "reps": 8, "rest_seconds": 90},
+        {"name": "Leg Press", "name_ne": "लेग प्रेस", "sets": 3, "reps": 12, "rest_seconds": 90},
+        {"name": "Walking Lunges", "name_ne": "वाकिंग लन्ज", "sets": 3, "reps": 12, "rest_seconds": 60},
+        {"name": "Calf Raises", "name_ne": "काफ रेज", "sets": 4, "reps": 15, "rest_seconds": 45}
+    ]'::jsonb,
+    goal = NULL,
+    days_per_week = NULL
+WHERE id = 'b1b2c3d4-e5f6-7890-abcd-ef1234567803';
+
+-- 4. HIIT Cardio Blast
+UPDATE workout_templates SET
+    exercises = '[
+        {"name": "Burpees", "name_ne": "बर्पी", "sets": 4, "reps": 10, "rest_seconds": 30},
+        {"name": "Mountain Climbers", "name_ne": "माउन्टेन क्लाइम्बर", "sets": 4, "reps": 20, "rest_seconds": 30},
+        {"name": "Jump Squats", "name_ne": "जम्प स्क्वाट", "sets": 4, "reps": 15, "rest_seconds": 30},
+        {"name": "High Knees", "name_ne": "हाइ नीज", "sets": 4, "reps": 30, "rest_seconds": 30},
+        {"name": "Box Jumps", "name_ne": "बक्स जम्प", "sets": 4, "reps": 10, "rest_seconds": 30}
+    ]'::jsonb,
+    goal = NULL,
+    days_per_week = NULL
+WHERE id = 'b1b2c3d4-e5f6-7890-abcd-ef1234567804';
+
+-- 5. Core & Flexibility
+UPDATE workout_templates SET
+    exercises = '[
+        {"name": "Plank", "name_ne": "प्ल्यांक", "sets": 3, "reps": 1, "rest_seconds": 45, "notes": "Hold for 45 seconds"},
+        {"name": "Russian Twists", "name_ne": "रसियन ट्विस्ट", "sets": 3, "reps": 20, "rest_seconds": 45},
+        {"name": "Bicycle Crunches", "name_ne": "बाइसिकल क्रन्च", "sets": 3, "reps": 20, "rest_seconds": 45},
+        {"name": "Dead Bug", "name_ne": "डेड बग", "sets": 3, "reps": 10, "rest_seconds": 45},
+        {"name": "Cat-Cow Stretch", "name_ne": "क्याट-काउ स्ट्रेच", "sets": 3, "reps": 10, "rest_seconds": 30},
+        {"name": "Seated Forward Fold", "name_ne": "बसेर अगाडि झुकाइ", "sets": 2, "reps": 1, "rest_seconds": 30, "notes": "Hold for 30 seconds"}
+    ]'::jsonb,
+    goal = NULL,
+    days_per_week = NULL
+WHERE id = 'b1b2c3d4-e5f6-7890-abcd-ef1234567805';

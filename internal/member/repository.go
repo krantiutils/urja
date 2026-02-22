@@ -47,8 +47,13 @@ type Member struct {
 	AvatarURL             string          `json:"avatar_url,omitempty"`
 	EmergencyContactName  string          `json:"emergency_contact_name,omitempty"`
 	EmergencyContactPhone string          `json:"emergency_contact_phone,omitempty"`
+	UserType              string          `json:"user_type"`
+	OnboardingCompleted   bool            `json:"onboarding_completed"`
+	GoalType              string          `json:"goal_type,omitempty"`
+	DailyWaterGoalML      int             `json:"daily_water_goal_ml"`
+	DailyStepGoal         int             `json:"daily_step_goal"`
 	PrivacySettings       PrivacySettings `json:"privacy_settings"`
-	Organizations         []OrgMembership `json:"organizations,omitempty"`
+	Organizations         []OrgMembership `json:"organizations"`
 	CreatedAt             time.Time       `json:"created_at"`
 	UpdatedAt             time.Time       `json:"updated_at"`
 }
@@ -86,12 +91,16 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*Member, error) {
 		`SELECT id, phone, name, COALESCE(name_ne, ''), COALESCE(email, ''),
 		        date_of_birth::text, COALESCE(gender, ''), COALESCE(avatar_url, ''),
 		        COALESCE(emergency_contact_name, ''), COALESCE(emergency_contact_phone, ''),
+		        COALESCE(user_type, 'gym_member'), onboarding_completed,
+		        COALESCE(goal_type, ''), COALESCE(daily_water_goal_ml, 2500), COALESCE(daily_step_goal, 8000),
 		        privacy_settings, created_at, updated_at
 		 FROM users WHERE id = $1 AND is_active = true`,
 		id,
 	).Scan(&m.ID, &m.Phone, &m.Name, &m.NameNe, &m.Email,
 		&dob, &m.Gender, &m.AvatarURL,
 		&m.EmergencyContactName, &m.EmergencyContactPhone,
+		&m.UserType, &m.OnboardingCompleted,
+		&m.GoalType, &m.DailyWaterGoalML, &m.DailyStepGoal,
 		&privJSON, &m.CreatedAt, &m.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

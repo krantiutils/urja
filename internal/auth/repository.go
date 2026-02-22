@@ -117,8 +117,8 @@ func (r *Repository) GetUserByID(ctx context.Context, userID string) (phone, rol
 }
 
 // FindOrCreateUserByPhone looks up a user by phone number, creating one if not found.
-// Returns the user ID and role.
-func (r *Repository) FindOrCreateUserByPhone(ctx context.Context, phone string) (string, string, error) {
+// Returns the user ID, role, and whether the user was newly created.
+func (r *Repository) FindOrCreateUserByPhone(ctx context.Context, phone string) (string, string, bool, error) {
 	var userID, role string
 
 	err := r.db.QueryRow(ctx,
@@ -136,10 +136,23 @@ func (r *Repository) FindOrCreateUserByPhone(ctx context.Context, phone string) 
 			phone,
 		).Scan(&userID)
 		if err != nil {
-			return "", "", fmt.Errorf("creating user: %w", err)
+			return "", "", false, fmt.Errorf("creating user: %w", err)
 		}
-		role = "member"
+		return userID, "member", true, nil
 	}
 
-	return userID, role, nil
+	return userID, role, false, nil
+}
+
+// GetUserOnboardingStatus retrieves onboarding_completed for a user.
+func (r *Repository) GetUserOnboardingStatus(ctx context.Context, userID string) (bool, error) {
+	var completed bool
+	err := r.db.QueryRow(ctx,
+		`SELECT onboarding_completed FROM users WHERE id = $1`,
+		userID,
+	).Scan(&completed)
+	if err != nil {
+		return false, fmt.Errorf("getting onboarding status: %w", err)
+	}
+	return completed, nil
 }

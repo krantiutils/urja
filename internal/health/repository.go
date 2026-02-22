@@ -180,6 +180,60 @@ func (r *Repository) GetMetricByID(ctx context.Context, memberID, metricID strin
 	return &m, nil
 }
 
+// GetWeightEntries retrieves weight metric entries for the last N days.
+// It pulls from both "weight" and "bmi" metric types, keeping one entry per day.
+func (r *Repository) GetWeightEntries(ctx context.Context, memberID string, days int) ([]WeightEntry, error) {
+	query := `SELECT DISTINCT ON (recorded_at::date)
+	                 recorded_at::date AS date,
+	                 (value->>'weight_kg')::float AS weight_kg
+	          FROM health_metrics
+	          WHERE member_id = $1
+	            AND metric_type IN ('weight', 'bmi')
+	            AND value->>'weight_kg' IS NOT NULL
+	            AND (value->>'weight_kg')::float > 0
+	            AND recorded_at >= NOW() - ($2 || ' days')::interval
+	          ORDER BY recorded_at::date ASC, recorded_at DESC`
+
+	rows, err := r.db.Query(ctx, query, memberID, fmt.Sprintf("%d", days))
+	if err != nil {
+		return nil, fmt.Errorf("querying weight entries: %w", err)
+	}
+	defer rows.Close()
+
+	var entries []WeightEntry
+	for rows.Next() {
+		var e WeightEntry
+		var date time.Time
+		if err := rows.Scan(&date, &e.WeightKG); err != nil {
+			return nil, fmt.Errorf("scanning weight entry: %w", err)
+		}
+		e.Date = date.Format("2006-01-02")
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
+// GetLatestHeight retrieves the most recent height from BMI entries.
+func (r *Repository) GetLatestHeight(ctx context.Context, memberID string) (float64, error) {
+	var heightCM float64
+	err := r.db.QueryRow(ctx,
+		`SELECT (value->>'height_cm')::float
+		 FROM health_metrics
+		 WHERE member_id = $1 AND metric_type = 'bmi'
+		   AND value->>'height_cm' IS NOT NULL
+		 ORDER BY recorded_at DESC
+		 LIMIT 1`,
+		memberID,
+	).Scan(&heightCM)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("querying latest height: %w", err)
+	}
+	return heightCM, nil
+}
+
 func nilIfEmpty(s string) *string {
 	if s == "" {
 		return nil

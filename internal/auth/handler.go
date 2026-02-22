@@ -33,9 +33,11 @@ type verifyRequest struct {
 }
 
 type tokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
+	AccessToken         string `json:"access_token"`
+	RefreshToken        string `json:"refresh_token"`
+	TokenType           string `json:"token_type"`
+	IsNewUser           bool   `json:"is_new_user"`
+	OnboardingCompleted bool   `json:"onboarding_completed"`
 }
 
 type refreshRequest struct {
@@ -90,16 +92,18 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, refreshToken, err := h.service.VerifyOTP(r.Context(), req.Phone, req.OTP)
+	result, err := h.service.VerifyOTP(r.Context(), req.Phone, req.OTP)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: err.Error()})
 		return
 	}
 
 	writeJSON(w, http.StatusOK, tokenResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		TokenType:    "Bearer",
+		AccessToken:         result.AccessToken,
+		RefreshToken:        result.RefreshToken,
+		TokenType:           "Bearer",
+		IsNewUser:           result.IsNewUser,
+		OnboardingCompleted: result.OnboardingCompleted,
 	})
 }
 

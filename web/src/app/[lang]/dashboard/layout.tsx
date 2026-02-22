@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { AuthGuard } from "@/components/layout/AuthGuard";
+import { useAuth } from "@/lib/auth";
 import { getDictionary } from "@/lib/i18n";
 import type { Locale } from "@/types";
 
@@ -16,6 +17,7 @@ export default function DashboardLayout({
 }) {
   const locale = params.lang as Locale;
   const t = getDictionary(locale);
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -26,6 +28,7 @@ export default function DashboardLayout({
           locale={locale}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          orgName={user?.org_name}
         />
 
         {/* Main content area offset by sidebar width on desktop */}

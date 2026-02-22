@@ -1,7 +1,19 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { getDictionary } from "@/lib/i18n";
-import type { Locale } from "@/types";
+import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
+import type {
+  Locale,
+  OrgMember,
+  OrgAttendance,
+  ExpiringPackageEntry,
+  ExpiredPackageEntry,
+  PackageSummaryItem,
+  AccountsSummary,
+} from "@/types";
 import {
   Users,
   UserCheck,
@@ -13,50 +25,30 @@ import {
   UserPlus,
   TrendingUp,
   ArrowUpRight,
+  Loader2,
 } from "lucide-react";
-
-// Mock data — will be replaced with API calls once backend endpoints exist
-const MOCK_STATS = {
-  totalMembers: 342,
-  activeMembers: 287,
-  todayAttendance: 89,
-  monthlyRevenue: 485000,
-};
-
-const MOCK_EXPIRING = [
-  { id: "1", name: "Ram Shrestha", phone: "9841234567", package: "3 Month Premium", daysLeft: 3, status: "expiring" as const },
-  { id: "2", name: "Sita Maharjan", phone: "9851234567", package: "1 Month Basic", daysLeft: 1, status: "expiring" as const },
-  { id: "3", name: "Hari Tamang", phone: "9861234567", package: "6 Month Standard", daysLeft: 5, status: "expiring" as const },
-];
-
-const MOCK_EXPIRED = [
-  { id: "4", name: "Bikash Gurung", phone: "9801234567", package: "1 Month Basic", expiredDays: 2, status: "expired" as const },
-  { id: "5", name: "Anita Rai", phone: "9811234567", package: "3 Month Premium", expiredDays: 7, status: "expired" as const },
-];
-
-const MOCK_TODAY_ATTENDANCE = [
-  { id: "1", memberName: "Ram Shrestha", checkInTime: "06:15 AM", method: "qr" as const },
-  { id: "2", memberName: "Sita Maharjan", checkInTime: "06:42 AM", method: "nfc" as const },
-  { id: "3", memberName: "Hari Tamang", checkInTime: "07:01 AM", method: "manual" as const },
-  { id: "4", memberName: "Deepa Thapa", checkInTime: "07:23 AM", method: "qr" as const },
-  { id: "5", memberName: "Sujan KC", checkInTime: "07:45 AM", method: "nfc" as const },
-];
-
-const MOCK_RECENTLY_JOINED = [
-  { id: "1", name: "Priya Adhikari", phone: "9871234567", package: "3 Month Premium", joinedAt: "2026-02-13" },
-  { id: "2", name: "Rajesh Bhandari", phone: "9881234567", package: "1 Month Basic", joinedAt: "2026-02-12" },
-  { id: "3", name: "Mina Poudel", phone: "9891234567", package: "6 Month Standard", joinedAt: "2026-02-11" },
-];
-
-const MOCK_PACKAGE_SUMMARY = [
-  { name: "1 Month Basic", count: 98, revenue: 78400 },
-  { name: "3 Month Premium", count: 124, revenue: 297600 },
-  { name: "6 Month Standard", count: 65, revenue: 195000 },
-  { name: "1 Year Gold", count: 42, revenue: 252000 },
-];
 
 function formatNPR(amount: number): string {
   return `Rs. ${amount.toLocaleString("en-IN")}`;
+}
+
+function formatTime(isoStr: string): string {
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function isToday(isoStr: string): boolean {
+  const d = new Date(isoStr);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }
 
 function StatCard({
@@ -98,7 +90,7 @@ function SectionHeader({
 }: {
   icon: React.ElementType;
   title: string;
-  action?: { label: string; onClick?: () => void };
+  action?: { label: string; href: string };
 }) {
   return (
     <div className="flex items-center justify-between mb-3">
@@ -107,10 +99,13 @@ function SectionHeader({
         {title}
       </h3>
       {action && (
-        <button className="flex items-center gap-1 text-xs text-accent hover:text-accent-bright transition-colors">
+        <Link
+          href={action.href}
+          className="flex items-center gap-1 text-xs text-accent hover:text-accent-bright transition-colors"
+        >
           {action.label}
           <ArrowUpRight className="w-3 h-3" />
-        </button>
+        </Link>
       )}
     </div>
   );
@@ -157,32 +152,197 @@ export default function DashboardHomePage({
 }) {
   const locale = params.lang as Locale;
   const t = getDictionary(locale);
+  const { user } = useAuth();
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Data state
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [totalMembers, setTotalMembers] = useState(0);
+  const [todayAttendance, setTodayAttendance] = useState<
+    (OrgAttendance & { resolvedName?: string })[]
+  >([]);
+  const [expiringPackages, setExpiringPackages] = useState<
+    ExpiringPackageEntry[]
+  >([]);
+  const [expiredPackages, setExpiredPackages] = useState<
+    ExpiredPackageEntry[]
+  >([]);
+  const [packageSummary, setPackageSummary] = useState<PackageSummaryItem[]>(
+    []
+  );
+  const [accountsSummary, setAccountsSummary] =
+    useState<AccountsSummary | null>(null);
+
+  const orgId = user?.org_id;
+
+  const fetchDashboardData = useCallback(async () => {
+    if (!orgId) return;
+    setLoading(true);
+    setError(null);
+
+    const results = await Promise.allSettled([
+      api.listMembers(orgId, { limit: 500 }),
+      api.listAttendance(orgId, { limit: 100 }),
+      api.getExpiringPackages(orgId, { days: 7, limit: 10 }),
+      api.getExpiredPackages(orgId, { limit: 10 }),
+      api.getPackageSummary(orgId),
+      api.getAccountsSummary(orgId),
+    ]);
+
+    const [
+      membersResult,
+      attendanceResult,
+      expiringResult,
+      expiredResult,
+      pkgSummaryResult,
+      accountsResult,
+    ] = results;
+
+    // Track if any fetch failed
+    const errors: string[] = [];
+
+    // Members
+    let membersList: OrgMember[] = [];
+    if (membersResult.status === "fulfilled") {
+      membersList = membersResult.value.data ?? [];
+      setMembers(membersList);
+      setTotalMembers(membersResult.value.total ?? membersList.length);
+    } else {
+      errors.push("members");
+    }
+
+    // Build member lookup map: user_id -> name
+    const memberLookup = new Map<string, string>();
+    for (const m of membersList) {
+      memberLookup.set(m.id, m.name);
+    }
+
+    // Attendance - filter today's records and join names
+    if (attendanceResult.status === "fulfilled") {
+      const allAttendance = attendanceResult.value.data ?? [];
+      const todayRecords = allAttendance
+        .filter((r) => isToday(r.check_in_at))
+        .map((r) => ({
+          ...r,
+          resolvedName:
+            r.member_name || memberLookup.get(r.user_id) || "Unknown",
+        }));
+      setTodayAttendance(todayRecords);
+    } else {
+      errors.push("attendance");
+    }
+
+    // Expiring packages
+    if (expiringResult.status === "fulfilled") {
+      setExpiringPackages(expiringResult.value.data ?? []);
+    } else {
+      errors.push("expiring packages");
+    }
+
+    // Expired packages
+    if (expiredResult.status === "fulfilled") {
+      setExpiredPackages(expiredResult.value.data ?? []);
+    } else {
+      errors.push("expired packages");
+    }
+
+    // Package summary
+    if (pkgSummaryResult.status === "fulfilled") {
+      setPackageSummary(
+        Array.isArray(pkgSummaryResult.value)
+          ? pkgSummaryResult.value
+          : []
+      );
+    } else {
+      errors.push("package summary");
+    }
+
+    // Accounts summary
+    if (accountsResult.status === "fulfilled") {
+      setAccountsSummary(accountsResult.value);
+    } else {
+      errors.push("accounts");
+    }
+
+    if (errors.length > 0 && errors.length === results.length) {
+      // All failed
+      setError(t.common.error);
+    } else if (errors.length > 0) {
+      // Partial failure - show what we have but note the error
+      setError(`Failed to load: ${errors.join(", ")}`);
+    }
+
+    setLoading(false);
+  }, [orgId, t.common.error]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Derived stats
+  const activeMembers = members.filter((m) => m.status === "active").length;
+  const monthlyRevenue = accountsSummary
+    ? parseFloat(accountsSummary.total_income) || 0
+    : 0;
+
+  // Recently joined: members sorted by joined_at descending, top 5
+  const recentlyJoined = [...members]
+    .sort(
+      (a, b) =>
+        new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime()
+    )
+    .slice(0, 5);
+
+  // Loading state while orgId resolves
+  if (!orgId) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 text-accent animate-spin" />
+      </div>
+    );
+  }
+
+  // Loading state while data fetches
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 text-accent animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Error banner (partial failure) */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Users}
           label={t.dashboard.totalMembers}
-          value={MOCK_STATS.totalMembers}
-          trend="+12"
+          value={totalMembers}
         />
         <StatCard
           icon={UserCheck}
           label={t.dashboard.activeMembers}
-          value={MOCK_STATS.activeMembers}
+          value={activeMembers}
         />
         <StatCard
           icon={CalendarCheck}
           label={t.dashboard.todayAttendance}
-          value={MOCK_STATS.todayAttendance}
-          trend="+5%"
+          value={todayAttendance.length}
         />
         <StatCard
           icon={Banknote}
           label={t.dashboard.monthlyRevenue}
-          value={formatNPR(MOCK_STATS.monthlyRevenue)}
+          value={formatNPR(monthlyRevenue)}
         />
       </div>
 
@@ -193,7 +353,7 @@ export default function DashboardHomePage({
           <SectionHeader
             icon={CalendarCheck}
             title={t.dashboard.todayActivity}
-            action={{ label: t.dashboard.viewAll }}
+            action={{ label: t.dashboard.viewAll, href: `/${locale}/dashboard/attendance` }}
           />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -211,20 +371,33 @@ export default function DashboardHomePage({
                 </tr>
               </thead>
               <tbody>
-                {MOCK_TODAY_ATTENDANCE.map((record) => (
-                  <tr
-                    key={record.id}
-                    className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
-                  >
-                    <td className="py-2.5 text-fg">{record.memberName}</td>
-                    <td className="py-2.5 text-fg-muted font-mono text-xs">
-                      {record.checkInTime}
-                    </td>
-                    <td className="py-2.5">
-                      <MethodBadge method={record.method} />
+                {todayAttendance.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="py-6 text-center text-fg-muted text-sm"
+                    >
+                      No check-ins today
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  todayAttendance.map((record) => (
+                    <tr
+                      key={record.id}
+                      className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    >
+                      <td className="py-2.5 text-fg">
+                        {record.resolvedName}
+                      </td>
+                      <td className="py-2.5 text-fg-muted font-mono text-xs">
+                        {formatTime(record.check_in_at)}
+                      </td>
+                      <td className="py-2.5">
+                        <MethodBadge method={record.method} />
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -235,7 +408,7 @@ export default function DashboardHomePage({
           <SectionHeader
             icon={AlertTriangle}
             title={t.dashboard.expiringPackages}
-            action={{ label: t.dashboard.viewAll }}
+            action={{ label: t.dashboard.viewAll, href: `/${locale}/dashboard/packages` }}
           />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -253,27 +426,40 @@ export default function DashboardHomePage({
                 </tr>
               </thead>
               <tbody>
-                {MOCK_EXPIRING.map((member) => (
-                  <tr
-                    key={member.id}
-                    className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
-                  >
-                    <td className="py-2.5">
-                      <div>
-                        <p className="text-fg">{member.name}</p>
-                        <p className="text-xs text-fg-muted font-mono">
-                          {member.phone}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-2.5 text-fg-muted">{member.package}</td>
-                    <td className="py-2.5">
-                      <span className="text-amber-400 text-xs font-mono">
-                        {member.daysLeft}d left
-                      </span>
+                {expiringPackages.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="py-6 text-center text-fg-muted text-sm"
+                    >
+                      No expiring packages
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  expiringPackages.map((entry, idx) => (
+                    <tr
+                      key={`${entry.member_phone}-${entry.package_name}-${idx}`}
+                      className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    >
+                      <td className="py-2.5">
+                        <div>
+                          <p className="text-fg">{entry.member_name}</p>
+                          <p className="text-xs text-fg-muted font-mono">
+                            {entry.member_phone}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="py-2.5 text-fg-muted">
+                        {entry.package_name}
+                      </td>
+                      <td className="py-2.5">
+                        <span className="text-amber-400 text-xs font-mono">
+                          {entry.expires_in}d left
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -284,7 +470,7 @@ export default function DashboardHomePage({
           <SectionHeader
             icon={Clock}
             title={t.dashboard.expiredPackages}
-            action={{ label: t.dashboard.viewAll }}
+            action={{ label: t.dashboard.viewAll, href: `/${locale}/dashboard/packages` }}
           />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -302,25 +488,38 @@ export default function DashboardHomePage({
                 </tr>
               </thead>
               <tbody>
-                {MOCK_EXPIRED.map((member) => (
-                  <tr
-                    key={member.id}
-                    className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
-                  >
-                    <td className="py-2.5">
-                      <div>
-                        <p className="text-fg">{member.name}</p>
-                        <p className="text-xs text-fg-muted font-mono">
-                          {member.phone}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-2.5 text-fg-muted">{member.package}</td>
-                    <td className="py-2.5">
-                      <StatusBadge status="expired" />
+                {expiredPackages.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="py-6 text-center text-fg-muted text-sm"
+                    >
+                      No expired packages
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  expiredPackages.map((entry, idx) => (
+                    <tr
+                      key={`${entry.member_phone}-${entry.package_name}-${idx}`}
+                      className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    >
+                      <td className="py-2.5">
+                        <div>
+                          <p className="text-fg">{entry.member_name}</p>
+                          <p className="text-xs text-fg-muted font-mono">
+                            {entry.member_phone}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="py-2.5 text-fg-muted">
+                        {entry.package_name}
+                      </td>
+                      <td className="py-2.5">
+                        <StatusBadge status="expired" />
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -331,7 +530,7 @@ export default function DashboardHomePage({
           <SectionHeader
             icon={UserPlus}
             title={t.dashboard.recentlyJoined}
-            action={{ label: t.dashboard.viewAll }}
+            action={{ label: t.dashboard.viewAll, href: `/${locale}/dashboard/members` }}
           />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -341,7 +540,7 @@ export default function DashboardHomePage({
                     {t.dashboard.member}
                   </th>
                   <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
-                    {t.dashboard.package}
+                    {t.dashboard.status}
                   </th>
                   <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
                     {t.dashboard.joined}
@@ -349,25 +548,40 @@ export default function DashboardHomePage({
                 </tr>
               </thead>
               <tbody>
-                {MOCK_RECENTLY_JOINED.map((member) => (
-                  <tr
-                    key={member.id}
-                    className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
-                  >
-                    <td className="py-2.5">
-                      <div>
-                        <p className="text-fg">{member.name}</p>
-                        <p className="text-xs text-fg-muted font-mono">
-                          {member.phone}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-2.5 text-fg-muted">{member.package}</td>
-                    <td className="py-2.5 text-fg-muted font-mono text-xs">
-                      {member.joinedAt}
+                {recentlyJoined.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="py-6 text-center text-fg-muted text-sm"
+                    >
+                      No members yet
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  recentlyJoined.map((member) => (
+                    <tr
+                      key={member.id}
+                      className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    >
+                      <td className="py-2.5">
+                        <div>
+                          <p className="text-fg">{member.name}</p>
+                          <p className="text-xs text-fg-muted font-mono">
+                            {member.phone}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="py-2.5">
+                        <StatusBadge status={member.status} />
+                      </td>
+                      <td className="py-2.5 text-fg-muted font-mono text-xs">
+                        {new Date(member.joined_at)
+                          .toISOString()
+                          .split("T")[0]}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -379,7 +593,7 @@ export default function DashboardHomePage({
         <SectionHeader
           icon={UserMinus}
           title={t.dashboard.packageSummary}
-          action={{ label: t.dashboard.viewAll }}
+          action={{ label: t.dashboard.viewAll, href: `/${locale}/dashboard/packages` }}
         />
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -397,31 +611,51 @@ export default function DashboardHomePage({
               </tr>
             </thead>
             <tbody>
-              {MOCK_PACKAGE_SUMMARY.map((pkg) => (
-                <tr
-                  key={pkg.name}
-                  className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
-                >
-                  <td className="py-2.5 text-fg">{pkg.name}</td>
-                  <td className="py-2.5 text-fg-muted text-right font-mono">
-                    {pkg.count}
-                  </td>
-                  <td className="py-2.5 text-fg-muted text-right font-mono">
-                    {formatNPR(pkg.revenue)}
+              {packageSummary.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={3}
+                    className="py-6 text-center text-fg-muted text-sm"
+                  >
+                    No packages
                   </td>
                 </tr>
-              ))}
-              <tr className="border-t border-white/[0.08]">
-                <td className="py-2.5 text-fg font-semibold">Total</td>
-                <td className="py-2.5 text-fg text-right font-mono font-semibold">
-                  {MOCK_PACKAGE_SUMMARY.reduce((a, b) => a + b.count, 0)}
-                </td>
-                <td className="py-2.5 text-fg text-right font-mono font-semibold">
-                  {formatNPR(
-                    MOCK_PACKAGE_SUMMARY.reduce((a, b) => a + b.revenue, 0)
-                  )}
-                </td>
-              </tr>
+              ) : (
+                <>
+                  {packageSummary.map((pkg) => (
+                    <tr
+                      key={pkg.id}
+                      className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    >
+                      <td className="py-2.5 text-fg">{pkg.name}</td>
+                      <td className="py-2.5 text-fg-muted text-right font-mono">
+                        {pkg.member_count}
+                      </td>
+                      <td className="py-2.5 text-fg-muted text-right font-mono">
+                        {formatNPR(pkg.member_count * parseFloat(pkg.price))}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="border-t border-white/[0.08]">
+                    <td className="py-2.5 text-fg font-semibold">Total</td>
+                    <td className="py-2.5 text-fg text-right font-mono font-semibold">
+                      {packageSummary.reduce(
+                        (a, b) => a + b.member_count,
+                        0
+                      )}
+                    </td>
+                    <td className="py-2.5 text-fg text-right font-mono font-semibold">
+                      {formatNPR(
+                        packageSummary.reduce(
+                          (a, b) =>
+                            a + b.member_count * parseFloat(b.price),
+                          0
+                        )
+                      )}
+                    </td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </div>

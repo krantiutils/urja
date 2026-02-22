@@ -996,4 +996,354 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get sat => 'श';
+
+  @override
+  String get account => 'खाता';
+
+  @override
+  String get editMyProfile => 'मेरो प्रोफाइल सम्पादन';
+
+  @override
+  String get subscriptionHistory => 'सदस्यता इतिहास';
+
+  @override
+  String get participationSettings => 'सहभागिता सेटिङ्स';
+
+  @override
+  String get reviewsFeedbacks => 'समीक्षा र प्रतिक्रिया';
+
+  @override
+  String get contactSupport => 'सहयोग सम्पर्क';
+
+  @override
+  String get changePhoto => 'फोटो परिवर्तन';
+
+  @override
+  String get camera => 'क्यामेरा';
+
+  @override
+  String get gallery => 'ग्यालरी';
+
+  @override
+  String get removePhoto => 'फोटो हटाउनुहोस्';
+
+  @override
+  String get myNutrition => 'मेरो पोषण';
+
+  @override
+  String get nutrition => 'पोषण';
+
+  @override
+  String get workoutMyPlan => 'मेरो योजना';
+
+  @override
+  String get workoutBrowsePlans => 'योजनाहरू हेर्नुहोस्';
+
+  @override
+  String get workoutFindMyPlan => 'मेरो योजना खोज्नुहोस्';
+
+  @override
+  String get workoutCurrentPlan => 'हालको व्यायाम योजना';
+
+  @override
+  String get workoutNoPlan => 'अहिलेसम्म कुनै व्यायाम योजना तोकिएको छैन';
+
+  @override
+  String get workoutChoosePlan => 'यो योजना छान्नुहोस्';
+
+  @override
+  String get workoutPlanAssigned => 'योजना सफलतापूर्वक तोकियो!';
+
+  @override
+  String get workoutExercises => 'व्यायामहरू';
+
+  @override
+  String get workoutSets => 'सेट';
+
+  @override
+  String get workoutReps => 'रेप्स';
+
+  @override
+  String get workoutRest => 'आराम';
+
+  @override
+  String get workoutSeconds => 'सेकेन्ड';
+
+  @override
+  String get workoutMuscleGroups => 'मांसपेशी समूहहरू';
+
+  @override
+  String get workoutFilterByGoal => 'लक्ष्यले छान्नुहोस्';
+
+  @override
+  String get workoutFilterByDifficulty => 'कठिनाइले छान्नुहोस्';
+
+  @override
+  String get workoutAllGoals => 'सबै लक्ष्य';
+
+  @override
+  String get workoutAllDifficulties => 'सबै स्तर';
+
+  @override
+  String get workoutLoseWeight => 'तौल घटाउने';
+
+  @override
+  String get workoutBuildMuscle => 'मांसपेशी बनाउने';
+
+  @override
+  String get workoutStayFit => 'फिट रहने';
+
+  @override
+  String get workoutBeginner => 'सुरुवाती';
+
+  @override
+  String get workoutIntermediate => 'मध्यम';
+
+  @override
+  String get workoutAdvanced => 'उन्नत';
+
+  @override
+  String get workoutQuestionnaire => 'छिटो मूल्यांकन';
+
+  @override
+  String get workoutWhatIsYourGoal => 'तपाईंको फिटनेस लक्ष्य के हो?';
+
+  @override
+  String get workoutExperienceLevel => 'तपाईंको अनुभव स्तर के हो?';
+
+  @override
+  String get workoutDaysPerWeek => 'हप्तामा कति दिन प्रशिक्षण गर्न सक्नुहुन्छ?';
+
+  @override
+  String get workoutDays23 => '२-३ दिन';
+
+  @override
+  String get workoutDays45 => '४-५ दिन';
+
+  @override
+  String get workoutDays67 => '६-७ दिन';
+
+  @override
+  String get workoutGetRecommendation => 'मेरो योजना पाउनुहोस्';
+
+  @override
+  String get workoutRecommendedPlan => 'सिफारिस गरिएको योजना';
+
+  @override
+  String get workoutSelfAssigned => 'आफैं छानेको';
+
+  @override
+  String get workoutQuestionnaireAssigned => 'सिफारिस गरिएको';
+
+  @override
+  String get workoutStaffAssigned => 'कर्मचारीले तोकेको';
+
+  @override
+  String get workoutTargetMuscles => 'लक्षित मांसपेशीहरू';
+
+  @override
+  String get workoutBodyMap => 'शरीर नक्सा';
+
+  @override
+  String get nutritionDailyIntake => 'दैनिक सेवन';
+
+  @override
+  String get nutritionCaloriesRemaining => 'बाँकी';
+
+  @override
+  String get nutritionCaloriesConsumed => 'खपत';
+
+  @override
+  String get nutritionCalorieGoal => 'लक्ष्य';
+
+  @override
+  String get nutritionProtein => 'प्रोटिन';
+
+  @override
+  String get nutritionCarbs => 'कार्ब्स';
+
+  @override
+  String get nutritionFat => 'बोसो';
+
+  @override
+  String get nutritionBreakfast => 'बिहानको खाना';
+
+  @override
+  String get nutritionLunch => 'दिउँसोको खाना';
+
+  @override
+  String get nutritionDinner => 'बेलुकाको खाना';
+
+  @override
+  String get nutritionSnack => 'खाजा';
+
+  @override
+  String get nutritionAddFood => 'खाना थप्नुहोस्';
+
+  @override
+  String get nutritionSearchFood => 'खाना खोज्नुहोस्...';
+
+  @override
+  String get nutritionQuantity => 'परिमाण (ग्राम)';
+
+  @override
+  String get nutritionCalories => 'क्यालोरी';
+
+  @override
+  String get nutritionNoLogs => 'अहिलेसम्म खाना लग गरिएको छैन';
+
+  @override
+  String get nutritionLogFood => 'खाना लग गर्नुहोस्';
+
+  @override
+  String get nutritionWeeklyProgress => 'साप्ताहिक प्रगति';
+
+  @override
+  String get nutritionSetGoal => 'पोषण लक्ष्य सेट गर्नुहोस्';
+
+  @override
+  String get nutritionEditGoal => 'लक्ष्य सम्पादन';
+
+  @override
+  String get nutritionWeight => 'तौल (किलो)';
+
+  @override
+  String get nutritionHeight => 'उचाइ (से.मी.)';
+
+  @override
+  String get nutritionAge => 'उमेर';
+
+  @override
+  String get nutritionGender => 'लिङ्ग';
+
+  @override
+  String get nutritionMale => 'पुरुष';
+
+  @override
+  String get nutritionFemale => 'महिला';
+
+  @override
+  String get nutritionActivityLevel => 'गतिविधि स्तर';
+
+  @override
+  String get nutritionSedentary => 'निष्क्रिय';
+
+  @override
+  String get nutritionLight => 'हल्का सक्रिय';
+
+  @override
+  String get nutritionModerate => 'मध्यम सक्रिय';
+
+  @override
+  String get nutritionActive => 'सक्रिय';
+
+  @override
+  String get nutritionVeryActive => 'धेरै सक्रिय';
+
+  @override
+  String get nutritionGoalType => 'लक्ष्य';
+
+  @override
+  String get nutritionLoseWeight => 'तौल घटाउने';
+
+  @override
+  String get nutritionMaintain => 'तौल कायम';
+
+  @override
+  String get nutritionBuildMuscle => 'मांसपेशी बनाउने';
+
+  @override
+  String get nutritionCalculateGoal => 'लक्ष्य गणना गर्नुहोस्';
+
+  @override
+  String get nutritionGoalSet => 'पोषण लक्ष्य सेट भयो!';
+
+  @override
+  String get nutritionDailyCalories => 'दैनिक क्यालोरी';
+
+  @override
+  String get nutritionMealTemplates => 'भोजन टेम्प्लेटहरू';
+
+  @override
+  String get nutritionCreateTemplate => 'टेम्प्लेट बनाउनुहोस्';
+
+  @override
+  String get nutritionTemplateName => 'टेम्प्लेट नाम';
+
+  @override
+  String get nutritionQuickLog => 'छिटो लग';
+
+  @override
+  String get nutritionNoTemplates => 'अहिलेसम्म कुनै भोजन टेम्प्लेट छैन';
+
+  @override
+  String get nutritionPer100g => 'प्रति १००ग्राम';
+
+  @override
+  String get nutritionServingSize => 'सर्भिङ';
+
+  @override
+  String get nutritionDeleteLog => 'हटाउनुहोस्';
+
+  @override
+  String get nutritionKcal => 'क्यालोरी';
+
+  @override
+  String get nutritionGrams => 'ग्राम';
+
+  @override
+  String get nutritionNoGoalSet =>
+      'प्रगति ट्र्याक गर्न पोषण लक्ष्य सेट गर्नुहोस्';
+
+  @override
+  String get nutritionToday => 'आज';
+
+  @override
+  String get progressTitle => 'प्रगति';
+
+  @override
+  String get progressLogWeight => 'तौल लग गर्नुहोस्';
+
+  @override
+  String get progressWeightKg => 'तौल (किलो)';
+
+  @override
+  String get progressWeightLogged => 'तौल सफलतापूर्वक लग भयो!';
+
+  @override
+  String get progressCurrentWeight => 'हालको';
+
+  @override
+  String get progressStartWeight => 'सुरु';
+
+  @override
+  String get progressChange => 'परिवर्तन';
+
+  @override
+  String get progressBmi => 'BMI';
+
+  @override
+  String get progressWeightTrend => 'तौल प्रवृत्ति';
+
+  @override
+  String get progressNoData =>
+      'अहिलेसम्म कुनै तौल डाटा छैन। पहिलो प्रविष्टि लग गर्नुहोस्!';
+
+  @override
+  String get progressPeriod30 => '३० दिन';
+
+  @override
+  String get progressPeriod90 => '९० दिन';
+
+  @override
+  String get progressPeriod180 => '१८० दिन';
+
+  @override
+  String get progressNutritionStreak => 'पोषण स्ट्रिक';
+
+  @override
+  String get progressEntries => 'प्रविष्टिहरू';
+
+  @override
+  String get progressKg => 'किलो';
 }
