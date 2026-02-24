@@ -101,33 +101,34 @@ func (r *Repository) RevokeAllRefreshTokens(ctx context.Context, userID string) 
 	return iter.Err()
 }
 
-// GetUserByID retrieves a user's phone and role by their ID.
-func (r *Repository) GetUserByID(ctx context.Context, userID string) (phone, role string, err error) {
+// GetUserByID retrieves a user's phone, role, and super admin status by their ID.
+func (r *Repository) GetUserByID(ctx context.Context, userID string) (phone, role string, isSuperAdmin bool, err error) {
 	err = r.db.QueryRow(ctx,
 		`SELECT u.phone, COALESCE(
 			(SELECT om.role FROM organization_members om WHERE om.user_id = u.id LIMIT 1),
 			'member'
-		) FROM users u WHERE u.id = $1`,
+		), u.is_super_admin FROM users u WHERE u.id = $1`,
 		userID,
-	).Scan(&phone, &role)
+	).Scan(&phone, &role, &isSuperAdmin)
 	if err != nil {
-		return "", "", fmt.Errorf("user not found: %w", err)
+		return "", "", false, fmt.Errorf("user not found: %w", err)
 	}
-	return phone, role, nil
+	return phone, role, isSuperAdmin, nil
 }
 
 // FindOrCreateUserByPhone looks up a user by phone number, creating one if not found.
-// Returns the user ID, role, and whether the user was newly created.
-func (r *Repository) FindOrCreateUserByPhone(ctx context.Context, phone string) (string, string, bool, error) {
+// Returns the user ID, role, super admin status, and whether the user was newly created.
+func (r *Repository) FindOrCreateUserByPhone(ctx context.Context, phone string) (string, string, bool, bool, error) {
 	var userID, role string
+	var isSuperAdmin bool
 
 	err := r.db.QueryRow(ctx,
 		`SELECT id, COALESCE(
 			(SELECT role FROM organization_members WHERE user_id = users.id LIMIT 1),
 			'member'
-		) FROM users WHERE phone = $1`,
+		), is_super_admin FROM users WHERE phone = $1`,
 		phone,
-	).Scan(&userID, &role)
+	).Scan(&userID, &role, &isSuperAdmin)
 
 	if err != nil {
 		// User doesn't exist; create one.
@@ -136,12 +137,12 @@ func (r *Repository) FindOrCreateUserByPhone(ctx context.Context, phone string) 
 			phone,
 		).Scan(&userID)
 		if err != nil {
-			return "", "", false, fmt.Errorf("creating user: %w", err)
+			return "", "", false, false, fmt.Errorf("creating user: %w", err)
 		}
-		return userID, "member", true, nil
+		return userID, "member", false, true, nil
 	}
 
-	return userID, role, false, nil
+	return userID, role, isSuperAdmin, false, nil
 }
 
 // GetUserOnboardingStatus retrieves onboarding_completed for a user.

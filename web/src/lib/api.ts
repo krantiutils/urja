@@ -2,6 +2,7 @@ import type {
   AuthTokens,
   ApiError,
   Organization,
+  CreateOrganizationRequest,
   UpdateOrganizationRequest,
   OrgMemberList,
   OrgMember,
@@ -139,6 +140,25 @@ class ApiClient {
   ): Promise<Organization> {
     return this.request(`/api/v1/orgs/${orgId}`, {
       method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // --- Super Admin ---
+
+  async listOrgs(
+    params: { limit?: number; offset?: number } = {}
+  ): Promise<{ data: Organization[] }> {
+    const q = new URLSearchParams();
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs${qs ? `?${qs}` : ""}`);
+  }
+
+  async createOrg(data: CreateOrganizationRequest): Promise<Organization> {
+    return this.request("/api/v1/orgs", {
+      method: "POST",
       body: JSON.stringify(data),
     });
   }

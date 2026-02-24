@@ -13,6 +13,7 @@ export interface JWTPayload {
   phone: string;
   role: string;
   org_id?: string;
+  is_super_admin?: boolean;
   iat: number;
   exp: number;
   iss: string;
@@ -28,6 +29,7 @@ export interface User {
   org_name?: string;
   user_type?: UserType;
   onboarding_completed?: boolean;
+  is_super_admin?: boolean;
 }
 
 export interface ApiError {
@@ -506,6 +508,14 @@ export interface Organization {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface CreateOrganizationRequest {
+  name: string;
+  slug?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
 }
 
 export interface UpdateOrganizationRequest {

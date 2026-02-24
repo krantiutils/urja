@@ -37,9 +37,10 @@ func NewService(repo *Repository, smsClient *sms.Client, cfg config.AuthConfig, 
 // AccessTokenClaims holds the claims embedded in a JWT access token.
 type AccessTokenClaims struct {
 	jwt.RegisteredClaims
-	Phone string `json:"phone"`
-	Role  string `json:"role"`
-	OrgID string `json:"org_id,omitempty"`
+	Phone        string `json:"phone"`
+	Role         string `json:"role"`
+	OrgID        string `json:"org_id,omitempty"`
+	IsSuperAdmin bool   `json:"is_super_admin,omitempty"`
 }
 
 // RefreshTokenClaims holds the claims embedded in a JWT refresh token.
@@ -142,7 +143,7 @@ func (s *Service) VerifyOTP(ctx context.Context, phone, otp string) (*VerifyOTPR
 	}
 
 	// Find or create user
-	userID, role, isNew, err := s.repo.FindOrCreateUserByPhone(ctx, phone)
+	userID, role, isSuperAdmin, isNew, err := s.repo.FindOrCreateUserByPhone(ctx, phone)
 	if err != nil {
 		return nil, fmt.Errorf("finding user: %w", err)
 	}
@@ -157,7 +158,7 @@ func (s *Service) VerifyOTP(ctx context.Context, phone, otp string) (*VerifyOTPR
 	}
 
 	// Issue tokens (PRD: tokens only issued AFTER OTP verification)
-	accessToken, err := s.generateAccessToken(userID, phone, role)
+	accessToken, err := s.generateAccessToken(userID, phone, role, isSuperAdmin)
 	if err != nil {
 		return nil, fmt.Errorf("generating access token: %w", err)
 	}
@@ -217,13 +218,13 @@ func (s *Service) RefreshAccessToken(ctx context.Context, refreshTokenStr string
 	}
 
 	// Look up user to get current role and phone
-	phone, role, err := s.repo.GetUserByID(ctx, userID)
+	phone, role, isSuperAdmin, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return "", "", fmt.Errorf("looking up user: %w", err)
 	}
 
 	// Issue new token pair
-	newAccessToken, err = s.generateAccessToken(userID, phone, role)
+	newAccessToken, err = s.generateAccessToken(userID, phone, role, isSuperAdmin)
 	if err != nil {
 		return "", "", fmt.Errorf("generating access token: %w", err)
 	}
@@ -291,7 +292,7 @@ func (s *Service) ValidateAccessToken(tokenString string) (string, string, error
 	return claims.Subject, claims.Role, nil
 }
 
-func (s *Service) generateAccessToken(userID, phone, role string) (string, error) {
+func (s *Service) generateAccessToken(userID, phone, role string, isSuperAdmin bool) (string, error) {
 	now := time.Now()
 	claims := AccessTokenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -300,8 +301,9 @@ func (s *Service) generateAccessToken(userID, phone, role string) (string, error
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.cfg.AccessTokenExpiry)),
 			Issuer:    "urja",
 		},
-		Phone: phone,
-		Role:  role,
+		Phone:        phone,
+		Role:         role,
+		IsSuperAdmin: isSuperAdmin,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

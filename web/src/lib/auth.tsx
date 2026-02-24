@@ -51,6 +51,7 @@ function getUserFromToken(token: string): User | null {
     phone: payload.phone,
     role: payload.role,
     org_id: payload.org_id,
+    is_super_admin: payload.is_super_admin,
   };
 }
 

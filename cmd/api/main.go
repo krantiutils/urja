@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
@@ -130,7 +131,7 @@ func main() {
 	activityLogHandler := activitylog.NewHandler(activityLogService, logger)
 
 	// QR Code
-	qrHandler := qrcode.NewHandler(cfg.Server.BaseURL, logger)
+	qrHandler := qrcode.NewHandler(cfg.Server.BaseURL, orgRepo, logger)
 
 	// Notice
 	noticeRepo := notice.NewRepository(pool)
@@ -230,15 +231,23 @@ func main() {
 	r.Use(globalLimiter.Limit())
 
 	// CORS — allow web frontend
-	corsOrigin := os.Getenv("CORS_ALLOWED_ORIGIN")
-	if corsOrigin == "" {
-		corsOrigin = "http://localhost:3000"
+	corsOrigins := os.Getenv("CORS_ALLOWED_ORIGIN")
+	if corsOrigins == "" {
+		corsOrigins = "http://localhost:3000,http://localhost:3001,http://localhost:8888,http://192.168.1.67:8888,http://192.168.1.67:3001,http://192.168.1.67:3000,http://100.117.21.47:3001,http://100.117.21.47:8888"
+	}
+	allowedOrigins := make(map[string]bool)
+	for _, o := range strings.Split(corsOrigins, ",") {
+		allowedOrigins[strings.TrimSpace(o)] = true
 	}
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", corsOrigin)
+			origin := r.Header.Get("Origin")
+			if allowedOrigins[origin] {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			}
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)
 				return
@@ -283,7 +292,8 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
 
-			// Org management (super_admin create)
+			// Org management (super_admin)
+			r.Get("/orgs", orgHandler.List)
 			r.Post("/orgs", orgHandler.Create)
 
 			// Billing subscribe (authenticated)

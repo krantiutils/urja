@@ -18,7 +18,7 @@ export default function LoginPage({
   const locale = params.lang as Locale;
   const t = getDictionary(locale);
   const router = useRouter();
-  const { login, verifyOtp, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, verifyOtp, isAuthenticated, isLoading: authLoading, user } = useAuth();
 
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("");
@@ -30,6 +30,14 @@ export default function LoginPage({
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
+      if (user?.is_super_admin) {
+        router.replace(`/${locale}/super-admin`);
+        return;
+      }
+      if (user && !user.onboarding_completed) {
+        router.replace(`/${locale}/onboarding`);
+        return;
+      }
       const token = localStorage.getItem("access_token");
       if (token) {
         try {
@@ -42,7 +50,7 @@ export default function LoginPage({
       }
       router.replace(`/${locale}/dashboard`);
     }
-  }, [isAuthenticated, authLoading, router, locale]);
+  }, [isAuthenticated, authLoading, router, locale, user]);
 
   // Resend timer countdown
   useEffect(() => {
@@ -96,8 +104,23 @@ export default function LoginPage({
       setIsSubmitting(true);
       try {
         const cleaned = phone.replace(/\s+/g, "");
-        await verifyOtp(cleaned, otp);
+        const result = await verifyOtp(cleaned, otp);
+        // Check super admin first
         const token = localStorage.getItem("access_token");
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            if (payload.is_super_admin) {
+              router.replace(`/${locale}/super-admin`);
+              return;
+            }
+          } catch {}
+        }
+        // New users or users who haven't completed onboarding → onboarding page
+        if (!result.onboarding_completed) {
+          router.replace(`/${locale}/onboarding`);
+          return;
+        }
         if (token) {
           try {
             const payload = JSON.parse(atob(token.split(".")[1]));
