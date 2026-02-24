@@ -58,8 +58,8 @@ class WorkoutTemplate {
 
   factory WorkoutTemplate.fromJson(Map<String, dynamic> json) =>
       WorkoutTemplate(
-        id: json['id'] as String,
-        name: json['name'] as String,
+        id: json['id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
         nameNe: json['name_ne'] as String?,
         description: json['description'] as String?,
         category: json['category'] as String?,
@@ -78,7 +78,7 @@ class WorkoutTemplate {
 class WorkoutPlan {
   final String id;
   final String userId;
-  final String organizationId;
+  final String? organizationId;
   final String workoutTemplateId;
   final String? assignedBy;
   final String? assignmentMethod;
@@ -88,7 +88,7 @@ class WorkoutPlan {
   WorkoutPlan({
     required this.id,
     required this.userId,
-    required this.organizationId,
+    this.organizationId,
     required this.workoutTemplateId,
     this.assignedBy,
     this.assignmentMethod,
@@ -97,13 +97,15 @@ class WorkoutPlan {
   });
 
   factory WorkoutPlan.fromJson(Map<String, dynamic> json) => WorkoutPlan(
-        id: json['id'] as String,
-        userId: json['user_id'] as String,
-        organizationId: json['organization_id'] as String,
-        workoutTemplateId: json['workout_template_id'] as String,
+        id: json['id'] as String? ?? '',
+        userId: json['user_id'] as String? ?? '',
+        organizationId: json['organization_id'] as String?,
+        workoutTemplateId: json['workout_template_id'] as String? ?? '',
         assignedBy: json['assigned_by'] as String?,
         assignmentMethod: json['assignment_method'] as String?,
-        assignedAt: json['assigned_at'] as String,
+        assignedAt: json['assigned_at'] is String
+            ? json['assigned_at'] as String
+            : json['assigned_at']?.toString() ?? '',
         template: json['template'] != null
             ? WorkoutTemplate.fromJson(
                 json['template'] as Map<String, dynamic>)

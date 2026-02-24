@@ -398,7 +398,6 @@ export default function MemberWorkoutsPage({
 
   // ---- Load current plan on mount ----
   useEffect(() => {
-    if (!orgId) return;
     (async () => {
       try {
         const p = await api.getMyWorkoutPlan(orgId);
@@ -413,7 +412,7 @@ export default function MemberWorkoutsPage({
 
   // ---- Load templates when browse tab is selected ----
   useEffect(() => {
-    if (tab !== "browse" || !orgId) return;
+    if (tab !== "browse") return;
     setBrowseLoading(true);
     (async () => {
       try {
@@ -437,7 +436,6 @@ export default function MemberWorkoutsPage({
 
   // ---- Handlers ----
   async function handleChoosePlan(templateId: string) {
-    if (!orgId) return;
     setChoosingId(templateId);
     try {
       const newPlan = await api.selfAssignPlan({
@@ -456,7 +454,7 @@ export default function MemberWorkoutsPage({
   }
 
   async function handleGetRecommendation() {
-    if (!orgId || !qGoal || !qExp || !qDays) return;
+    if (!qGoal || !qExp || !qDays) return;
     setQLoading(true);
     try {
       const rec = await api.recommendPlan({

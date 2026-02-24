@@ -1299,6 +1299,182 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nutritionToday => 'Today';
 
   @override
+  String get onboardingTitle => 'Welcome to Urja';
+
+  @override
+  String get onboardingWhatBringsYou => 'What brings you here?';
+
+  @override
+  String get onboardingGymMember => 'Gym Member';
+
+  @override
+  String get onboardingGymMemberDesc =>
+      'I go to a gym and want to track my membership';
+
+  @override
+  String get onboardingFitnessTracker => 'Fitness Tracker';
+
+  @override
+  String get onboardingFitnessTrackerDesc =>
+      'I work out at home and want to follow training programs';
+
+  @override
+  String get onboardingCalorieTracker => 'Calorie Tracker';
+
+  @override
+  String get onboardingCalorieTrackerDesc =>
+      'I want to track my food intake and manage my weight';
+
+  @override
+  String get onboardingWhatsYourGoal => 'What\'s your goal?';
+
+  @override
+  String get onboardingLoseWeight => 'Lose Weight';
+
+  @override
+  String get onboardingBuildMuscle => 'Build Muscle';
+
+  @override
+  String get onboardingStayFit => 'Stay Fit';
+
+  @override
+  String get onboardingGeneralHealth => 'General Health';
+
+  @override
+  String get onboardingAboutYou => 'About You';
+
+  @override
+  String get onboardingYourName => 'Your Name';
+
+  @override
+  String get onboardingNamePlaceholder => 'Enter your full name';
+
+  @override
+  String get onboardingWeight => 'Weight (kg)';
+
+  @override
+  String get onboardingHeight => 'Height (cm)';
+
+  @override
+  String get onboardingAge => 'Age';
+
+  @override
+  String get onboardingGender => 'Gender';
+
+  @override
+  String get onboardingActivityLevel => 'Activity Level';
+
+  @override
+  String get onboardingSedentary => 'Sedentary';
+
+  @override
+  String get onboardingLight => 'Lightly Active';
+
+  @override
+  String get onboardingModerate => 'Moderately Active';
+
+  @override
+  String get onboardingActive => 'Active';
+
+  @override
+  String get onboardingVeryActive => 'Very Active';
+
+  @override
+  String get onboardingScanGymQr => 'Scan your gym\'s QR code to join';
+
+  @override
+  String get onboardingJoinGym => 'Join Gym';
+
+  @override
+  String get onboardingSkipForNow => 'Skip for now';
+
+  @override
+  String get onboardingAllSet => 'You\'re all set!';
+
+  @override
+  String get onboardingDailyCalories => 'Daily Calories';
+
+  @override
+  String get onboardingProtein => 'Protein';
+
+  @override
+  String get onboardingCarbs => 'Carbs';
+
+  @override
+  String get onboardingFat => 'Fat';
+
+  @override
+  String get onboardingLetsGo => 'Let\'s Go!';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingBack => 'Back';
+
+  @override
+  String onboardingStep(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get waterTitle => 'Water Intake';
+
+  @override
+  String get waterTodayIntake => 'Today\'s Intake';
+
+  @override
+  String get waterGoal => 'Goal';
+
+  @override
+  String get waterAddWater => 'Add Water';
+
+  @override
+  String get waterAmount => 'Amount (ml)';
+
+  @override
+  String get waterGlassSize => 'Glass (250ml)';
+
+  @override
+  String get waterBottleSize => 'Bottle (500ml)';
+
+  @override
+  String get waterLargeBottle => 'Large (1000ml)';
+
+  @override
+  String get waterCustomAmount => 'Custom';
+
+  @override
+  String get waterRemaining => 'Remaining';
+
+  @override
+  String get waterCompleted => 'Goal Reached!';
+
+  @override
+  String get waterNoLogs => 'No water logged today';
+
+  @override
+  String get waterDelete => 'Remove';
+
+  @override
+  String get myWater => 'Water Intake';
+
+  @override
+  String get trackerHome => 'Home';
+
+  @override
+  String get trackerNutrition => 'Nutrition';
+
+  @override
+  String get trackerWorkouts => 'Workouts';
+
+  @override
+  String get trackerProgress => 'Progress';
+
+  @override
+  String get trackerAccount => 'Account';
+
+  @override
   String get progressTitle => 'Progress';
 
   @override
@@ -1345,4 +1521,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progressKg => 'kg';
+
+  @override
+  String get gymCode => 'Gym Code';
+
+  @override
+  String get scanToCheckIn => 'Scan to Check In';
+
+  @override
+  String get gymQrCodeError => 'Failed to load QR code';
+
+  @override
+  String get gymQrCodeDesc => 'Members can scan this code to check in';
+
+  @override
+  String get joinAGym => 'Join a Gym';
+
+  @override
+  String get joinAGymDesc =>
+      'Connect to a gym to track attendance and access workouts';
+
+  @override
+  String get scanGymQrCode => 'Scan Gym QR Code';
+
+  @override
+  String get orEnterCodeManually => 'or enter code manually';
+
+  @override
+  String get joinGym => 'Join Gym';
+
+  @override
+  String get successfullyJoinedGym => 'Successfully joined the gym!';
+
+  @override
+  String get couldNotJoinGym => 'Could not join gym. Please check the code.';
+
+  @override
+  String get enterGymCode => 'Please enter your gym code';
+
+  @override
+  String get submitFeedback => 'Submit Feedback';
+
+  @override
+  String get rateYourExperience => 'Rate your experience';
+
+  @override
+  String get submit => 'Submit';
+
+  @override
+  String get feedbackSubmitted => 'Thank you for your feedback!';
 }

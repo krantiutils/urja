@@ -7,6 +7,7 @@ import (
 // RegisterOrgRoutes mounts org-scoped attendance routes (under /orgs/{orgId}/attendance).
 func (h *Handler) RegisterOrgRoutes(r chi.Router) {
 	r.Get("/", h.ListByOrg)
+	r.Get("/weekly", h.WeeklySummary)
 	r.Post("/check-in", h.ManualCheckIn)
 }
 

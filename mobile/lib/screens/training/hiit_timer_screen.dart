@@ -53,6 +53,7 @@ class _HiitTimerScreenState extends State<HiitTimerScreen> {
       });
 
       if (_remainingSeconds <= 0) {
+        timer.cancel();
         _onPhaseComplete();
       } else if (_remainingSeconds <= 3) {
         // Countdown beep for last 3 seconds
@@ -78,6 +79,7 @@ class _HiitTimerScreenState extends State<HiitTimerScreen> {
         _phase = HiitPhase.rest;
         _remainingSeconds = _restSeconds;
       });
+      _startCountdown();
     } else if (_phase == HiitPhase.rest) {
       // Switch to next work round
       setState(() {
@@ -85,6 +87,7 @@ class _HiitTimerScreenState extends State<HiitTimerScreen> {
         _phase = HiitPhase.work;
         _remainingSeconds = _workSeconds;
       });
+      _startCountdown();
     }
   }
 
@@ -360,9 +363,14 @@ class _HiitTimerScreenState extends State<HiitTimerScreen> {
   Widget _buildTimerView() {
     final isFinished = _phase == HiitPhase.finished;
 
-    return Column(
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Spacer(flex: 1),
+        const SizedBox(height: 24),
 
         // Phase label
         Text(
@@ -476,7 +484,7 @@ class _HiitTimerScreenState extends State<HiitTimerScreen> {
           ),
         ),
 
-        const Spacer(flex: 2),
+        const SizedBox(height: 32),
 
         // Control buttons
         Padding(
@@ -546,7 +554,7 @@ class _HiitTimerScreenState extends State<HiitTimerScreen> {
                       height: 56,
                       child: OutlinedButton(
                         onPressed: () {
-                          setState(() => _remainingSeconds = 0);
+                          _timer?.cancel();
                           _onPhaseComplete();
                         },
                         style: OutlinedButton.styleFrom(
@@ -567,6 +575,6 @@ class _HiitTimerScreenState extends State<HiitTimerScreen> {
         ),
         const SizedBox(height: 32),
       ],
-    );
+    ),),),);
   }
 }

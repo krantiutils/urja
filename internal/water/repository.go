@@ -13,13 +13,13 @@ type WaterLog struct {
 	ID         string    `json:"id"`
 	UserID     string    `json:"user_id"`
 	AmountML   int       `json:"amount_ml"`
-	LoggedDate string    `json:"logged_date"`
+	LoggedDate time.Time `json:"logged_date"`
 	LoggedAt   time.Time `json:"logged_at"`
 }
 
 // WaterDailySummary represents aggregated water intake for a single day.
 type WaterDailySummary struct {
-	Date    string     `json:"date"`
+	Date    time.Time  `json:"date"`
 	TotalML int        `json:"total_ml"`
 	GoalML  int        `json:"goal_ml"`
 	Entries []WaterLog `json:"entries"`

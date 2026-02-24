@@ -42,12 +42,21 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
       _error = null;
     });
     try {
+      final now = DateTime.now();
+      final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
       final results = await Future.wait([
         _memberService.getProfile(),
-        _memberService.getStreaks(),
-        _memberService.getPackages(limit: 5),
-        _memberService.getAttendanceCalendar(),
-        _memberService.getLeaderboard(),
+        _memberService.getStreaks().catchError((_) => <MemberStreak>[]),
+        _memberService.getPackages(limit: 5).catchError((_) => <MemberPackage>[]),
+        _memberService.getAttendanceCalendar().catchError((_) =>
+            AttendanceCalendar(
+              month: '${now.year}-${now.month.toString().padLeft(2, '0')}',
+              daysInMonth: daysInMonth,
+              checkInDays: <int>[],
+              totalCheckIns: 0,
+            )),
+        _memberService.getLeaderboard().catchError((_) =>
+            LeaderboardResponse(period: 'monthly', rankings: [])),
       ]);
       setState(() {
         _profile = results[0] as MemberProfile;
@@ -721,11 +730,27 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
             child: Text(l10n.cancel),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
+              final message = controller.text.trim();
+              if (message.isEmpty) return;
               Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.feedbackSent)),
-              );
+              final orgId = ref.read(authProvider).user?.orgId;
+              if (orgId != null && orgId.isNotEmpty) {
+                try {
+                  final apiClient = ref.read(apiClientProvider);
+                  await apiClient.post('/orgs/$orgId/feedbacks', data: {
+                    'message': message,
+                    'rating': 5,
+                  });
+                } catch (_) {
+                  // Feedback submission failed silently
+                }
+              }
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.feedbackSent)),
+                );
+              }
             },
             child: Text(l10n.send),
           ),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,7 +33,10 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 
   Future<void> _loadData() async {
     final orgId = ref.read(authProvider).user?.orgId;
-    if (orgId == null) return;
+    if (orgId == null) {
+      setState(() => _loading = false);
+      return;
+    }
 
     setState(() => _loading = true);
     final financeService = FinanceService(ref.read(apiClientProvider));
@@ -120,7 +124,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                     labelText: l10n.amount,
                     prefixText: 'Rs. ',
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(

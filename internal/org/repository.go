@@ -223,6 +223,18 @@ func (r *Repository) GetOrgRole(ctx context.Context, userID, orgID string) (stri
 	return role, nil
 }
 
+// GetSlugByID retrieves an organization's slug by its ID.
+func (r *Repository) GetSlugByID(ctx context.Context, orgID string) (string, error) {
+	var slug string
+	err := r.db.QueryRow(ctx,
+		`SELECT slug FROM organizations WHERE id = $1`, orgID,
+	).Scan(&slug)
+	if err != nil {
+		return "", fmt.Errorf("getting org slug: %w", err)
+	}
+	return slug, nil
+}
+
 // SlugExists checks if a slug is already taken.
 func (r *Repository) SlugExists(ctx context.Context, slug string) (bool, error) {
 	var exists bool

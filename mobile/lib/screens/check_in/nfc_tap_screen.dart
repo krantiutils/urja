@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -76,7 +76,7 @@ class _NfcTapScreenState extends ConsumerState<NfcTapScreen>
       onDiscovered: (NfcTag tag) async {
         String uid = '';
 
-        if (Platform.isAndroid) {
+        if (!kIsWeb) {
           final androidTag = NfcTagAndroid.from(tag);
           if (androidTag != null) {
             uid = _bytesToHex(androidTag.id);

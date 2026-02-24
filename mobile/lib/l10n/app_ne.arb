@@ -507,5 +507,23 @@
   "progressPeriod180": "१८० दिन",
   "progressNutritionStreak": "पोषण स्ट्रिक",
   "progressEntries": "प्रविष्टिहरू",
-  "progressKg": "किलो"
+  "progressKg": "किलो",
+
+  "gymCode": "जिम कोड",
+  "scanToCheckIn": "चेक इन गर्न स्क्यान गर्नुहोस्",
+  "gymQrCodeError": "QR कोड लोड गर्न असफल",
+  "gymQrCodeDesc": "सदस्यहरूले चेक इन गर्न यो कोड स्क्यान गर्न सक्छन्",
+
+  "joinAGym": "जिममा सामेल हुनुहोस्",
+  "joinAGymDesc": "उपस्थिति ट्र्याक गर्न र व्यायाम पहुँच गर्न जिममा जोड्नुहोस्",
+  "scanGymQrCode": "जिम QR कोड स्क्यान गर्नुहोस्",
+  "orEnterCodeManually": "वा कोड म्यानुअली प्रविष्ट गर्नुहोस्",
+  "joinGym": "जिममा सामेल हुनुहोस्",
+  "successfullyJoinedGym": "जिममा सफलतापूर्वक सामेल भयो!",
+  "couldNotJoinGym": "जिममा सामेल हुन सकिएन। कृपया कोड जाँच गर्नुहोस्।",
+  "enterGymCode": "कृपया आफ्नो जिम कोड प्रविष्ट गर्नुहोस्",
+  "submitFeedback": "प्रतिक्रिया पठाउनुहोस्",
+  "rateYourExperience": "तपाईंको अनुभव मूल्याङ्कन गर्नुहोस्",
+  "submit": "पेश गर्नुहोस्",
+  "feedbackSubmitted": "तपाईंको प्रतिक्रियाको लागि धन्यवाद!"
 }

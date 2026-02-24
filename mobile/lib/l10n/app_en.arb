@@ -511,5 +511,23 @@
   "progressPeriod180": "180 Days",
   "progressNutritionStreak": "Nutrition Streak",
   "progressEntries": "entries",
-  "progressKg": "kg"
+  "progressKg": "kg",
+
+  "gymCode": "Gym Code",
+  "scanToCheckIn": "Scan to Check In",
+  "gymQrCodeError": "Failed to load QR code",
+  "gymQrCodeDesc": "Members can scan this code to check in",
+
+  "joinAGym": "Join a Gym",
+  "joinAGymDesc": "Connect to a gym to track attendance and access workouts",
+  "scanGymQrCode": "Scan Gym QR Code",
+  "orEnterCodeManually": "or enter code manually",
+  "joinGym": "Join Gym",
+  "successfullyJoinedGym": "Successfully joined the gym!",
+  "couldNotJoinGym": "Could not join gym. Please check the code.",
+  "enterGymCode": "Please enter your gym code",
+  "submitFeedback": "Submit Feedback",
+  "rateYourExperience": "Rate your experience",
+  "submit": "Submit",
+  "feedbackSubmitted": "Thank you for your feedback!"
 }

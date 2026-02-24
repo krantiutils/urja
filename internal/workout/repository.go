@@ -68,12 +68,12 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // ListTemplates retrieves templates for an org plus global presets.
 func (r *Repository) ListTemplates(ctx context.Context, orgID string, limit, offset int) ([]WorkoutTemplate, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, organization_id, name, COALESCE(name_ne, ''), COALESCE(description, ''),
+		`SELECT id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(description, ''),
 		        COALESCE(description_ne, ''), COALESCE(category, ''), COALESCE(difficulty, ''),
 		        duration_minutes, exercises, COALESCE(goal, ''), COALESCE(days_per_week, ''),
-		        is_preset, created_by, created_at, updated_at
+		        is_preset, created_by::text, created_at, updated_at
 		 FROM workout_templates
-		 WHERE COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($1, '00000000-0000-0000-0000-000000000000') OR is_preset = true
+		 WHERE COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($1::uuid, '00000000-0000-0000-0000-000000000000') OR is_preset = true
 		 ORDER BY is_preset DESC, created_at DESC
 		 LIMIT $2 OFFSET $3`,
 		nilIfEmpty(orgID), limit, offset,
@@ -101,12 +101,12 @@ func (r *Repository) ListTemplates(ctx context.Context, orgID string, limit, off
 func (r *Repository) GetTemplate(ctx context.Context, orgID, templateID string) (*WorkoutTemplate, error) {
 	var t WorkoutTemplate
 	err := r.db.QueryRow(ctx,
-		`SELECT id, organization_id, name, COALESCE(name_ne, ''), COALESCE(description, ''),
+		`SELECT id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(description, ''),
 		        COALESCE(description_ne, ''), COALESCE(category, ''), COALESCE(difficulty, ''),
 		        duration_minutes, exercises, COALESCE(goal, ''), COALESCE(days_per_week, ''),
-		        is_preset, created_by, created_at, updated_at
+		        is_preset, created_by::text, created_at, updated_at
 		 FROM workout_templates
-		 WHERE id = $1 AND (COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000') OR is_preset = true)`,
+		 WHERE id = $1 AND (COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000') OR is_preset = true)`,
 		templateID, nilIfEmpty(orgID),
 	).Scan(&t.ID, &t.OrgID, &t.Name, &t.NameNe, &t.Description,
 		&t.DescriptionNe, &t.Category, &t.Difficulty,
@@ -125,10 +125,10 @@ func (r *Repository) CreateTemplate(ctx context.Context, orgID, name, nameNe, de
 		`INSERT INTO workout_templates
 		    (organization_id, name, name_ne, description, description_ne, category, difficulty, duration_minutes, exercises, created_by, goal, days_per_week)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		 RETURNING id, organization_id, name, COALESCE(name_ne, ''), COALESCE(description, ''),
+		 RETURNING id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(description, ''),
 		           COALESCE(description_ne, ''), COALESCE(category, ''), COALESCE(difficulty, ''),
 		           duration_minutes, exercises, COALESCE(goal, ''), COALESCE(days_per_week, ''),
-		           is_preset, created_by, created_at, updated_at`,
+		           is_preset, created_by::text, created_at, updated_at`,
 		nilIfEmpty(orgID), name, nilIfEmpty(nameNe), nilIfEmpty(description), nilIfEmpty(descriptionNe),
 		nilIfEmpty(category), nilIfEmpty(difficulty), durationMinutes, exercises, createdBy,
 		nilIfEmpty(goal), nilIfEmpty(daysPerWeek),
@@ -150,11 +150,11 @@ func (r *Repository) UpdateTemplate(ctx context.Context, orgID, templateID, name
 		 SET name = $3, name_ne = $4, description = $5, description_ne = $6,
 		     category = $7, difficulty = $8, duration_minutes = $9, exercises = $10,
 		     goal = $11, days_per_week = $12
-		 WHERE id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000') AND is_preset = false
-		 RETURNING id, organization_id, name, COALESCE(name_ne, ''), COALESCE(description, ''),
+		 WHERE id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000') AND is_preset = false
+		 RETURNING id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(description, ''),
 		           COALESCE(description_ne, ''), COALESCE(category, ''), COALESCE(difficulty, ''),
 		           duration_minutes, exercises, COALESCE(goal, ''), COALESCE(days_per_week, ''),
-		           is_preset, created_by, created_at, updated_at`,
+		           is_preset, created_by::text, created_at, updated_at`,
 		templateID, nilIfEmpty(orgID), name, nilIfEmpty(nameNe), nilIfEmpty(description), nilIfEmpty(descriptionNe),
 		nilIfEmpty(category), nilIfEmpty(difficulty), durationMinutes, exercises,
 		nilIfEmpty(goal), nilIfEmpty(daysPerWeek),
@@ -171,7 +171,7 @@ func (r *Repository) UpdateTemplate(ctx context.Context, orgID, templateID, name
 // DeleteTemplate removes a template (only org-owned, not presets).
 func (r *Repository) DeleteTemplate(ctx context.Context, orgID, templateID string) error {
 	tag, err := r.db.Exec(ctx,
-		`DELETE FROM workout_templates WHERE id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000') AND is_preset = false`,
+		`DELETE FROM workout_templates WHERE id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000') AND is_preset = false`,
 		templateID, nilIfEmpty(orgID),
 	)
 	if err != nil {
@@ -191,9 +191,9 @@ func (r *Repository) AssignPlan(ctx context.Context, userID, orgID, templateID, 
 	err := r.db.QueryRow(ctx,
 		`INSERT INTO member_workout_plans (user_id, organization_id, workout_template_id, assigned_by, assignment_method)
 		 VALUES ($1, $2, $3, $4, 'staff')
-		 ON CONFLICT ON CONSTRAINT member_workout_plans_user_org_unique
+		 ON CONFLICT (user_id, COALESCE(organization_id, '00000000-0000-0000-0000-000000000000'))
 		 DO UPDATE SET workout_template_id = $3, assigned_by = $4, assignment_method = 'staff', assigned_at = NOW()
-		 RETURNING id, user_id, organization_id, workout_template_id, assigned_by, COALESCE(assignment_method, 'staff'), assigned_at`,
+		 RETURNING id, user_id, organization_id::text, workout_template_id, assigned_by::text, COALESCE(assignment_method, 'staff'), assigned_at`,
 		userID, nilIfEmpty(orgID), templateID, assignedBy,
 	).Scan(&p.ID, &p.UserID, &p.OrgID, &p.WorkoutTemplateID, &p.AssignedBy, &p.AssignmentMethod, &p.AssignedAt)
 	if err != nil {
@@ -207,15 +207,15 @@ func (r *Repository) GetPlan(ctx context.Context, userID, orgID string) (*Member
 	var p MemberWorkoutPlan
 	var t WorkoutTemplate
 	err := r.db.QueryRow(ctx,
-		`SELECT p.id, p.user_id, p.organization_id, p.workout_template_id, p.assigned_by,
+		`SELECT p.id, p.user_id, p.organization_id::text, p.workout_template_id, p.assigned_by::text,
 		        COALESCE(p.assignment_method, 'staff'), p.assigned_at,
-		        t.id, t.organization_id, t.name, COALESCE(t.name_ne, ''), COALESCE(t.description, ''),
+		        t.id, t.organization_id::text, t.name, COALESCE(t.name_ne, ''), COALESCE(t.description, ''),
 		        COALESCE(t.description_ne, ''), COALESCE(t.category, ''), COALESCE(t.difficulty, ''),
 		        t.duration_minutes, t.exercises, COALESCE(t.goal, ''), COALESCE(t.days_per_week, ''),
-		        t.is_preset, t.created_by, t.created_at, t.updated_at
+		        t.is_preset, t.created_by::text, t.created_at, t.updated_at
 		 FROM member_workout_plans p
 		 JOIN workout_templates t ON t.id = p.workout_template_id
-		 WHERE p.user_id = $1 AND COALESCE(p.organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000')`,
+		 WHERE p.user_id = $1 AND COALESCE(p.organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000')`,
 		userID, nilIfEmpty(orgID),
 	).Scan(&p.ID, &p.UserID, &p.OrgID, &p.WorkoutTemplateID, &p.AssignedBy,
 		&p.AssignmentMethod, &p.AssignedAt,
@@ -232,12 +232,12 @@ func (r *Repository) GetPlan(ctx context.Context, userID, orgID string) (*Member
 
 // ListTemplatesByFilters retrieves templates with optional goal and difficulty filters.
 func (r *Repository) ListTemplatesByFilters(ctx context.Context, orgID, goal, difficulty string, limit, offset int) ([]WorkoutTemplate, error) {
-	query := `SELECT id, organization_id, name, COALESCE(name_ne, ''), COALESCE(description, ''),
+	query := `SELECT id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(description, ''),
 	                 COALESCE(description_ne, ''), COALESCE(category, ''), COALESCE(difficulty, ''),
 	                 duration_minutes, exercises, COALESCE(goal, ''), COALESCE(days_per_week, ''),
-	                 is_preset, created_by, created_at, updated_at
+	                 is_preset, created_by::text, created_at, updated_at
 	          FROM workout_templates
-	          WHERE (COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($1, '00000000-0000-0000-0000-000000000000') OR is_preset = true)`
+	          WHERE (COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($1::uuid, '00000000-0000-0000-0000-000000000000') OR is_preset = true)`
 	args := []interface{}{nilIfEmpty(orgID)}
 	argIdx := 2
 
@@ -278,10 +278,10 @@ func (r *Repository) ListTemplatesByFilters(ctx context.Context, orgID, goal, di
 // ListPresetTemplatesByFilters retrieves only preset templates with optional goal and difficulty filters.
 // Used when no organization_id is provided.
 func (r *Repository) ListPresetTemplatesByFilters(ctx context.Context, goal, difficulty string, limit, offset int) ([]WorkoutTemplate, error) {
-	query := `SELECT id, organization_id, name, COALESCE(name_ne, ''), COALESCE(description, ''),
+	query := `SELECT id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(description, ''),
 	                 COALESCE(description_ne, ''), COALESCE(category, ''), COALESCE(difficulty, ''),
 	                 duration_minutes, exercises, COALESCE(goal, ''), COALESCE(days_per_week, ''),
-	                 is_preset, created_by, created_at, updated_at
+	                 is_preset, created_by::text, created_at, updated_at
 	          FROM workout_templates
 	          WHERE is_preset = true`
 	args := []interface{}{}
@@ -327,9 +327,9 @@ func (r *Repository) SelfAssignPlan(ctx context.Context, userID, orgID, template
 	err := r.db.QueryRow(ctx,
 		`INSERT INTO member_workout_plans (user_id, organization_id, workout_template_id, assigned_by, assignment_method)
 		 VALUES ($1, $2, $3, NULL, $4)
-		 ON CONFLICT ON CONSTRAINT member_workout_plans_user_org_unique
+		 ON CONFLICT (user_id, COALESCE(organization_id, '00000000-0000-0000-0000-000000000000'))
 		 DO UPDATE SET workout_template_id = $3, assigned_by = NULL, assignment_method = $4, assigned_at = NOW()
-		 RETURNING id, user_id, organization_id, workout_template_id, assigned_by, COALESCE(assignment_method, 'self'), assigned_at`,
+		 RETURNING id, user_id, organization_id::text, workout_template_id, assigned_by::text, COALESCE(assignment_method, 'self'), assigned_at`,
 		userID, nilIfEmpty(orgID), templateID, assignmentMethod,
 	).Scan(&p.ID, &p.UserID, &p.OrgID, &p.WorkoutTemplateID, &p.AssignedBy, &p.AssignmentMethod, &p.AssignedAt)
 	if err != nil {
@@ -346,7 +346,7 @@ func (r *Repository) CreateLog(ctx context.Context, userID, orgID string, templa
 	err := r.db.QueryRow(ctx,
 		`INSERT INTO workout_logs (user_id, organization_id, workout_template_id, exercises, duration_minutes, notes)
 		 VALUES ($1, $2, $3, $4, $5, $6)
-		 RETURNING id, user_id, workout_template_id, organization_id, exercises, duration_minutes,
+		 RETURNING id, user_id, workout_template_id::text, organization_id::text, exercises, duration_minutes,
 		           COALESCE(notes, ''), logged_at`,
 		userID, nilIfEmpty(orgID), templateID, exercises, durationMinutes, nilIfEmpty(notes),
 	).Scan(&l.ID, &l.UserID, &l.WorkoutTemplateID, &l.OrgID, &l.Exercises, &l.DurationMinutes,
@@ -359,10 +359,10 @@ func (r *Repository) CreateLog(ctx context.Context, userID, orgID string, templa
 
 // ListLogs retrieves workout logs for a user with optional date filtering.
 func (r *Repository) ListLogs(ctx context.Context, userID, orgID string, from, to *time.Time, limit, offset int) ([]WorkoutLog, error) {
-	query := `SELECT id, user_id, workout_template_id, organization_id, exercises, duration_minutes,
+	query := `SELECT id, user_id, workout_template_id::text, organization_id::text, exercises, duration_minutes,
 	                 COALESCE(notes, ''), logged_at
 	          FROM workout_logs
-	          WHERE user_id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000')`
+	          WHERE user_id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000')`
 	args := []interface{}{userID, nilIfEmpty(orgID)}
 	argIdx := 3
 

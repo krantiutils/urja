@@ -61,8 +61,8 @@ class BodyMapPainter extends CustomPainter {
 
   // Muscle group approximate positions on a 200x300 canvas
   static const Map<String, Offset> _positions = {
-    'chest': Offset(100, 95),
-    'back': Offset(100, 95),
+    'chest': Offset(100, 90),
+    'back': Offset(100, 115),
     'shoulders': Offset(60, 72),
     'traps': Offset(100, 65),
     'biceps': Offset(48, 110),
@@ -258,13 +258,17 @@ class _MemberWorkoutsScreenState extends ConsumerState<MemberWorkoutsScreen>
   WorkoutPlan? _recommendedPlan;
   bool _findLoading = false;
 
-  String get _orgId =>
-      ref.read(authProvider).user?.orgId ?? '';
+  String? get _orgId => ref.read(authProvider).user?.orgId;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.index == 1 && _templates.isEmpty && !_browseLoading) {
+        _loadBrowse();
+      }
+    });
     _memberService = MemberService(ref.read(apiClientProvider));
     _workoutService = WorkoutService(ref.read(apiClientProvider));
     _loadPlan();
@@ -285,14 +289,15 @@ class _MemberWorkoutsScreenState extends ConsumerState<MemberWorkoutsScreen>
     });
     try {
       final plan =
-          await _memberService.getWorkoutPlan(organizationId: _orgId);
+          await _memberService.getWorkoutPlan(organizationId: _orgId ?? '');
       setState(() {
         _plan = plan;
         _planLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
+      // No plan assigned — show empty state, not error
       setState(() {
-        _planError = e.toString();
+        _plan = null;
         _planLoading = false;
       });
     }
@@ -305,7 +310,7 @@ class _MemberWorkoutsScreenState extends ConsumerState<MemberWorkoutsScreen>
     });
     try {
       final templates = await _workoutService.browseTemplates(
-        _orgId,
+        _orgId ?? '',
         goal: _goalFilter,
         difficulty: _difficultyFilter,
       );
@@ -313,9 +318,10 @@ class _MemberWorkoutsScreenState extends ConsumerState<MemberWorkoutsScreen>
         _templates = templates;
         _browseLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
+      // Independent users see empty browse — show empty state, not error
       setState(() {
-        _browseError = e.toString();
+        _templates = [];
         _browseLoading = false;
       });
     }
@@ -323,7 +329,7 @@ class _MemberWorkoutsScreenState extends ConsumerState<MemberWorkoutsScreen>
 
   Future<void> _choosePlan(String templateId) async {
     try {
-      final plan = await _workoutService.selfAssignPlan(_orgId, templateId);
+      final plan = await _workoutService.selfAssignPlan(_orgId ?? '', templateId);
       setState(() {
         _plan = plan;
       });
@@ -349,7 +355,7 @@ class _MemberWorkoutsScreenState extends ConsumerState<MemberWorkoutsScreen>
     setState(() => _findLoading = true);
     try {
       final plan = await _workoutService.recommendPlan(
-        _orgId,
+        _orgId ?? '',
         _questionGoal!,
         _questionExperience!,
         _questionDays!,
@@ -370,6 +376,14 @@ class _MemberWorkoutsScreenState extends ConsumerState<MemberWorkoutsScreen>
 
   Future<void> _acceptRecommendation() async {
     if (_recommendedPlan == null) return;
+    try {
+      if (_recommendedPlan!.template != null) {
+        await _workoutService.selfAssignPlan(
+            _orgId ?? '', _recommendedPlan!.template!.id);
+      }
+    } catch (_) {
+      // Even if persistence fails, still accept locally
+    }
     setState(() {
       _plan = _recommendedPlan;
       _recommendedPlan = null;

@@ -2660,6 +2660,348 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get nutritionToday;
 
+  /// No description provided for @onboardingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Urja'**
+  String get onboardingTitle;
+
+  /// No description provided for @onboardingWhatBringsYou.
+  ///
+  /// In en, this message translates to:
+  /// **'What brings you here?'**
+  String get onboardingWhatBringsYou;
+
+  /// No description provided for @onboardingGymMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym Member'**
+  String get onboardingGymMember;
+
+  /// No description provided for @onboardingGymMemberDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'I go to a gym and want to track my membership'**
+  String get onboardingGymMemberDesc;
+
+  /// No description provided for @onboardingFitnessTracker.
+  ///
+  /// In en, this message translates to:
+  /// **'Fitness Tracker'**
+  String get onboardingFitnessTracker;
+
+  /// No description provided for @onboardingFitnessTrackerDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'I work out at home and want to follow training programs'**
+  String get onboardingFitnessTrackerDesc;
+
+  /// No description provided for @onboardingCalorieTracker.
+  ///
+  /// In en, this message translates to:
+  /// **'Calorie Tracker'**
+  String get onboardingCalorieTracker;
+
+  /// No description provided for @onboardingCalorieTrackerDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'I want to track my food intake and manage my weight'**
+  String get onboardingCalorieTrackerDesc;
+
+  /// No description provided for @onboardingWhatsYourGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s your goal?'**
+  String get onboardingWhatsYourGoal;
+
+  /// No description provided for @onboardingLoseWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Lose Weight'**
+  String get onboardingLoseWeight;
+
+  /// No description provided for @onboardingBuildMuscle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build Muscle'**
+  String get onboardingBuildMuscle;
+
+  /// No description provided for @onboardingStayFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay Fit'**
+  String get onboardingStayFit;
+
+  /// No description provided for @onboardingGeneralHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'General Health'**
+  String get onboardingGeneralHealth;
+
+  /// No description provided for @onboardingAboutYou.
+  ///
+  /// In en, this message translates to:
+  /// **'About You'**
+  String get onboardingAboutYou;
+
+  /// No description provided for @onboardingYourName.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Name'**
+  String get onboardingYourName;
+
+  /// No description provided for @onboardingNamePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your full name'**
+  String get onboardingNamePlaceholder;
+
+  /// No description provided for @onboardingWeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight (kg)'**
+  String get onboardingWeight;
+
+  /// No description provided for @onboardingHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Height (cm)'**
+  String get onboardingHeight;
+
+  /// No description provided for @onboardingAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
+  String get onboardingAge;
+
+  /// No description provided for @onboardingGender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
+  String get onboardingGender;
+
+  /// No description provided for @onboardingActivityLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Level'**
+  String get onboardingActivityLevel;
+
+  /// No description provided for @onboardingSedentary.
+  ///
+  /// In en, this message translates to:
+  /// **'Sedentary'**
+  String get onboardingSedentary;
+
+  /// No description provided for @onboardingLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightly Active'**
+  String get onboardingLight;
+
+  /// No description provided for @onboardingModerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderately Active'**
+  String get onboardingModerate;
+
+  /// No description provided for @onboardingActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get onboardingActive;
+
+  /// No description provided for @onboardingVeryActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Very Active'**
+  String get onboardingVeryActive;
+
+  /// No description provided for @onboardingScanGymQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan your gym\'s QR code to join'**
+  String get onboardingScanGymQr;
+
+  /// No description provided for @onboardingJoinGym.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Gym'**
+  String get onboardingJoinGym;
+
+  /// No description provided for @onboardingSkipForNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for now'**
+  String get onboardingSkipForNow;
+
+  /// No description provided for @onboardingAllSet.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re all set!'**
+  String get onboardingAllSet;
+
+  /// No description provided for @onboardingDailyCalories.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Calories'**
+  String get onboardingDailyCalories;
+
+  /// No description provided for @onboardingProtein.
+  ///
+  /// In en, this message translates to:
+  /// **'Protein'**
+  String get onboardingProtein;
+
+  /// No description provided for @onboardingCarbs.
+  ///
+  /// In en, this message translates to:
+  /// **'Carbs'**
+  String get onboardingCarbs;
+
+  /// No description provided for @onboardingFat.
+  ///
+  /// In en, this message translates to:
+  /// **'Fat'**
+  String get onboardingFat;
+
+  /// No description provided for @onboardingLetsGo.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s Go!'**
+  String get onboardingLetsGo;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get onboardingBack;
+
+  /// No description provided for @onboardingStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String onboardingStep(int current, int total);
+
+  /// No description provided for @waterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Water Intake'**
+  String get waterTitle;
+
+  /// No description provided for @waterTodayIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Intake'**
+  String get waterTodayIntake;
+
+  /// No description provided for @waterGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get waterGoal;
+
+  /// No description provided for @waterAddWater.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Water'**
+  String get waterAddWater;
+
+  /// No description provided for @waterAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount (ml)'**
+  String get waterAmount;
+
+  /// No description provided for @waterGlassSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass (250ml)'**
+  String get waterGlassSize;
+
+  /// No description provided for @waterBottleSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottle (500ml)'**
+  String get waterBottleSize;
+
+  /// No description provided for @waterLargeBottle.
+  ///
+  /// In en, this message translates to:
+  /// **'Large (1000ml)'**
+  String get waterLargeBottle;
+
+  /// No description provided for @waterCustomAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get waterCustomAmount;
+
+  /// No description provided for @waterRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get waterRemaining;
+
+  /// No description provided for @waterCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal Reached!'**
+  String get waterCompleted;
+
+  /// No description provided for @waterNoLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'No water logged today'**
+  String get waterNoLogs;
+
+  /// No description provided for @waterDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get waterDelete;
+
+  /// No description provided for @myWater.
+  ///
+  /// In en, this message translates to:
+  /// **'Water Intake'**
+  String get myWater;
+
+  /// No description provided for @trackerHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get trackerHome;
+
+  /// No description provided for @trackerNutrition.
+  ///
+  /// In en, this message translates to:
+  /// **'Nutrition'**
+  String get trackerNutrition;
+
+  /// No description provided for @trackerWorkouts.
+  ///
+  /// In en, this message translates to:
+  /// **'Workouts'**
+  String get trackerWorkouts;
+
+  /// No description provided for @trackerProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get trackerProgress;
+
+  /// No description provided for @trackerAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get trackerAccount;
+
   /// No description provided for @progressTitle.
   ///
   /// In en, this message translates to:
@@ -2755,6 +3097,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'kg'**
   String get progressKg;
+
+  /// No description provided for @gymCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Gym Code'**
+  String get gymCode;
+
+  /// No description provided for @scanToCheckIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan to Check In'**
+  String get scanToCheckIn;
+
+  /// No description provided for @gymQrCodeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load QR code'**
+  String get gymQrCodeError;
+
+  /// No description provided for @gymQrCodeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Members can scan this code to check in'**
+  String get gymQrCodeDesc;
+
+  /// No description provided for @joinAGym.
+  ///
+  /// In en, this message translates to:
+  /// **'Join a Gym'**
+  String get joinAGym;
+
+  /// No description provided for @joinAGymDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a gym to track attendance and access workouts'**
+  String get joinAGymDesc;
+
+  /// No description provided for @scanGymQrCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Gym QR Code'**
+  String get scanGymQrCode;
+
+  /// No description provided for @orEnterCodeManually.
+  ///
+  /// In en, this message translates to:
+  /// **'or enter code manually'**
+  String get orEnterCodeManually;
+
+  /// No description provided for @joinGym.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Gym'**
+  String get joinGym;
+
+  /// No description provided for @successfullyJoinedGym.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully joined the gym!'**
+  String get successfullyJoinedGym;
+
+  /// No description provided for @couldNotJoinGym.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not join gym. Please check the code.'**
+  String get couldNotJoinGym;
+
+  /// No description provided for @enterGymCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your gym code'**
+  String get enterGymCode;
+
+  /// No description provided for @submitFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Feedback'**
+  String get submitFeedback;
+
+  /// No description provided for @rateYourExperience.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate your experience'**
+  String get rateYourExperience;
+
+  /// No description provided for @submit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get submit;
+
+  /// No description provided for @feedbackSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for your feedback!'**
+  String get feedbackSubmitted;
 }
 
 class _AppLocalizationsDelegate

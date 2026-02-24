@@ -17,11 +17,11 @@ class LeaderboardEntry {
 
   factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
     return LeaderboardEntry(
-      rank: json['rank'] as int,
+      rank: (json['rank'] as num).toInt(),
       memberId: json['member_id'] as String,
       name: json['name'] as String,
       avatarUrl: json['avatar_url'] as String?,
-      value: json['value'] as int,
+      value: (json['value'] as num).toInt(),
       metric: json['metric'] as String,
     );
   }
@@ -39,7 +39,7 @@ class LeaderboardResponse {
   factory LeaderboardResponse.fromJson(Map<String, dynamic> json) {
     return LeaderboardResponse(
       period: json['period'] as String,
-      rankings: (json['rankings'] as List<dynamic>)
+      rankings: (json['rankings'] as List<dynamic>? ?? [])
           .map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
     );

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/l10n/app_localizations.dart';
@@ -201,8 +202,9 @@ class _MemberProgressScreenState extends ConsumerState<MemberProgressScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _weightController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: kIsWeb
+                          ? TextInputType.text
+                          : const TextInputType.numberWithOptions(decimal: true),
                       style: const TextStyle(color: AppTheme.textPrimary),
                       decoration: InputDecoration(
                         hintText: l10n.progressWeightKg,
@@ -651,7 +653,7 @@ class _WeightChartPainter extends CustomPainter {
 
     if (points.length < 2) {
       // Single dot
-      final dotPaint = Paint()..color = const Color(0xFF22C55E);
+      final dotPaint = Paint()..color = const Color(0xFFF59E0B);
       canvas.drawCircle(points.first, 6, dotPaint);
       final innerPaint = Paint()..color = Colors.white;
       canvas.drawCircle(points.first, 3, innerPaint);
@@ -672,8 +674,8 @@ class _WeightChartPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          const Color(0xFF22C55E).withAlpha(60),
-          const Color(0xFF22C55E).withAlpha(5),
+          const Color(0xFFF59E0B).withAlpha(60),
+          const Color(0xFFF59E0B).withAlpha(5),
         ],
       ).createShader(
           Rect.fromLTWH(leftPadding, topPadding, chartWidth, chartHeight));
@@ -681,7 +683,7 @@ class _WeightChartPainter extends CustomPainter {
 
     // Line
     final linePaint = Paint()
-      ..color = const Color(0xFF22C55E)
+      ..color = const Color(0xFFF59E0B)
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -695,7 +697,7 @@ class _WeightChartPainter extends CustomPainter {
     canvas.drawPath(linePath, linePaint);
 
     // Dots
-    final dotPaint = Paint()..color = const Color(0xFF22C55E);
+    final dotPaint = Paint()..color = const Color(0xFFF59E0B);
     final dotBorderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke

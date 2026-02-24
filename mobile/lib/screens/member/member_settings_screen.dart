@@ -1,13 +1,16 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../config/theme.dart';
 import '../../models/member.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../services/member_service.dart';
+import '../../services/onboarding_service.dart';
 import '../shared/widgets/loading_indicator.dart';
 
 class MemberSettingsScreen extends ConsumerStatefulWidget {
@@ -135,6 +138,11 @@ class _MemberSettingsScreenState extends ConsumerState<MemberSettingsScreen> {
       );
     }
 
+    final authState = ref.watch(authProvider);
+    final userType = authState.user?.userType;
+    final isNonGymUser =
+        userType == 'fitness_tracker' || userType == 'calorie_tracker';
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: ListView(
@@ -142,6 +150,10 @@ class _MemberSettingsScreenState extends ConsumerState<MemberSettingsScreen> {
         children: [
           _buildProfileHero(l10n),
           const SizedBox(height: 16),
+          if (isNonGymUser) ...[
+            _buildJoinGymCard(l10n),
+            const SizedBox(height: 16),
+          ],
           _buildMenuList(l10n),
           const SizedBox(height: 16),
           _buildLogoutTile(l10n),
@@ -347,10 +359,7 @@ class _MemberSettingsScreenState extends ConsumerState<MemberSettingsScreen> {
           _menuItem(
             icon: Icons.rate_review_outlined,
             label: l10n.reviewsFeedbacks,
-            onTap: () {
-              // Feedback is on home screen, but can also navigate there
-              _showSuccess(l10n.sendFeedback);
-            },
+            onTap: () => _showFeedbackSheet(l10n),
           ),
           _divider(),
           _menuItem(
@@ -594,7 +603,7 @@ class _MemberSettingsScreenState extends ConsumerState<MemberSettingsScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: phoneCtrl,
-                keyboardType: TextInputType.phone,
+                keyboardType: kIsWeb ? TextInputType.text : TextInputType.phone,
                 style: const TextStyle(color: AppTheme.textPrimary),
                 decoration: InputDecoration(
                   labelText: l10n.contactPhone,
@@ -637,6 +646,456 @@ class _MemberSettingsScreenState extends ConsumerState<MemberSettingsScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2))
                       : Text(l10n.saveEmergencyContact),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- Join a Gym Card (for non-gym users) ---
+  Widget _buildJoinGymCard(AppLocalizations l10n) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primary.withAlpha(30),
+            AppTheme.primary.withAlpha(10),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primary.withAlpha(60)),
+      ),
+      child: InkWell(
+        onTap: () => _showJoinGymSheet(l10n),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withAlpha(30),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.qr_code_scanner,
+                    color: AppTheme.primary, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.joinAGym,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.joinAGymDesc,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right,
+                  color: AppTheme.primary, size: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- Bottom Sheet: Join a Gym ---
+  void _showJoinGymSheet(AppLocalizations l10n) {
+    final orgIdCtrl = TextEditingController();
+    bool joining = false;
+    String? joinError;
+    bool joined = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              16, 24, 16, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.joinAGym,
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary)),
+              const SizedBox(height: 8),
+              Text(l10n.joinAGymDesc,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 14)),
+              const SizedBox(height: 20),
+              if (joined) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withAlpha(15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.primary),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle,
+                          color: AppTheme.primary, size: 28),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          l10n.successfullyJoinedGym,
+                          style: const TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      // Reload profile and update auth state
+                      _loadProfile();
+                      ref
+                          .read(authProvider.notifier)
+                          .updateUserType('gym_member');
+                    },
+                    child: Text(l10n.done),
+                  ),
+                ),
+              ] else ...[
+                if (!kIsWeb) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        _openGymQRScanner(ctx, orgIdCtrl, setSheetState,
+                            (id) async {
+                          setSheetState(() {
+                            joining = true;
+                            joinError = null;
+                          });
+                          try {
+                            final service =
+                                OnboardingService(ref.read(apiClientProvider));
+                            await service.joinGym(id);
+                            setSheetState(() {
+                              joining = false;
+                              joined = true;
+                            });
+                          } catch (e) {
+                            setSheetState(() {
+                              joining = false;
+                              joinError = l10n.couldNotJoinGym;
+                            });
+                          }
+                        });
+                      },
+                      icon: const Icon(Icons.qr_code_scanner, size: 20),
+                      label: Text(l10n.scanGymQrCode),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: AppTheme.primary),
+                        foregroundColor: AppTheme.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Expanded(
+                          child: Divider(color: AppTheme.surfaceLight)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(l10n.orEnterCodeManually,
+                            style: TextStyle(
+                                color: AppTheme.textSecondary.withAlpha(150),
+                                fontSize: 13)),
+                      ),
+                      const Expanded(
+                          child: Divider(color: AppTheme.surfaceLight)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                TextField(
+                  controller: orgIdCtrl,
+                  style: const TextStyle(
+                      color: AppTheme.textPrimary, fontSize: 16),
+                  decoration: InputDecoration(
+                    labelText: l10n.gymCode,
+                    labelStyle:
+                        const TextStyle(color: AppTheme.textSecondary),
+                    hintText: 'e.g. kathmandu-fitness-hub',
+                    hintStyle: TextStyle(
+                        color: AppTheme.textSecondary.withAlpha(100)),
+                    prefixIcon: const Icon(Icons.business,
+                        color: AppTheme.textSecondary, size: 20),
+                    errorText: joinError,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: joining
+                        ? null
+                        : () async {
+                            final orgId = orgIdCtrl.text.trim();
+                            if (orgId.isEmpty) {
+                              setSheetState(
+                                  () => joinError = l10n.enterGymCode);
+                              return;
+                            }
+                            setSheetState(() {
+                              joining = true;
+                              joinError = null;
+                            });
+                            try {
+                              final service = OnboardingService(
+                                  ref.read(apiClientProvider));
+                              await service.joinGym(orgId);
+                              setSheetState(() {
+                                joining = false;
+                                joined = true;
+                              });
+                            } catch (e) {
+                              setSheetState(() {
+                                joining = false;
+                                joinError = l10n.couldNotJoinGym;
+                              });
+                            }
+                          },
+                    child: joining
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
+                        : Text(l10n.joinGym),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openGymQRScanner(
+    BuildContext parentCtx,
+    TextEditingController orgIdCtrl,
+    StateSetter setParentState,
+    Future<void> Function(String orgId) onScanned,
+  ) {
+    showModalBottomSheet(
+      context: parentCtx,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (scanCtx) => Container(
+        height: MediaQuery.of(scanCtx).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    AppLocalizations.of(context)!.scanGymQrCode,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(scanCtx),
+                    icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: MobileScanner(
+                  onDetect: (capture) {
+                    final barcode = capture.barcodes.firstOrNull;
+                    if (barcode?.rawValue != null) {
+                      Navigator.pop(scanCtx);
+                      orgIdCtrl.text = barcode!.rawValue!;
+                      onScanned(barcode.rawValue!);
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- Bottom Sheet: Feedback ---
+  void _showFeedbackSheet(AppLocalizations l10n) {
+    final commentCtrl = TextEditingController();
+    int selectedRating = 0;
+    bool submitting = false;
+
+    // Only show feedback for users that belong to an org
+    if (_profile == null || _profile!.organizations.isEmpty) {
+      _showError(l10n.error);
+      return;
+    }
+
+    final orgId = _profile!.organizations.first.orgId;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              16, 24, 16, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.submitFeedback,
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary)),
+              const SizedBox(height: 20),
+              // Star rating
+              Text(l10n.rateYourExperience,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 14)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  final starIndex = index + 1;
+                  return GestureDetector(
+                    onTap: () =>
+                        setSheetState(() => selectedRating = starIndex),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(
+                        starIndex <= selectedRating
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
+                        color: starIndex <= selectedRating
+                            ? Colors.amber
+                            : AppTheme.textSecondary,
+                        size: 40,
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 16),
+              // Comment text field
+              TextField(
+                controller: commentCtrl,
+                maxLines: 4,
+                onChanged: (_) => setSheetState(() {}),
+                style: const TextStyle(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  hintText: l10n.feedbackHint,
+                  hintStyle:
+                      TextStyle(color: AppTheme.textSecondary.withAlpha(150)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: AppTheme.surfaceLight),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: AppTheme.surfaceLight),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppTheme.primary),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: submitting ||
+                          (selectedRating == 0 &&
+                              commentCtrl.text.trim().isEmpty)
+                      ? null
+                      : () async {
+                          setSheetState(() => submitting = true);
+                          try {
+                            final api = ref.read(apiClientProvider);
+                            await api.post(
+                              '/orgs/$orgId/feedbacks',
+                              data: {
+                                'message': commentCtrl.text.trim(),
+                                'rating': selectedRating > 0
+                                    ? selectedRating
+                                    : null,
+                              },
+                            );
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            _showSuccess(l10n.feedbackSubmitted);
+                          } catch (e) {
+                            setSheetState(() => submitting = false);
+                            _showError(l10n.error);
+                          }
+                        },
+                  child: submitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : Text(l10n.submit),
                 ),
               ),
             ],

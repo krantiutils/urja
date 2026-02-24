@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,7 +33,10 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
 
   Future<void> _loadMembers() async {
     final orgId = ref.read(authProvider).user?.orgId;
-    if (orgId == null) return;
+    if (orgId == null) {
+      setState(() => _loading = false);
+      return;
+    }
 
     setState(() => _loading = true);
     final orgService = OrgService(ref.read(apiClientProvider));
@@ -87,7 +91,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 TextField(
                   controller: phoneCtrl,
                   decoration: InputDecoration(labelText: l10n.phone),
-                  keyboardType: TextInputType.phone,
+                  keyboardType: kIsWeb ? TextInputType.text : TextInputType.phone,
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -172,7 +176,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 TextField(
                   controller: phoneCtrl,
                   decoration: InputDecoration(labelText: l10n.phone),
-                  keyboardType: TextInputType.phone,
+                  keyboardType: kIsWeb ? TextInputType.text : TextInputType.phone,
                 ),
                 const SizedBox(height: 12),
                 TextField(

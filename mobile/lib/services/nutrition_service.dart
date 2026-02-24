@@ -9,7 +9,7 @@ class NutritionService {
   Future<List<FoodItem>> searchFoods(String orgId,
       {String? query, String? category, int limit = 20}) async {
     final params = <String, dynamic>{
-      'organization_id': orgId,
+      if (orgId.isNotEmpty) 'organization_id': orgId,
       'limit': limit,
     };
     if (query != null && query.isNotEmpty) params['q'] = query;
@@ -36,7 +36,7 @@ class NutritionService {
     String? notes,
   }) async {
     final response = await _api.post('/members/me/food-logs', data: {
-      'organization_id': orgId,
+      if (orgId.isNotEmpty) 'organization_id': orgId,
       'food_item_id': foodItemId,
       'meal_type': mealType,
       'quantity_grams': quantityGrams,
@@ -48,7 +48,9 @@ class NutritionService {
 
   Future<List<FoodLog>> getMyFoodLogs(String orgId,
       {String? date, String? mealType}) async {
-    final params = <String, dynamic>{'organization_id': orgId};
+    final params = <String, dynamic>{
+      if (orgId.isNotEmpty) 'organization_id': orgId,
+    };
     if (date != null) params['date'] = date;
     if (mealType != null) params['meal_type'] = mealType;
     final response =
@@ -66,7 +68,7 @@ class NutritionService {
   Future<DailySummary> getDailySummary(String orgId, String date) async {
     final response =
         await _api.get('/members/me/nutrition/summary', queryParameters: {
-      'organization_id': orgId,
+      if (orgId.isNotEmpty) 'organization_id': orgId,
       'date': date,
     });
     return DailySummary.fromJson(response.data as Map<String, dynamic>);
@@ -76,7 +78,7 @@ class NutritionService {
       String orgId, String from) async {
     final response =
         await _api.get('/members/me/nutrition/weekly', queryParameters: {
-      'organization_id': orgId,
+      if (orgId.isNotEmpty) 'organization_id': orgId,
       'from': from,
     });
     final data = response.data['data'] as List<dynamic>? ?? [];
@@ -96,7 +98,7 @@ class NutritionService {
   }) async {
     final response =
         await _api.post('/members/me/nutrition/goal', data: {
-      'organization_id': orgId,
+      if (orgId.isNotEmpty) 'organization_id': orgId,
       'weight_kg': weightKg,
       'height_cm': heightCm,
       'age': age,
@@ -110,7 +112,7 @@ class NutritionService {
   Future<NutritionGoal> getNutritionGoal(String orgId) async {
     final response =
         await _api.get('/members/me/nutrition/goal', queryParameters: {
-      'organization_id': orgId,
+      if (orgId.isNotEmpty) 'organization_id': orgId,
     });
     return NutritionGoal.fromJson(response.data as Map<String, dynamic>);
   }
@@ -123,7 +125,7 @@ class NutritionService {
     required List<Map<String, dynamic>> items,
   }) async {
     final response = await _api.post('/members/me/meal-templates', data: {
-      'organization_id': orgId,
+      if (orgId.isNotEmpty) 'organization_id': orgId,
       'name': name,
       if (nameNe != null) 'name_ne': nameNe,
       'meal_type': mealType,
@@ -135,7 +137,7 @@ class NutritionService {
   Future<List<MealTemplate>> getMyMealTemplates(String orgId) async {
     final response =
         await _api.get('/members/me/meal-templates', queryParameters: {
-      'organization_id': orgId,
+      if (orgId.isNotEmpty) 'organization_id': orgId,
     });
     final data = response.data['data'] as List<dynamic>? ?? [];
     return data
@@ -169,7 +171,7 @@ class NutritionService {
       String templateId, String orgId, String loggedDate) async {
     final response =
         await _api.post('/members/me/meal-templates/$templateId/log', data: {
-      'organization_id': orgId,
+      if (orgId.isNotEmpty) 'organization_id': orgId,
       'logged_date': loggedDate,
     });
     final data = response.data['data'] as List<dynamic>? ?? [];

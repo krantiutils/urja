@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,7 +32,10 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
 
   Future<void> _loadPackages() async {
     final orgId = ref.read(authProvider).user?.orgId;
-    if (orgId == null) return;
+    if (orgId == null) {
+      setState(() => _loading = false);
+      return;
+    }
 
     setState(() => _loading = true);
     final orgService = OrgService(ref.read(apiClientProvider));
@@ -106,13 +110,13 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                     labelText: l10n.price,
                     prefixText: 'Rs. ',
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: durationCtrl,
                   decoration: InputDecoration(labelText: l10n.durationDays),
-                  keyboardType: TextInputType.number,
+                  keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
                 ),
                 const SizedBox(height: 12),
                 TextField(

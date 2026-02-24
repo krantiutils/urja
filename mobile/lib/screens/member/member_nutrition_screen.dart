@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:mobile/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,9 +47,9 @@ class _MemberNutritionScreenState
     _loadData();
   }
 
-  String get _orgId {
+  String? get _orgId {
     final authState = ref.read(authProvider);
-    return authState.user?.orgId ?? '';
+    return authState.user?.orgId;
   }
 
   String _formatDate(DateTime dt) {
@@ -61,7 +62,7 @@ class _MemberNutritionScreenState
       _error = null;
     });
     try {
-      final orgId = _orgId;
+      final orgId = _orgId ?? '';
       final dateStr = _formatDate(_selectedDate);
 
       // Calculate the start of the week (Monday)
@@ -791,7 +792,7 @@ class _MemberNutritionScreenState
       ),
       builder: (ctx) => _FoodSearchSheet(
         nutritionService: _nutritionService,
-        orgId: _orgId,
+        orgId: _orgId ?? '',
         mealType: mealType,
         loggedDate: _formatDate(_selectedDate),
         onLogged: () {
@@ -806,7 +807,7 @@ class _MemberNutritionScreenState
 
   Widget _buildWeeklyProgress() {
     final goalCal = _goal?.calorieGoal ?? 2000;
-    final dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final dayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
     final maxCal =
         _weeklySummary.fold<double>(goalCal, (m, d) => max(m, d.totalCalories));
     final chartHeight = 120.0;
@@ -1055,7 +1056,7 @@ class _MemberNutritionScreenState
       ),
       builder: (ctx) => _GoalSetupSheet(
         nutritionService: _nutritionService,
-        orgId: _orgId,
+        orgId: _orgId ?? '',
         existingGoal: (_goalNotFound || (_goal?.id.isEmpty ?? true)) ? null : _goal,
         onSaved: () {
           Navigator.pop(ctx);
@@ -1203,7 +1204,7 @@ class _MemberNutritionScreenState
   Future<void> _quickLogTemplate(MealTemplate template) async {
     try {
       await _nutritionService.logMealTemplate(
-          template.id, _orgId, _formatDate(_selectedDate));
+          template.id, _orgId ?? '', _formatDate(_selectedDate));
       _loadData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1254,7 +1255,7 @@ class _MemberNutritionScreenState
       ),
       builder: (ctx) => _CreateTemplateSheet(
         nutritionService: _nutritionService,
-        orgId: _orgId,
+        orgId: _orgId ?? '',
         onCreated: () {
           Navigator.pop(ctx);
           _loadData();
@@ -1294,12 +1295,13 @@ class _CalorieRingPainter extends CustomPainter {
     canvas.drawCircle(center, radius, bgPaint);
 
     // Progress arc
+    final clampedRatio = ratio.clamp(0.0, 1.0);
     final progressPaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
-    final sweepAngle = 2 * pi * ratio.clamp(0.0, 1.0);
+    final sweepAngle = 2 * pi * clampedRatio;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -pi / 2,
@@ -1307,6 +1309,23 @@ class _CalorieRingPainter extends CustomPainter {
       false,
       progressPaint,
     );
+
+    // Over-goal arc (red overlay beyond 100%)
+    if (ratio > 1.0) {
+      final overPaint = Paint()
+        ..color = const Color(0xFFEF4444)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round;
+      final overSweep = 2 * pi * (ratio - 1.0).clamp(0.0, 0.5);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        -pi / 2,
+        overSweep,
+        false,
+        overPaint,
+      );
+    }
   }
 
   @override
@@ -1685,7 +1704,7 @@ class _FoodSearchSheetState extends State<_FoodSearchSheet> {
           // Quantity input
           TextField(
             controller: _quantityController,
-            keyboardType: TextInputType.number,
+            keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
             style: const TextStyle(color: AppTheme.textPrimary),
             decoration: const InputDecoration(
               labelText: 'Quantity (grams)',
@@ -1890,7 +1909,7 @@ class _CreateCustomFoodSheetState extends State<_CreateCustomFoodSheet> {
             const SizedBox(height: 12),
             TextField(
               controller: _caloriesCtrl,
-              keyboardType: TextInputType.number,
+              keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
               style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Calories per 100g *',
@@ -1905,7 +1924,7 @@ class _CreateCustomFoodSheetState extends State<_CreateCustomFoodSheet> {
                 Expanded(
                   child: TextField(
                     controller: _proteinCtrl,
-                    keyboardType: TextInputType.number,
+                    keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
                     style: const TextStyle(color: AppTheme.textPrimary),
                     decoration: const InputDecoration(
                       labelText: 'Protein (g) *',
@@ -1918,7 +1937,7 @@ class _CreateCustomFoodSheetState extends State<_CreateCustomFoodSheet> {
                 Expanded(
                   child: TextField(
                     controller: _carbsCtrl,
-                    keyboardType: TextInputType.number,
+                    keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
                     style: const TextStyle(color: AppTheme.textPrimary),
                     decoration: const InputDecoration(
                       labelText: 'Carbs (g) *',
@@ -1931,7 +1950,7 @@ class _CreateCustomFoodSheetState extends State<_CreateCustomFoodSheet> {
                 Expanded(
                   child: TextField(
                     controller: _fatCtrl,
-                    keyboardType: TextInputType.number,
+                    keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
                     style: const TextStyle(color: AppTheme.textPrimary),
                     decoration: const InputDecoration(
                       labelText: 'Fat (g) *',
@@ -2101,7 +2120,7 @@ class _GoalSetupSheetState extends State<_GoalSetupSheet> {
             // Weight
             TextField(
               controller: _weightCtrl,
-              keyboardType: TextInputType.number,
+              keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
               style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Weight (kg)',
@@ -2114,7 +2133,7 @@ class _GoalSetupSheetState extends State<_GoalSetupSheet> {
             // Height
             TextField(
               controller: _heightCtrl,
-              keyboardType: TextInputType.number,
+              keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
               style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Height (cm)',
@@ -2127,7 +2146,7 @@ class _GoalSetupSheetState extends State<_GoalSetupSheet> {
             // Age
             TextField(
               controller: _ageCtrl,
-              keyboardType: TextInputType.number,
+              keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
               style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Age',

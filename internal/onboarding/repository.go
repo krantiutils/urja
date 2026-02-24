@@ -44,7 +44,7 @@ func (r *Repository) UpsertNutritionGoal(ctx context.Context, userID string, cal
 	_, err := r.db.Exec(ctx,
 		`INSERT INTO nutrition_goals (user_id, organization_id, calorie_goal, protein_goal_g, carbs_goal_g, fat_goal_g, weight_kg, height_cm, age, gender, activity_level, goal_type)
 		 VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		 ON CONFLICT ON CONSTRAINT nutrition_goals_user_org_unique
+		 ON CONFLICT (user_id, COALESCE(organization_id, '00000000-0000-0000-0000-000000000000'))
 		 DO UPDATE SET calorie_goal = $2, protein_goal_g = $3, carbs_goal_g = $4, fat_goal_g = $5,
 		               weight_kg = $6, height_cm = $7, age = $8, gender = $9,
 		               activity_level = $10, goal_type = $11`,
@@ -54,6 +54,18 @@ func (r *Repository) UpsertNutritionGoal(ctx context.Context, userID string, cal
 		return fmt.Errorf("upserting nutrition goal: %w", err)
 	}
 	return nil
+}
+
+// GetOrgIDBySlug looks up an organization's UUID by its slug.
+func (r *Repository) GetOrgIDBySlug(ctx context.Context, slug string) (string, error) {
+	var orgID string
+	err := r.db.QueryRow(ctx,
+		`SELECT id::text FROM organizations WHERE slug = $1 AND is_active = true`, slug,
+	).Scan(&orgID)
+	if err != nil {
+		return "", fmt.Errorf("organization not found for slug %q: %w", slug, err)
+	}
+	return orgID, nil
 }
 
 // JoinGym creates an organization_members record for the user.

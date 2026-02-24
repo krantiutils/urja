@@ -278,6 +278,7 @@ export default function MemberExercisesPage({
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailCache, setDetailCache] = useState<Record<string, ExerciseItem>>({});
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [detailLoading, setDetailLoading] = useState<string | null>(null);
 
   // Load exercises

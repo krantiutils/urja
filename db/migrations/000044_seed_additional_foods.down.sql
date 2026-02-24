@@ -1,0 +1,27 @@
+-- Remove additional food items seeded in 000044.
+DELETE FROM food_items WHERE name IN (
+    'Idli (Steamed Rice Cake)',
+    'Dosa (Plain)',
+    'Masala Dosa',
+    'Sambar',
+    'Vada (Medu)',
+    'Uttapam',
+    'Upma',
+    'Pizza (Cheese)',
+    'Pizza (Pepperoni)',
+    'Burger (Beef)',
+    'French Fries',
+    'Fried Chicken',
+    'Sandwich (Club)',
+    'Thukpa',
+    'Chatamari',
+    'Yomari',
+    'Kwati (Bean Soup)',
+    'Gundruk',
+    'Dhido',
+    'Sel Roti (Ring Bread)',
+    'Bara (Fried Lentil Patty)',
+    'Protein Shake (Whey)',
+    'Greek Yogurt',
+    'Oatmeal (Cooked)'
+);

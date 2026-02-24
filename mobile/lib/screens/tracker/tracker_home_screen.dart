@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/theme.dart';
+import '../../models/nutrition.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/nutrition_service.dart';
+import '../member/water_tracker_widget.dart';
 
 class TrackerHomeScreen extends ConsumerStatefulWidget {
   const TrackerHomeScreen({super.key});
@@ -13,10 +16,68 @@ class TrackerHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _TrackerHomeScreenState extends ConsumerState<TrackerHomeScreen> {
+  late final NutritionService _nutritionService;
+  DailySummary? _dailySummary;
+  NutritionGoal? _nutritionGoal;
+  bool _calorieLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _nutritionService = NutritionService(ref.read(apiClientProvider));
+    _loadCalorieData();
+  }
+
+  String get _today {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _loadCalorieData() async {
+    setState(() => _calorieLoading = true);
+    try {
+      final orgId = ref.read(authProvider).user?.orgId ?? '';
+      final results = await Future.wait([
+        _nutritionService.getDailySummary(orgId, _today).catchError((_) =>
+            DailySummary(
+                date: _today,
+                totalCalories: 0,
+                totalProtein: 0,
+                totalCarbs: 0,
+                totalFat: 0,
+                meals: [])),
+        _nutritionService.getNutritionGoal(orgId).catchError((_) =>
+            NutritionGoal(
+              id: '',
+              userId: '',
+              organizationId: '',
+              calorieGoal: 2000,
+              proteinGoalG: 150,
+              carbsGoalG: 250,
+              fatGoalG: 65,
+              weightKg: 0,
+              heightCm: 0,
+              age: 0,
+              gender: '',
+              activityLevel: '',
+              goalType: '',
+            )),
+      ]);
+      if (mounted) {
+        setState(() {
+          _dailySummary = results[0] as DailySummary;
+          _nutritionGoal = results[1] as NutritionGoal;
+          _calorieLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _calorieLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
-    final userName = auth.user?.phone ?? 'there';
     final userType = auth.user?.userType;
     final isCalorieTracker = userType == 'calorie_tracker';
 
@@ -35,9 +96,7 @@ class _TrackerHomeScreenState extends ConsumerState<TrackerHomeScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           color: AppTheme.primary,
-          onRefresh: () async {
-            // Placeholder - will refresh data when integrated
-          },
+          onRefresh: _loadCalorieData,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
             children: [
@@ -109,6 +168,11 @@ class _TrackerHomeScreenState extends ConsumerState<TrackerHomeScreen> {
   }
 
   Widget _buildCalorieSummaryCard() {
+    final eaten = _dailySummary?.totalCalories.round() ?? 0;
+    final goal = _nutritionGoal?.calorieGoal.round() ?? 2000;
+    final remaining = (goal - eaten).clamp(0, double.maxFinite.toInt());
+    final progress = goal > 0 ? (eaten / goal).clamp(0.0, 1.0) : 0.0;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -143,35 +207,48 @@ class _TrackerHomeScreenState extends ConsumerState<TrackerHomeScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            // Calorie progress (placeholder)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _calorieColumn('Eaten', '0', AppTheme.primary),
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: AppTheme.surfaceLight,
+            if (_calorieLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                        color: AppTheme.primary, strokeWidth: 2),
+                  ),
                 ),
-                _calorieColumn('Remaining', '2000', AppTheme.textSecondary),
-                Container(
-                  width: 1,
-                  height: 40,
-                  color: AppTheme.surfaceLight,
-                ),
-                _calorieColumn('Goal', '2000', AppTheme.info),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: const LinearProgressIndicator(
-                value: 0.0,
-                backgroundColor: Color(0xFF16213E),
-                color: AppTheme.primary,
-                minHeight: 8,
+              )
+            else ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _calorieColumn('Eaten', '$eaten', AppTheme.primary),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: AppTheme.surfaceLight,
+                  ),
+                  _calorieColumn('Remaining', '$remaining', AppTheme.textSecondary),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: AppTheme.surfaceLight,
+                  ),
+                  _calorieColumn('Goal', '$goal', AppTheme.info),
+                ],
               ),
-            ),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: const Color(0xFF16213E),
+                  color: AppTheme.primary,
+                  minHeight: 8,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -202,84 +279,7 @@ class _TrackerHomeScreenState extends ConsumerState<TrackerHomeScreen> {
   }
 
   Widget _buildWaterTrackerCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.info.withAlpha(30),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.water_drop,
-                      color: AppTheme.info, size: 20),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Water Intake',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Water glasses placeholder
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(8, (index) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(
-                    Icons.water_drop,
-                    color: AppTheme.info.withAlpha(40),
-                    size: 28,
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: Text(
-                '0 / 8 glasses',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  // Placeholder - will be implemented in water tracking step
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Water tracking coming soon!'),
-                      backgroundColor: AppTheme.info,
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Glass'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.info,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return const WaterTrackerWidget();
   }
 
   Widget _buildWorkoutPlanCard() {
@@ -396,10 +396,12 @@ class _TrackerHomeScreenState extends ConsumerState<TrackerHomeScreen> {
                 iconColor: AppTheme.info,
                 label: 'Log Water',
                 onTap: () {
+                  // Scroll to water tracker card at top of page
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Water tracking coming soon!'),
+                      content: Text('Use the water tracker above to log water!'),
                       backgroundColor: AppTheme.info,
+                      duration: Duration(seconds: 2),
                     ),
                   );
                 },

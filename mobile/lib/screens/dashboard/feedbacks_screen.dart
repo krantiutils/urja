@@ -29,7 +29,10 @@ class _FeedbacksScreenState extends ConsumerState<FeedbacksScreen> {
 
   Future<void> _loadFeedbacks() async {
     final orgId = ref.read(authProvider).user?.orgId;
-    if (orgId == null) return;
+    if (orgId == null) {
+      setState(() => _loading = false);
+      return;
+    }
 
     setState(() => _loading = true);
     final noticeService = NoticeService(ref.read(apiClientProvider));

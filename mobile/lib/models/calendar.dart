@@ -14,9 +14,9 @@ class AttendanceCalendar {
   factory AttendanceCalendar.fromJson(Map<String, dynamic> json) {
     return AttendanceCalendar(
       month: json['month'] as String,
-      daysInMonth: json['days_in_month'] as int,
-      checkInDays: (json['check_in_days'] as List<dynamic>).map((e) => e as int).toList(),
-      totalCheckIns: json['total_check_ins'] as int,
+      daysInMonth: (json['days_in_month'] as num).toInt(),
+      checkInDays: (json['check_in_days'] as List<dynamic>? ?? []).map((e) => (e as num).toInt()).toList(),
+      totalCheckIns: (json['total_check_ins'] as num).toInt(),
     );
   }
 }

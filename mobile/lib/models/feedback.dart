@@ -5,6 +5,7 @@ class MemberFeedback {
   final String memberName;
   final String? avatarUrl;
   final String message;
+  final int? rating;
   final String createdAt;
 
   MemberFeedback({
@@ -14,6 +15,7 @@ class MemberFeedback {
     required this.memberName,
     this.avatarUrl,
     required this.message,
+    this.rating,
     required this.createdAt,
   });
 
@@ -24,6 +26,7 @@ class MemberFeedback {
         memberName: json['member_name'] as String,
         avatarUrl: json['avatar_url'] as String?,
         message: json['message'] as String,
+        rating: json['rating'] as int?,
         createdAt: json['created_at'] as String,
       );
 }

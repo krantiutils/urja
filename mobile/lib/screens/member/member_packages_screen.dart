@@ -52,9 +52,10 @@ class _MemberPackagesScreenState extends ConsumerState<MemberPackagesScreen>
         _packages = packages;
         _loading = false;
       });
-    } catch (e) {
+    } catch (_) {
+      // Independent users may have no packages — treat as empty, not error
       setState(() {
-        _error = e.toString();
+        _packages = [];
         _loading = false;
       });
     }

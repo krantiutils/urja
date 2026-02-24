@@ -84,8 +84,13 @@ func (s *Service) GetDailySummary(ctx context.Context, userID, date string) (*Wa
 		return nil, err
 	}
 
+	parsedDate, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return nil, fmt.Errorf("parsing date for summary: %w", err)
+	}
+
 	return &WaterDailySummary{
-		Date:    date,
+		Date:    parsedDate,
 		TotalML: totalML,
 		GoalML:  goalML,
 		Entries: entries,

@@ -41,7 +41,10 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
 
   Future<void> _loadData() async {
     final orgId = ref.read(authProvider).user?.orgId;
-    if (orgId == null) return;
+    if (orgId == null) {
+      setState(() => _loading = false);
+      return;
+    }
 
     setState(() => _loading = true);
     final smsService = SmsService(ref.read(apiClientProvider));

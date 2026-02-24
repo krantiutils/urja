@@ -1299,6 +1299,183 @@ class AppLocalizationsNe extends AppLocalizations {
   String get nutritionToday => 'आज';
 
   @override
+  String get onboardingTitle => 'ऊर्जामा स्वागत छ';
+
+  @override
+  String get onboardingWhatBringsYou => 'तपाईं किन यहाँ हुनुहुन्छ?';
+
+  @override
+  String get onboardingGymMember => 'जिम सदस्य';
+
+  @override
+  String get onboardingGymMemberDesc =>
+      'म जिम जान्छु र सदस्यता ट्र्याक गर्न चाहन्छु';
+
+  @override
+  String get onboardingFitnessTracker => 'फिटनेस ट्र्याकर';
+
+  @override
+  String get onboardingFitnessTrackerDesc =>
+      'म घरमा व्यायाम गर्छु र प्रशिक्षण कार्यक्रम पालन गर्न चाहन्छु';
+
+  @override
+  String get onboardingCalorieTracker => 'क्यालोरी ट्र्याकर';
+
+  @override
+  String get onboardingCalorieTrackerDesc =>
+      'म खाना सेवन ट्र्याक गर्न र तौल व्यवस्थापन गर्न चाहन्छु';
+
+  @override
+  String get onboardingWhatsYourGoal => 'तपाईंको लक्ष्य के हो?';
+
+  @override
+  String get onboardingLoseWeight => 'तौल घटाउने';
+
+  @override
+  String get onboardingBuildMuscle => 'मांसपेशी बनाउने';
+
+  @override
+  String get onboardingStayFit => 'फिट रहने';
+
+  @override
+  String get onboardingGeneralHealth => 'सामान्य स्वास्थ्य';
+
+  @override
+  String get onboardingAboutYou => 'तपाईंको बारेमा';
+
+  @override
+  String get onboardingYourName => 'तपाईंको नाम';
+
+  @override
+  String get onboardingNamePlaceholder => 'पूरा नाम लेख्नुहोस्';
+
+  @override
+  String get onboardingWeight => 'तौल (किलो)';
+
+  @override
+  String get onboardingHeight => 'उचाइ (से.मी.)';
+
+  @override
+  String get onboardingAge => 'उमेर';
+
+  @override
+  String get onboardingGender => 'लिङ्ग';
+
+  @override
+  String get onboardingActivityLevel => 'गतिविधि स्तर';
+
+  @override
+  String get onboardingSedentary => 'निष्क्रिय';
+
+  @override
+  String get onboardingLight => 'हल्का सक्रिय';
+
+  @override
+  String get onboardingModerate => 'मध्यम सक्रिय';
+
+  @override
+  String get onboardingActive => 'सक्रिय';
+
+  @override
+  String get onboardingVeryActive => 'धेरै सक्रिय';
+
+  @override
+  String get onboardingScanGymQr =>
+      'सामेल हुन आफ्नो जिमको QR कोड स्क्यान गर्नुहोस्';
+
+  @override
+  String get onboardingJoinGym => 'जिम सामेल हुनुहोस्';
+
+  @override
+  String get onboardingSkipForNow => 'अहिलेलाई छोड्नुहोस्';
+
+  @override
+  String get onboardingAllSet => 'तपाईं तयार हुनुहुन्छ!';
+
+  @override
+  String get onboardingDailyCalories => 'दैनिक क्यालोरी';
+
+  @override
+  String get onboardingProtein => 'प्रोटिन';
+
+  @override
+  String get onboardingCarbs => 'कार्ब्स';
+
+  @override
+  String get onboardingFat => 'बोसो';
+
+  @override
+  String get onboardingLetsGo => 'सुरु गरौं!';
+
+  @override
+  String get onboardingNext => 'अर्को';
+
+  @override
+  String get onboardingBack => 'पछाडि';
+
+  @override
+  String onboardingStep(int current, int total) {
+    return 'चरण $current मध्ये $total';
+  }
+
+  @override
+  String get waterTitle => 'पानी सेवन';
+
+  @override
+  String get waterTodayIntake => 'आजको सेवन';
+
+  @override
+  String get waterGoal => 'लक्ष्य';
+
+  @override
+  String get waterAddWater => 'पानी थप्नुहोस्';
+
+  @override
+  String get waterAmount => 'परिमाण (मि.लि.)';
+
+  @override
+  String get waterGlassSize => 'गिलास (२५०मि.लि.)';
+
+  @override
+  String get waterBottleSize => 'बोतल (५००मि.लि.)';
+
+  @override
+  String get waterLargeBottle => 'ठूलो (१०००मि.लि.)';
+
+  @override
+  String get waterCustomAmount => 'अनुकूलन';
+
+  @override
+  String get waterRemaining => 'बाँकी';
+
+  @override
+  String get waterCompleted => 'लक्ष्य पुग्यो!';
+
+  @override
+  String get waterNoLogs => 'आज पानी लग गरिएको छैन';
+
+  @override
+  String get waterDelete => 'हटाउनुहोस्';
+
+  @override
+  String get myWater => 'पानी सेवन';
+
+  @override
+  String get trackerHome => 'गृहपृष्ठ';
+
+  @override
+  String get trackerNutrition => 'पोषण';
+
+  @override
+  String get trackerWorkouts => 'व्यायामहरू';
+
+  @override
+  String get trackerProgress => 'प्रगति';
+
+  @override
+  String get trackerAccount => 'खाता';
+
+  @override
   String get progressTitle => 'प्रगति';
 
   @override
@@ -1346,4 +1523,55 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get progressKg => 'किलो';
+
+  @override
+  String get gymCode => 'जिम कोड';
+
+  @override
+  String get scanToCheckIn => 'चेक इन गर्न स्क्यान गर्नुहोस्';
+
+  @override
+  String get gymQrCodeError => 'QR कोड लोड गर्न असफल';
+
+  @override
+  String get gymQrCodeDesc =>
+      'सदस्यहरूले चेक इन गर्न यो कोड स्क्यान गर्न सक्छन्';
+
+  @override
+  String get joinAGym => 'जिममा सामेल हुनुहोस्';
+
+  @override
+  String get joinAGymDesc =>
+      'उपस्थिति ट्र्याक गर्न र व्यायाम पहुँच गर्न जिममा जोड्नुहोस्';
+
+  @override
+  String get scanGymQrCode => 'जिम QR कोड स्क्यान गर्नुहोस्';
+
+  @override
+  String get orEnterCodeManually => 'वा कोड म्यानुअली प्रविष्ट गर्नुहोस्';
+
+  @override
+  String get joinGym => 'जिममा सामेल हुनुहोस्';
+
+  @override
+  String get successfullyJoinedGym => 'जिममा सफलतापूर्वक सामेल भयो!';
+
+  @override
+  String get couldNotJoinGym =>
+      'जिममा सामेल हुन सकिएन। कृपया कोड जाँच गर्नुहोस्।';
+
+  @override
+  String get enterGymCode => 'कृपया आफ्नो जिम कोड प्रविष्ट गर्नुहोस्';
+
+  @override
+  String get submitFeedback => 'प्रतिक्रिया पठाउनुहोस्';
+
+  @override
+  String get rateYourExperience => 'तपाईंको अनुभव मूल्याङ्कन गर्नुहोस्';
+
+  @override
+  String get submit => 'पेश गर्नुहोस्';
+
+  @override
+  String get feedbackSubmitted => 'तपाईंको प्रतिक्रियाको लागि धन्यवाद!';
 }

@@ -7,7 +7,6 @@ import { api } from "@/lib/api";
 import type {
   Locale,
   FoodItem,
-  FoodLog,
   MealTemplate,
   NutritionGoal,
   DailySummary,
@@ -15,7 +14,6 @@ import type {
   WeeklySummaryDay,
   NutritionStreak,
   WaterDailySummary,
-  WaterLog,
   CreateCustomFoodInput,
 } from "@/types";
 import {

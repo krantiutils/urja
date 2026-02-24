@@ -109,6 +109,24 @@ func (h *Handler) ListByOrg(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"data": records})
 }
 
+// WeeklySummary handles GET /api/v1/orgs/{orgId}/attendance/weekly
+func (h *Handler) WeeklySummary(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+
+	summaries, err := h.service.ListWeeklySummary(r.Context(), orgID)
+	if err != nil {
+		h.logger.Error("failed to get weekly summary", "error", err, "org_id", orgID)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"data": summaries})
+}
+
 // ListMine handles GET /api/v1/members/me/attendance
 func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.UserIDFromContext(r.Context())

@@ -88,7 +88,7 @@ export default function OnboardingPage({
   const t = getDictionary(locale);
   const ob = t.onboarding;
   const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading } = useAuth();
 
   // Form state
   const [form, setForm] = useState<OnboardingState>({

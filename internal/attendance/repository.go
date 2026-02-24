@@ -11,11 +11,20 @@ import (
 
 // Record represents an attendance check-in.
 type Record struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	OrgID     string    `json:"org_id"`
-	CheckInAt time.Time `json:"check_in_at"`
-	Method    string    `json:"method"`
+	ID         string    `json:"id"`
+	UserID     string    `json:"user_id"`
+	OrgID      string    `json:"org_id"`
+	CheckInAt  time.Time `json:"check_in_at"`
+	Method     string    `json:"method"`
+	MemberName *string   `json:"member_name,omitempty"`
+}
+
+// WeeklyMemberSummary represents a member's attendance count for the last 7 days.
+type WeeklyMemberSummary struct {
+	UserID    string `json:"user_id"`
+	Name      string `json:"name"`
+	DaysCount int    `json:"days_count"`
+	Streak    int    `json:"current_streak"`
 }
 
 // Streak represents a member's attendance streak at an organization.
@@ -78,12 +87,15 @@ func (r *Repository) ListByUser(ctx context.Context, userID string, limit, offse
 	return records, rows.Err()
 }
 
-// ListByOrg retrieves attendance records for an organization.
+// ListByOrg retrieves attendance records for an organization, including member names.
 func (r *Repository) ListByOrg(ctx context.Context, orgID string, limit, offset int) ([]Record, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, user_id, organization_id, check_in_at, check_in_method
-		 FROM attendance WHERE organization_id = $1
-		 ORDER BY check_in_at DESC LIMIT $2 OFFSET $3`,
+		`SELECT a.id, a.user_id, a.organization_id, a.check_in_at, a.check_in_method,
+		        COALESCE(u.name, '')
+		 FROM attendance a
+		 LEFT JOIN users u ON a.user_id = u.id
+		 WHERE a.organization_id = $1
+		 ORDER BY a.check_in_at DESC LIMIT $2 OFFSET $3`,
 		orgID, limit, offset,
 	)
 	if err != nil {
@@ -94,12 +106,47 @@ func (r *Repository) ListByOrg(ctx context.Context, orgID string, limit, offset 
 	var records []Record
 	for rows.Next() {
 		var rec Record
-		if err := rows.Scan(&rec.ID, &rec.UserID, &rec.OrgID, &rec.CheckInAt, &rec.Method); err != nil {
+		var name string
+		if err := rows.Scan(&rec.ID, &rec.UserID, &rec.OrgID, &rec.CheckInAt, &rec.Method, &name); err != nil {
 			return nil, fmt.Errorf("scanning attendance: %w", err)
+		}
+		if name != "" {
+			rec.MemberName = &name
 		}
 		records = append(records, rec)
 	}
 	return records, rows.Err()
+}
+
+// ListWeeklySummary returns per-member attendance counts for the last 7 days.
+func (r *Repository) ListWeeklySummary(ctx context.Context, orgID string) ([]WeeklyMemberSummary, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT a.user_id, COALESCE(u.name, ''),
+		        COUNT(DISTINCT DATE(a.check_in_at AT TIME ZONE 'Asia/Kathmandu')) as days_count,
+		        COALESCE(s.current_streak, 0)
+		 FROM attendance a
+		 LEFT JOIN users u ON a.user_id = u.id
+		 LEFT JOIN streaks s ON a.user_id = s.member_id AND a.organization_id = s.organization_id
+		 WHERE a.organization_id = $1
+		   AND a.check_in_at >= (NOW() AT TIME ZONE 'Asia/Kathmandu')::date - INTERVAL '6 days'
+		 GROUP BY a.user_id, u.name, s.current_streak
+		 ORDER BY days_count DESC, u.name ASC`,
+		orgID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying weekly summary: %w", err)
+	}
+	defer rows.Close()
+
+	var summaries []WeeklyMemberSummary
+	for rows.Next() {
+		var s WeeklyMemberSummary
+		if err := rows.Scan(&s.UserID, &s.Name, &s.DaysCount, &s.Streak); err != nil {
+			return nil, fmt.Errorf("scanning weekly summary: %w", err)
+		}
+		summaries = append(summaries, s)
+	}
+	return summaries, rows.Err()
 }
 
 // UpsertStreak updates the streak for a member at an org after a check-in.

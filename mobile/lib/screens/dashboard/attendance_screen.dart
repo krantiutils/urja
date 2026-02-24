@@ -21,26 +21,34 @@ class AttendanceScreen extends ConsumerStatefulWidget {
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   bool _loading = true;
   List<OrgAttendance> _records = [];
+  List<WeeklyMemberSummary> _weeklySummary = [];
   DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _loadAttendance();
+    _loadAll();
   }
 
-  Future<void> _loadAttendance() async {
+  Future<void> _loadAll() async {
     final orgId = ref.read(authProvider).user?.orgId;
-    if (orgId == null) return;
+    if (orgId == null) {
+      setState(() => _loading = false);
+      return;
+    }
 
     setState(() => _loading = true);
     final orgService = OrgService(ref.read(apiClientProvider));
 
     try {
-      final records = await orgService.getAttendance(orgId, limit: 100);
+      final results = await Future.wait([
+        orgService.getAttendance(orgId, limit: 100),
+        orgService.getWeeklyAttendanceSummary(orgId),
+      ]);
       if (mounted) {
         setState(() {
-          _records = records;
+          _records = results[0] as List<OrgAttendance>;
+          _weeklySummary = results[1] as List<WeeklyMemberSummary>;
           _loading = false;
         });
       }
@@ -121,7 +129,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               backgroundColor: AppTheme.primary,
             ),
           );
-          _loadAttendance();
+          _loadAll();
         }
       } catch (e) {
         if (mounted) {
@@ -147,7 +155,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       body: _loading
           ? const LoadingIndicator()
           : RefreshIndicator(
-              onRefresh: _loadAttendance,
+              onRefresh: _loadAll,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -186,7 +194,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Attendance list
+                  // Today's attendance list
                   if (filtered.isEmpty)
                     EmptyState(
                       icon: Icons.event_busy,
@@ -212,9 +220,112 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                         ),
                       );
                     }),
+
+                  // Weekly attendance summary
+                  if (_weeklySummary.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      'Last 7 Days',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Table(
+                          columnWidths: const {
+                            0: FlexColumnWidth(3),
+                            1: FlexColumnWidth(1.5),
+                            2: FlexColumnWidth(1.5),
+                          },
+                          children: [
+                            TableRow(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                      color: Colors.grey.shade300, width: 1),
+                                ),
+                              ),
+                              children: [
+                                _tableHeader('Member'),
+                                _tableHeader('Days'),
+                                _tableHeader('Streak'),
+                              ],
+                            ),
+                            ..._weeklySummary.map((s) => TableRow(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
+                                      child: Text(
+                                        s.name.isEmpty ? 'Unknown' : s.name,
+                                        style: const TextStyle(
+                                            color: AppTheme.textPrimary),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
+                                      child: Text(
+                                        '${s.daysCount}/7',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: s.daysCount >= 5
+                                              ? AppTheme.primary
+                                              : s.daysCount >= 3
+                                                  ? Colors.orange
+                                                  : AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.local_fire_department,
+                                              size: 16, color: Colors.orange),
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            '${s.currentStreak}',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: AppTheme.textPrimary),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _tableHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+          color: AppTheme.textSecondary,
+        ),
+        textAlign: text == 'Member' ? TextAlign.left : TextAlign.center,
+      ),
     );
   }
 }

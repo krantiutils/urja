@@ -153,17 +153,26 @@ func (s *Service) CompleteOnboarding(ctx context.Context, userID string, input *
 }
 
 // JoinGym adds the user to a gym organization.
+// Accepts either a UUID org_id or a slug (e.g. "kathmandu-fitness-hub").
 func (s *Service) JoinGym(ctx context.Context, userID string, input *JoinGymInput) error {
 	if input.OrgID == "" {
 		return fmt.Errorf("org_id is required")
 	}
-	if _, err := uuid.Parse(input.OrgID); err != nil {
-		return fmt.Errorf("invalid org_id format")
+
+	orgID := input.OrgID
+	// If input doesn't look like a UUID, treat it as a slug and resolve it
+	if _, err := uuid.Parse(orgID); err != nil {
+		resolvedID, slugErr := s.repo.GetOrgIDBySlug(ctx, orgID)
+		if slugErr != nil {
+			return fmt.Errorf("gym not found: %s", orgID)
+		}
+		orgID = resolvedID
 	}
-	if err := s.repo.JoinGym(ctx, userID, input.OrgID); err != nil {
+
+	if err := s.repo.JoinGym(ctx, userID, orgID); err != nil {
 		return err
 	}
-	s.logger.Info("user joined gym", "user_id", userID, "org_id", input.OrgID)
+	s.logger.Info("user joined gym", "user_id", userID, "org_id", orgID)
 	return nil
 }
 

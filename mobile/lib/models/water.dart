@@ -16,7 +16,7 @@ class WaterLog {
   factory WaterLog.fromJson(Map<String, dynamic> json) => WaterLog(
         id: json['id'] as String,
         userId: json['user_id'] as String,
-        amountMl: json['amount_ml'] as int,
+        amountMl: (json['amount_ml'] as num).toInt(),
         loggedDate: json['logged_date'] as String,
         loggedAt: json['logged_at'] as String,
       );
@@ -38,8 +38,8 @@ class WaterDailySummary {
   factory WaterDailySummary.fromJson(Map<String, dynamic> json) =>
       WaterDailySummary(
         date: json['date'] as String,
-        totalMl: json['total_ml'] as int,
-        goalMl: json['goal_ml'] as int,
+        totalMl: (json['total_ml'] as num).toInt(),
+        goalMl: (json['goal_ml'] as num).toInt(),
         entries: (json['entries'] as List? ?? [])
             .map((e) => WaterLog.fromJson(e as Map<String, dynamic>))
             .toList(),

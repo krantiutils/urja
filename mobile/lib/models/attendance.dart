@@ -25,6 +25,28 @@ class OrgAttendance {
       );
 }
 
+class WeeklyMemberSummary {
+  final String userId;
+  final String name;
+  final int daysCount;
+  final int currentStreak;
+
+  WeeklyMemberSummary({
+    required this.userId,
+    required this.name,
+    required this.daysCount,
+    required this.currentStreak,
+  });
+
+  factory WeeklyMemberSummary.fromJson(Map<String, dynamic> json) =>
+      WeeklyMemberSummary(
+        userId: json['user_id'] as String,
+        name: json['name'] as String? ?? 'Unknown',
+        daysCount: (json['days_count'] as num?)?.toInt() ?? 0,
+        currentStreak: (json['current_streak'] as num?)?.toInt() ?? 0,
+      );
+}
+
 class MemberAttendanceRecord {
   final String id;
   final String userId;
@@ -87,8 +109,8 @@ class StreakInfo {
         id: json['id'] as String,
         memberId: json['member_id'] as String,
         orgId: json['org_id'] as String,
-        currentStreak: json['current_streak'] as int? ?? 0,
-        longestStreak: json['longest_streak'] as int? ?? 0,
+        currentStreak: (json['current_streak'] as num?)?.toInt() ?? 0,
+        longestStreak: (json['longest_streak'] as num?)?.toInt() ?? 0,
         lastCheckIn: json['last_check_in'] as String?,
         updatedAt: json['updated_at'] as String,
       );

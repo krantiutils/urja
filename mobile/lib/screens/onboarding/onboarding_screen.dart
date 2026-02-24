@@ -1,11 +1,14 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/notification_service.dart';
 import '../../services/onboarding_service.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -55,8 +58,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     return page;
   }
-
-  int get _logicalPage => _adjustedPage(_currentPage);
 
   @override
   void dispose() {
@@ -122,7 +123,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
       final data = <String, dynamic>{
         'user_type': _userType,
-        'goal': _goal,
+        'goal_type': _goal,
         'name': _nameController.text.trim(),
         'weight_kg': double.tryParse(_weightController.text) ?? 0,
         'height_cm': double.tryParse(_heightController.text) ?? 0,
@@ -155,6 +156,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void _completeOnboarding() {
     ref.read(authProvider.notifier).updateUserType(_userType ?? 'gym_member');
     ref.read(authProvider.notifier).completeOnboarding();
+
+    // Schedule periodic water & food intake reminders
+    NotificationService().scheduleAllReminders();
 
     // Navigate based on user type
     if (_userType == 'gym_member') {
@@ -228,61 +232,68 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // ─── Step 1: User Type ──────────────────────────────────────────────────────
 
   Widget _buildUserTypePage() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 32),
-          const Text(
-            'What brings you here?',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 32),
+                const Text(
+                  'What brings you here?',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Choose how you want to use the app',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                _buildUserTypeCard(
+                  value: 'gym_member',
+                  icon: Icons.fitness_center,
+                  iconColor: AppTheme.primary,
+                  title: 'Gym Member',
+                  subtitle: 'I go to a gym and want to track my membership, attendance, workouts and nutrition',
+                ),
+                const SizedBox(height: 12),
+                _buildUserTypeCard(
+                  value: 'fitness_tracker',
+                  icon: Icons.directions_run,
+                  iconColor: AppTheme.info,
+                  title: 'Fitness Tracker',
+                  subtitle: 'I work out on my own and want to track workouts and nutrition',
+                ),
+                const SizedBox(height: 12),
+                _buildUserTypeCard(
+                  value: 'calorie_tracker',
+                  icon: Icons.restaurant,
+                  iconColor: AppTheme.warning,
+                  title: 'Calorie Tracker',
+                  subtitle: 'I just want to track what I eat and manage my calories',
+                ),
+                const Spacer(),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _userType != null ? _nextPage : null,
+                    child: const Text('Continue'),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Choose how you want to use the app',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 40),
-          _buildUserTypeCard(
-            value: 'gym_member',
-            icon: Icons.fitness_center,
-            iconColor: AppTheme.primary,
-            title: 'Gym Member',
-            subtitle: 'I go to a gym and want to track my membership, attendance, workouts and nutrition',
-          ),
-          const SizedBox(height: 12),
-          _buildUserTypeCard(
-            value: 'fitness_tracker',
-            icon: Icons.directions_run,
-            iconColor: AppTheme.info,
-            title: 'Fitness Tracker',
-            subtitle: 'I work out on my own and want to track workouts and nutrition',
-          ),
-          const SizedBox(height: 12),
-          _buildUserTypeCard(
-            value: 'calorie_tracker',
-            icon: Icons.restaurant,
-            iconColor: AppTheme.warning,
-            title: 'Calorie Tracker',
-            subtitle: 'I just want to track what I eat and manage my calories',
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _userType != null ? _nextPage : null,
-              child: const Text('Continue'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -359,131 +370,225 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   // ─── Step 2: Gym Join (gym_member only) ─────────────────────────────────────
 
-  Widget _buildGymJoinPage() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 32),
-          const Text(
-            'Join your gym',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Enter the gym code provided by your gym to connect your account',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 40),
-          if (_gymJoined) ...[
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withAlpha(15),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primary, width: 2),
-              ),
+  void _openQRScanner() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: const BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withAlpha(30),
-                      borderRadius: BorderRadius.circular(12),
+                  const Text(
+                    'Scan Gym QR Code',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
                     ),
-                    child: const Icon(Icons.check_circle,
-                        color: AppTheme.primary, size: 28),
                   ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: MobileScanner(
+                  onDetect: (capture) {
+                    final barcode = capture.barcodes.firstOrNull;
+                    if (barcode?.rawValue != null) {
+                      Navigator.pop(context);
+                      _orgIdController.text = barcode!.rawValue!;
+                      _joinGym();
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGymJoinPage() {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 32),
+                const Text(
+                  'Join your gym',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Scan the QR code at your gym or enter the gym code manually',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                if (_gymJoined) ...[
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withAlpha(15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.primary, width: 2),
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          'Successfully joined!',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary,
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withAlpha(30),
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          child: const Icon(Icons.check_circle,
+                              color: AppTheme.primary, size: 28),
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'You are now connected to your gym',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppTheme.textSecondary,
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Successfully joined!',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'You are now connected to your gym',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ] else ...[
-            TextField(
-              controller: _orgIdController,
-              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
-              decoration: InputDecoration(
-                labelText: 'Gym Code',
-                labelStyle: const TextStyle(color: AppTheme.textSecondary),
-                hintText: 'e.g. GYM-XXXXX',
-                hintStyle:
-                    TextStyle(color: AppTheme.textSecondary.withAlpha(100)),
-                prefixIcon: const Icon(Icons.qr_code,
-                    color: AppTheme.textSecondary, size: 20),
-                errorText: _joinGymError,
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _joiningGym ? null : _joinGym,
-                child: _joiningGym
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.5,
+                ] else ...[
+                  if (!kIsWeb) ...[
+                    // QR Scan button
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _openQRScanner,
+                        icon: const Icon(Icons.qr_code_scanner, size: 24),
+                        label: const Text('Scan QR Code'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: const BorderSide(color: AppTheme.primary),
+                          foregroundColor: AppTheme.primary,
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider(color: AppTheme.surfaceLight)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('or enter code manually',
+                              style: TextStyle(
+                                  color: AppTheme.textSecondary.withAlpha(150),
+                                  fontSize: 13)),
+                        ),
+                        const Expanded(child: Divider(color: AppTheme.surfaceLight)),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                  TextField(
+                    controller: _orgIdController,
+                    style:
+                        const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+                    decoration: InputDecoration(
+                      labelText: 'Gym Code',
+                      labelStyle: const TextStyle(color: AppTheme.textSecondary),
+                      hintText: 'e.g. GYM-XXXXX',
+                      hintStyle:
+                          TextStyle(color: AppTheme.textSecondary.withAlpha(100)),
+                      prefixIcon: const Icon(Icons.business,
+                          color: AppTheme.textSecondary, size: 20),
+                      errorText: _joinGymError,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _joiningGym ? null : _joinGym,
+                      child: _joiningGym
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text('Join Gym'),
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: _previousPage,
+                      child: const Text('Back'),
+                    ),
+                    const Spacer(),
+                    if (_gymJoined)
+                      ElevatedButton(
+                        onPressed: _nextPage,
+                        child: const Text('Continue'),
                       )
-                    : const Text('Join Gym'),
-              ),
-            ),
-          ],
-          const Spacer(),
-          Row(
-            children: [
-              TextButton(
-                onPressed: _previousPage,
-                child: const Text('Back'),
-              ),
-              const Spacer(),
-              if (_gymJoined)
-                ElevatedButton(
-                  onPressed: _nextPage,
-                  child: const Text('Continue'),
-                )
-              else
-                TextButton(
-                  onPressed: _nextPage,
-                  child: const Text('Skip for now'),
+                    else
+                      TextButton(
+                        onPressed: _nextPage,
+                        child: const Text('Skip for now'),
+                      ),
+                  ],
                 ),
-            ],
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -491,75 +596,82 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // ─── Step 3: Goal ───────────────────────────────────────────────────────────
 
   Widget _buildGoalPage() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 32),
-          const Text(
-            "What's your goal?",
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 32),
+                const Text(
+                  "What's your goal?",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'This helps us personalize your experience',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                _buildGoalCard(
+                  value: 'lose_weight',
+                  icon: Icons.local_fire_department,
+                  iconColor: Colors.orange,
+                  title: 'Lose Weight',
+                  subtitle: 'Burn fat and get lean',
+                ),
+                const SizedBox(height: 12),
+                _buildGoalCard(
+                  value: 'build_muscle',
+                  icon: Icons.fitness_center,
+                  iconColor: Colors.blue,
+                  title: 'Build Muscle',
+                  subtitle: 'Gain strength and size',
+                ),
+                const SizedBox(height: 12),
+                _buildGoalCard(
+                  value: 'stay_fit',
+                  icon: Icons.favorite,
+                  iconColor: Colors.red,
+                  title: 'Stay Fit',
+                  subtitle: 'Maintain general fitness',
+                ),
+                const SizedBox(height: 12),
+                _buildGoalCard(
+                  value: 'general_health',
+                  icon: Icons.spa,
+                  iconColor: Colors.green,
+                  title: 'General Health',
+                  subtitle: 'Eat better and feel better',
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: _previousPage,
+                      child: const Text('Back'),
+                    ),
+                    const Spacer(),
+                    ElevatedButton(
+                      onPressed: _goal != null ? _nextPage : null,
+                      child: const Text('Continue'),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'This helps us personalize your experience',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 40),
-          _buildGoalCard(
-            value: 'lose_weight',
-            icon: Icons.local_fire_department,
-            iconColor: Colors.orange,
-            title: 'Lose Weight',
-            subtitle: 'Burn fat and get lean',
-          ),
-          const SizedBox(height: 12),
-          _buildGoalCard(
-            value: 'build_muscle',
-            icon: Icons.fitness_center,
-            iconColor: Colors.blue,
-            title: 'Build Muscle',
-            subtitle: 'Gain strength and size',
-          ),
-          const SizedBox(height: 12),
-          _buildGoalCard(
-            value: 'stay_fit',
-            icon: Icons.favorite,
-            iconColor: Colors.red,
-            title: 'Stay Fit',
-            subtitle: 'Maintain general fitness',
-          ),
-          const SizedBox(height: 12),
-          _buildGoalCard(
-            value: 'general_health',
-            icon: Icons.spa,
-            iconColor: Colors.green,
-            title: 'General Health',
-            subtitle: 'Eat better and feel better',
-          ),
-          const Spacer(),
-          Row(
-            children: [
-              TextButton(
-                onPressed: _previousPage,
-                child: const Text('Back'),
-              ),
-              const Spacer(),
-              ElevatedButton(
-                onPressed: _goal != null ? _nextPage : null,
-                child: const Text('Continue'),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -678,7 +790,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Expanded(
                 child: TextField(
                   controller: _weightController,
-                  keyboardType: TextInputType.number,
+                  keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
                   style: const TextStyle(color: AppTheme.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Weight (kg)',
@@ -692,7 +804,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Expanded(
                 child: TextField(
                   controller: _heightController,
-                  keyboardType: TextInputType.number,
+                  keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
                   style: const TextStyle(color: AppTheme.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Height (cm)',
@@ -708,7 +820,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           // Age
           TextField(
             controller: _ageController,
-            keyboardType: TextInputType.number,
+            keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
             style: const TextStyle(color: AppTheme.textPrimary),
             decoration: const InputDecoration(
               labelText: 'Age',
@@ -800,95 +912,102 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final carbsGoal = _results?['carbs_goal_g'] ?? (calorieGoal * 0.4 / 4).round();
     final fatGoal = _results?['fat_goal_g'] ?? (calorieGoal * 0.3 / 9).round();
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          const SizedBox(height: 48),
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withAlpha(30),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.check_circle,
-                color: AppTheme.primary, size: 48),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            "You're all set!",
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Here are your personalized targets',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 40),
-          // Calorie target card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  const Text(
-                    'Daily Calorie Target',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.textSecondary,
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: Column(
+              children: [
+                const SizedBox(height: 48),
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withAlpha(30),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle,
+                      color: AppTheme.primary, size: 48),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  "You're all set!",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Here are your personalized targets',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                // Calorie target card
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Daily Calorie Target',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${_toInt(calorieGoal)}',
+                          style: const TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                        const Text(
+                          'kcal / day',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Divider(),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _macroTarget(
+                                'Protein', '${_toInt(proteinGoal)}g', Colors.blue),
+                            _macroTarget(
+                                'Carbs', '${_toInt(carbsGoal)}g', Colors.amber),
+                            _macroTarget(
+                                'Fat', '${_toInt(fatGoal)}g', Colors.pink[300]!),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${_toInt(calorieGoal)}',
-                    style: const TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primary,
-                    ),
+                ),
+                const Spacer(),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _completeOnboarding,
+                    child: const Text('Get Started'),
                   ),
-                  const Text(
-                    'kcal / day',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _macroTarget(
-                          'Protein', '${_toInt(proteinGoal)}g', Colors.blue),
-                      _macroTarget(
-                          'Carbs', '${_toInt(carbsGoal)}g', Colors.amber),
-                      _macroTarget(
-                          'Fat', '${_toInt(fatGoal)}g', Colors.pink[300]!),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _completeOnboarding,
-              child: const Text('Get Started'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -38,7 +38,7 @@ class OrgPackage {
         nameNe: json['name_ne'] as String?,
         description: json['description'] as String?,
         descriptionNe: json['description_ne'] as String?,
-        durationDays: json['duration_days'] as int,
+        durationDays: (json['duration_days'] as num).toInt(),
         price: json['price'] as String,
         currency: json['currency'] as String? ?? 'NPR',
         maxMembers: json['max_members'] as int?,
@@ -113,7 +113,10 @@ class MemberPackage {
   int get daysRemaining {
     final end = DateTime.tryParse(endDate);
     if (end == null) return 0;
-    return end.difference(DateTime.now()).inDays;
+    final today = DateTime.now();
+    final endOfDay = DateTime(end.year, end.month, end.day, 23, 59, 59);
+    final diff = endOfDay.difference(today).inDays;
+    return diff < 0 ? 0 : diff;
   }
 
   bool get isExpired => daysRemaining <= 0;

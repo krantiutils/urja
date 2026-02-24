@@ -208,6 +208,11 @@ func (s *Service) ListByOrg(ctx context.Context, orgID string, limit, offset int
 	return s.repo.ListByOrg(ctx, orgID, limit, offset)
 }
 
+// ListWeeklySummary returns per-member attendance counts for the last 7 days.
+func (s *Service) ListWeeklySummary(ctx context.Context, orgID string) ([]WeeklyMemberSummary, error) {
+	return s.repo.ListWeeklySummary(ctx, orgID)
+}
+
 // GetStreaks returns all attendance streaks for a user across organizations.
 func (s *Service) GetStreaks(ctx context.Context, userID string) ([]Streak, error) {
 	return s.repo.GetStreaksByUser(ctx, userID)

@@ -21,8 +21,8 @@ class MemberStreak {
         id: json['id'] as String,
         memberId: json['member_id'] as String,
         orgId: json['org_id'] as String,
-        currentStreak: json['current_streak'] as int? ?? 0,
-        longestStreak: json['longest_streak'] as int? ?? 0,
+        currentStreak: (json['current_streak'] as num?)?.toInt() ?? 0,
+        longestStreak: (json['longest_streak'] as num?)?.toInt() ?? 0,
         lastCheckIn: json['last_check_in'] as String?,
         updatedAt: json['updated_at'] as String,
       );

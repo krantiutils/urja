@@ -30,7 +30,10 @@ class _NoticesScreenState extends ConsumerState<NoticesScreen> {
 
   Future<void> _loadNotices() async {
     final orgId = ref.read(authProvider).user?.orgId;
-    if (orgId == null) return;
+    if (orgId == null) {
+      setState(() => _loading = false);
+      return;
+    }
 
     setState(() => _loading = true);
     final noticeService = NoticeService(ref.read(apiClientProvider));

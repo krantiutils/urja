@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile/l10n/app_localizations.dart';
@@ -149,7 +150,58 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ] else ...[
                   // Show phone number with change option
                   _buildPhoneDisplay(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  // Test mode OTP banner
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warning.withAlpha(25),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.warning.withAlpha(100),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('🧪', style: TextStyle(fontSize: 20)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'TEST MODE',
+                                style: TextStyle(
+                                  color: AppTheme.warning,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Your OTP is: 123456',
+                                style: TextStyle(
+                                  color: AppTheme.warning,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'In production, real SMS will be sent to your number.',
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   _buildOtpInput(l10n),
                   const SizedBox(height: 20),
                   _buildVerifyButton(l10n),
@@ -167,11 +219,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildPhoneInput(AppLocalizations l10n) {
     return TextField(
       controller: _phoneController,
-      keyboardType: TextInputType.phone,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(10),
-      ],
+      keyboardType: kIsWeb ? TextInputType.text : TextInputType.phone,
+      inputFormatters: kIsWeb
+          ? []
+          : [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ],
       style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
       decoration: InputDecoration(
         labelText: l10n.phoneNumber,
@@ -264,12 +318,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildOtpInput(AppLocalizations l10n) {
     return TextField(
       controller: _otpController,
-      keyboardType: TextInputType.number,
+      keyboardType: kIsWeb ? TextInputType.text : TextInputType.number,
       textAlign: TextAlign.center,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(6),
-      ],
+      inputFormatters: kIsWeb
+          ? []
+          : [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(6),
+            ],
       style: const TextStyle(
         color: AppTheme.textPrimary,
         fontSize: 24,
@@ -286,7 +342,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
       ),
       onChanged: (value) {
-        if (value.length == 6) {
+        if (value.length == 6 && !_loading) {
           _verifyOtp();
         }
       },

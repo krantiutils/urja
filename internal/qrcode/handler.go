@@ -1,6 +1,7 @@
 package qrcode
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -10,16 +11,22 @@ import (
 	"github.com/urja-gym/urja/pkg/middleware"
 )
 
+// OrgSlugLookup is an interface for looking up an org's slug by its ID.
+type OrgSlugLookup interface {
+	GetSlugByID(ctx context.Context, orgID string) (string, error)
+}
+
 // Handler handles QR code generation endpoints.
 type Handler struct {
 	baseURL string
+	orgSlug OrgSlugLookup
 	logger  *slog.Logger
 }
 
 // NewHandler creates a new QR code handler.
 // baseURL is the application base URL used to construct check-in URLs.
-func NewHandler(baseURL string, logger *slog.Logger) *Handler {
-	return &Handler{baseURL: baseURL, logger: logger}
+func NewHandler(baseURL string, orgSlug OrgSlugLookup, logger *slog.Logger) *Handler {
+	return &Handler{baseURL: baseURL, orgSlug: orgSlug, logger: logger}
 }
 
 // GenerateQR handles GET /api/v1/orgs/{orgId}/qr-code
@@ -33,8 +40,16 @@ func (h *Handler) GenerateQR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The QR code encodes a check-in URL for the organization
-	checkInURL := fmt.Sprintf("%s/checkin/%s", h.baseURL, orgID)
+	// Look up the org slug for a human-readable URL
+	slug, err := h.orgSlug.GetSlugByID(r.Context(), orgID)
+	if err != nil {
+		h.logger.Error("failed to look up org slug", "error", err, "org_id", orgID)
+		// Fall back to org ID if slug lookup fails
+		slug = orgID
+	}
+
+	// The QR code encodes a check-in URL using the org slug
+	checkInURL := fmt.Sprintf("%s/checkin?gym=%s", h.baseURL, slug)
 
 	format := r.URL.Query().Get("format")
 	size := 256
@@ -44,8 +59,9 @@ func (h *Handler) GenerateQR(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{
-			"org_id":       orgID,
-			"checkin_url":  checkInURL,
+			"org_id":      orgID,
+			"slug":        slug,
+			"checkin_url": checkInURL,
 		})
 		return
 	}

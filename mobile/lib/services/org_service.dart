@@ -75,6 +75,15 @@ class OrgService {
     return CheckInResponse.fromJson(response.data);
   }
 
+  Future<List<WeeklyMemberSummary>> getWeeklyAttendanceSummary(
+      String orgId) async {
+    final response = await _api.get('/orgs/$orgId/attendance/weekly');
+    final data = response.data['data'] as List<dynamic>? ?? [];
+    return data
+        .map((e) => WeeklyMemberSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // Packages
   Future<List<OrgPackage>> getPackages(
     String orgId, {

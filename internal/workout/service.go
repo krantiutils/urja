@@ -198,7 +198,7 @@ func (s *Service) SelfAssignPlan(ctx context.Context, userID, orgID, templateID 
 	}
 
 	// Verify the template exists and is accessible to this org.
-	_, err := s.repo.GetTemplate(ctx, orgID, templateID)
+	tmpl, err := s.repo.GetTemplate(ctx, orgID, templateID)
 	if err != nil {
 		return nil, fmt.Errorf("template not found or not accessible")
 	}
@@ -208,6 +208,7 @@ func (s *Service) SelfAssignPlan(ctx context.Context, userID, orgID, templateID 
 		return nil, err
 	}
 
+	p.Template = tmpl
 	s.logger.Info("workout plan self-assigned", "user_id", userID, "template_id", templateID, "org_id", orgID)
 	return p, nil
 }

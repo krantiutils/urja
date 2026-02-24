@@ -41,7 +41,10 @@ class _NfcScreenState extends ConsumerState<NfcScreen>
 
   Future<void> _loadCards() async {
     final orgId = ref.read(authProvider).user?.orgId;
-    if (orgId == null) return;
+    if (orgId == null) {
+      setState(() => _loadingCards = false);
+      return;
+    }
 
     setState(() => _loadingCards = true);
     final nfcService = NfcApiService(ref.read(apiClientProvider));
@@ -66,7 +69,10 @@ class _NfcScreenState extends ConsumerState<NfcScreen>
 
   Future<void> _loadDevices() async {
     final orgId = ref.read(authProvider).user?.orgId;
-    if (orgId == null) return;
+    if (orgId == null) {
+      setState(() => _loadingDevices = false);
+      return;
+    }
 
     setState(() => _loadingDevices = true);
     final nfcService = NfcApiService(ref.read(apiClientProvider));

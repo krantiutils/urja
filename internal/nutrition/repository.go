@@ -170,23 +170,23 @@ func (r *Repository) ListFoodItems(ctx context.Context, orgID, userID, category 
 	var argIdx int
 
 	if orgID == "" {
-		sql = `SELECT id, organization_id, name, COALESCE(name_ne, ''), COALESCE(category, ''),
+		sql = `SELECT id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(category, ''),
 		               COALESCE(calories_per_100g, 0), COALESCE(protein_per_100g, 0),
 		               COALESCE(carbs_per_100g, 0), COALESCE(fat_per_100g, 0),
 		               COALESCE(fiber_per_100g, 0), COALESCE(serving_size_g, 0),
 		               COALESCE(serving_label, ''), COALESCE(serving_label_ne, ''),
-		               is_verified, COALESCE(barcode, ''), created_by, created_at, updated_at
+		               is_verified, COALESCE(barcode, ''), created_by::text, created_at, updated_at
 		        FROM food_items
 		        WHERE (organization_id IS NULL OR created_by = $1)`
 		args = []interface{}{userID}
 		argIdx = 2
 	} else {
-		sql = `SELECT id, organization_id, name, COALESCE(name_ne, ''), COALESCE(category, ''),
+		sql = `SELECT id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(category, ''),
 		               COALESCE(calories_per_100g, 0), COALESCE(protein_per_100g, 0),
 		               COALESCE(carbs_per_100g, 0), COALESCE(fat_per_100g, 0),
 		               COALESCE(fiber_per_100g, 0), COALESCE(serving_size_g, 0),
 		               COALESCE(serving_label, ''), COALESCE(serving_label_ne, ''),
-		               is_verified, COALESCE(barcode, ''), created_by, created_at, updated_at
+		               is_verified, COALESCE(barcode, ''), created_by::text, created_at, updated_at
 		        FROM food_items
 		        WHERE (organization_id = $1 OR organization_id IS NULL OR created_by = $2)`
 		args = []interface{}{orgID, userID}
@@ -230,12 +230,12 @@ func (r *Repository) SearchFoodItems(ctx context.Context, orgID, userID, query, 
 	var queryArgIdx int
 
 	if orgID == "" {
-		sql = `SELECT id, organization_id, name, COALESCE(name_ne, ''), COALESCE(category, ''),
+		sql = `SELECT id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(category, ''),
 		               COALESCE(calories_per_100g, 0), COALESCE(protein_per_100g, 0),
 		               COALESCE(carbs_per_100g, 0), COALESCE(fat_per_100g, 0),
 		               COALESCE(fiber_per_100g, 0), COALESCE(serving_size_g, 0),
 		               COALESCE(serving_label, ''), COALESCE(serving_label_ne, ''),
-		               is_verified, COALESCE(barcode, ''), created_by, created_at, updated_at
+		               is_verified, COALESCE(barcode, ''), created_by::text, created_at, updated_at
 		        FROM food_items
 		        WHERE (organization_id IS NULL OR created_by = $1)
 		          AND (name ILIKE '%' || $2 || '%' OR name_ne ILIKE '%' || $2 || '%')`
@@ -243,12 +243,12 @@ func (r *Repository) SearchFoodItems(ctx context.Context, orgID, userID, query, 
 		argIdx = 3
 		queryArgIdx = 2
 	} else {
-		sql = `SELECT id, organization_id, name, COALESCE(name_ne, ''), COALESCE(category, ''),
+		sql = `SELECT id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(category, ''),
 		               COALESCE(calories_per_100g, 0), COALESCE(protein_per_100g, 0),
 		               COALESCE(carbs_per_100g, 0), COALESCE(fat_per_100g, 0),
 		               COALESCE(fiber_per_100g, 0), COALESCE(serving_size_g, 0),
 		               COALESCE(serving_label, ''), COALESCE(serving_label_ne, ''),
-		               is_verified, COALESCE(barcode, ''), created_by, created_at, updated_at
+		               is_verified, COALESCE(barcode, ''), created_by::text, created_at, updated_at
 		        FROM food_items
 		        WHERE (organization_id = $1 OR organization_id IS NULL OR created_by = $2)
 		          AND (name ILIKE '%' || $3 || '%' OR name_ne ILIKE '%' || $3 || '%')`
@@ -290,12 +290,12 @@ func (r *Repository) SearchFoodItems(ctx context.Context, orgID, userID, query, 
 func (r *Repository) GetFoodItem(ctx context.Context, id string) (*FoodItem, error) {
 	var f FoodItem
 	err := r.db.QueryRow(ctx,
-		`SELECT id, organization_id, name, COALESCE(name_ne, ''), COALESCE(category, ''),
+		`SELECT id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(category, ''),
 		        COALESCE(calories_per_100g, 0), COALESCE(protein_per_100g, 0),
 		        COALESCE(carbs_per_100g, 0), COALESCE(fat_per_100g, 0),
 		        COALESCE(fiber_per_100g, 0), COALESCE(serving_size_g, 0),
 		        COALESCE(serving_label, ''), COALESCE(serving_label_ne, ''),
-		        is_verified, COALESCE(barcode, ''), created_by, created_at, updated_at
+		        is_verified, COALESCE(barcode, ''), created_by::text, created_at, updated_at
 		 FROM food_items
 		 WHERE id = $1`,
 		id,
@@ -317,7 +317,7 @@ func (r *Repository) CreateFoodLog(ctx context.Context, userID, orgID, foodItemI
 	err := r.db.QueryRow(ctx,
 		`INSERT INTO food_logs (user_id, organization_id, food_item_id, meal_type, quantity_grams, calories, protein, carbs, fat, logged_date, notes)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		 RETURNING id, user_id, organization_id, food_item_id, meal_type,
+		 RETURNING id, user_id, organization_id::text, food_item_id, meal_type,
 		           quantity_grams, COALESCE(calories, 0), COALESCE(protein, 0),
 		           COALESCE(carbs, 0), COALESCE(fat, 0),
 		           logged_date, logged_at, COALESCE(notes, '')`,
@@ -333,19 +333,19 @@ func (r *Repository) CreateFoodLog(ctx context.Context, userID, orgID, foodItemI
 
 // ListFoodLogs retrieves food logs for a user on a given date, optionally filtered by meal type.
 func (r *Repository) ListFoodLogs(ctx context.Context, userID, orgID, date, mealType string) ([]FoodLog, error) {
-	sql := `SELECT fl.id, fl.user_id, fl.organization_id, fl.food_item_id, fl.meal_type,
+	sql := `SELECT fl.id, fl.user_id, fl.organization_id::text, fl.food_item_id, fl.meal_type,
 	               fl.quantity_grams, COALESCE(fl.calories, 0), COALESCE(fl.protein, 0),
 	               COALESCE(fl.carbs, 0), COALESCE(fl.fat, 0),
 	               fl.logged_date, fl.logged_at, COALESCE(fl.notes, ''),
-	               fi.id, fi.organization_id, fi.name, COALESCE(fi.name_ne, ''), COALESCE(fi.category, ''),
+	               fi.id, fi.organization_id::text, fi.name, COALESCE(fi.name_ne, ''), COALESCE(fi.category, ''),
 	               COALESCE(fi.calories_per_100g, 0), COALESCE(fi.protein_per_100g, 0),
 	               COALESCE(fi.carbs_per_100g, 0), COALESCE(fi.fat_per_100g, 0),
 	               COALESCE(fi.fiber_per_100g, 0), COALESCE(fi.serving_size_g, 0),
 	               COALESCE(fi.serving_label, ''), COALESCE(fi.serving_label_ne, ''),
-	               fi.is_verified, COALESCE(fi.barcode, ''), fi.created_by, fi.created_at, fi.updated_at
+	               fi.is_verified, COALESCE(fi.barcode, ''), fi.created_by::text, fi.created_at, fi.updated_at
 	        FROM food_logs fl
 	        JOIN food_items fi ON fi.id = fl.food_item_id
-	        WHERE fl.user_id = $1 AND COALESCE(fl.organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000') AND fl.logged_date = $3`
+	        WHERE fl.user_id = $1 AND COALESCE(fl.organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000') AND fl.logged_date = $3`
 	args := []interface{}{userID, nilIfEmpty(orgID), date}
 	argIdx := 4
 
@@ -401,19 +401,19 @@ func (r *Repository) DeleteFoodLog(ctx context.Context, userID, logID string) er
 // GetDailySummaryLogs retrieves all food logs for a user on a specific date, joined with food items.
 func (r *Repository) GetDailySummaryLogs(ctx context.Context, userID, orgID, date string) ([]FoodLog, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT fl.id, fl.user_id, fl.organization_id, fl.food_item_id, fl.meal_type,
+		`SELECT fl.id, fl.user_id, fl.organization_id::text, fl.food_item_id, fl.meal_type,
 		        fl.quantity_grams, COALESCE(fl.calories, 0), COALESCE(fl.protein, 0),
 		        COALESCE(fl.carbs, 0), COALESCE(fl.fat, 0),
 		        fl.logged_date, fl.logged_at, COALESCE(fl.notes, ''),
-		        fi.id, fi.organization_id, fi.name, COALESCE(fi.name_ne, ''), COALESCE(fi.category, ''),
+		        fi.id, fi.organization_id::text, fi.name, COALESCE(fi.name_ne, ''), COALESCE(fi.category, ''),
 		        COALESCE(fi.calories_per_100g, 0), COALESCE(fi.protein_per_100g, 0),
 		        COALESCE(fi.carbs_per_100g, 0), COALESCE(fi.fat_per_100g, 0),
 		        COALESCE(fi.fiber_per_100g, 0), COALESCE(fi.serving_size_g, 0),
 		        COALESCE(fi.serving_label, ''), COALESCE(fi.serving_label_ne, ''),
-		        fi.is_verified, COALESCE(fi.barcode, ''), fi.created_by, fi.created_at, fi.updated_at
+		        fi.is_verified, COALESCE(fi.barcode, ''), fi.created_by::text, fi.created_at, fi.updated_at
 		 FROM food_logs fl
 		 JOIN food_items fi ON fi.id = fl.food_item_id
-		 WHERE fl.user_id = $1 AND COALESCE(fl.organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000') AND fl.logged_date = $3
+		 WHERE fl.user_id = $1 AND COALESCE(fl.organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000') AND fl.logged_date = $3
 		 ORDER BY fl.meal_type, fl.logged_at ASC`,
 		userID, nilIfEmpty(orgID), date,
 	)
@@ -450,7 +450,7 @@ func (r *Repository) GetWeeklySummary(ctx context.Context, userID, orgID, fromDa
 		        COALESCE(SUM(carbs), 0),
 		        COALESCE(SUM(fat), 0)
 		 FROM food_logs
-		 WHERE user_id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000')
+		 WHERE user_id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000')
 		   AND logged_date >= $3::date AND logged_date < ($3::date + INTERVAL '7 days')
 		 GROUP BY logged_date
 		 ORDER BY logged_date ASC`,
@@ -480,11 +480,11 @@ func (r *Repository) UpsertNutritionGoal(ctx context.Context, userID, orgID stri
 	err := r.db.QueryRow(ctx,
 		`INSERT INTO nutrition_goals (user_id, organization_id, calorie_goal, protein_goal_g, carbs_goal_g, fat_goal_g, weight_kg, height_cm, age, gender, activity_level, goal_type)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		 ON CONFLICT ON CONSTRAINT nutrition_goals_user_org_unique
+		 ON CONFLICT (user_id, COALESCE(organization_id, '00000000-0000-0000-0000-000000000000'))
 		 DO UPDATE SET calorie_goal = $3, protein_goal_g = $4, carbs_goal_g = $5, fat_goal_g = $6,
 		               weight_kg = $7, height_cm = $8, age = $9, gender = $10,
 		               activity_level = $11, goal_type = $12
-		 RETURNING id, user_id, organization_id, COALESCE(calorie_goal, 0), COALESCE(protein_goal_g, 0),
+		 RETURNING id, user_id, organization_id::text, COALESCE(calorie_goal, 0), COALESCE(protein_goal_g, 0),
 		           COALESCE(carbs_goal_g, 0), COALESCE(fat_goal_g, 0),
 		           COALESCE(weight_kg, 0), COALESCE(height_cm, 0), COALESCE(age, 0),
 		           COALESCE(gender, ''), COALESCE(activity_level, ''), COALESCE(goal_type, ''),
@@ -500,16 +500,25 @@ func (r *Repository) UpsertNutritionGoal(ctx context.Context, userID, orgID stri
 }
 
 // GetNutritionGoal retrieves the nutrition goal for a user+org pair.
+// Falls back to the NULL-org goal (created during onboarding) if no org-specific goal exists.
 func (r *Repository) GetNutritionGoal(ctx context.Context, userID, orgID string) (*NutritionGoal, error) {
 	var g NutritionGoal
 	err := r.db.QueryRow(ctx,
-		`SELECT id, user_id, organization_id, COALESCE(calorie_goal, 0), COALESCE(protein_goal_g, 0),
+		`SELECT id, user_id, organization_id::text, COALESCE(calorie_goal, 0), COALESCE(protein_goal_g, 0),
 		        COALESCE(carbs_goal_g, 0), COALESCE(fat_goal_g, 0),
 		        COALESCE(weight_kg, 0), COALESCE(height_cm, 0), COALESCE(age, 0),
 		        COALESCE(gender, ''), COALESCE(activity_level, ''), COALESCE(goal_type, ''),
 		        created_at, updated_at
 		 FROM nutrition_goals
-		 WHERE user_id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000')`,
+		 WHERE user_id = $1
+		   AND (COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000')
+		        OR organization_id IS NULL)
+		 ORDER BY CASE
+		   WHEN COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000') THEN 0
+		   WHEN organization_id IS NULL THEN 1
+		   ELSE 2
+		 END
+		 LIMIT 1`,
 		userID, nilIfEmpty(orgID),
 	).Scan(&g.ID, &g.UserID, &g.OrgID, &g.CalorieGoal, &g.ProteinGoalG,
 		&g.CarbsGoalG, &g.FatGoalG, &g.WeightKg, &g.HeightCm, &g.Age,
@@ -528,7 +537,7 @@ func (r *Repository) CreateMealTemplate(ctx context.Context, userID, orgID, name
 	err := r.db.QueryRow(ctx,
 		`INSERT INTO meal_templates (user_id, organization_id, name, name_ne, meal_type, items)
 		 VALUES ($1, $2, $3, $4, $5, $6)
-		 RETURNING id, user_id, organization_id, name, COALESCE(name_ne, ''), COALESCE(meal_type, ''), items, created_at`,
+		 RETURNING id, user_id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(meal_type, ''), items, created_at`,
 		userID, nilIfEmpty(orgID), name, nilIfEmpty(nameNe), nilIfEmpty(mealType), items,
 	).Scan(&t.ID, &t.UserID, &t.OrgID, &t.Name, &t.NameNe, &t.MealType, &t.Items, &t.CreatedAt)
 	if err != nil {
@@ -540,9 +549,9 @@ func (r *Repository) CreateMealTemplate(ctx context.Context, userID, orgID, name
 // ListMealTemplates retrieves meal templates for a user in an org.
 func (r *Repository) ListMealTemplates(ctx context.Context, userID, orgID string) ([]MealTemplate, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, user_id, organization_id, name, COALESCE(name_ne, ''), COALESCE(meal_type, ''), items, created_at
+		`SELECT id, user_id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(meal_type, ''), items, created_at
 		 FROM meal_templates
-		 WHERE user_id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000')
+		 WHERE user_id = $1 AND COALESCE(organization_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2::uuid, '00000000-0000-0000-0000-000000000000')
 		 ORDER BY created_at DESC`,
 		userID, nilIfEmpty(orgID),
 	)
@@ -566,7 +575,7 @@ func (r *Repository) ListMealTemplates(ctx context.Context, userID, orgID string
 func (r *Repository) GetMealTemplate(ctx context.Context, id string) (*MealTemplate, error) {
 	var t MealTemplate
 	err := r.db.QueryRow(ctx,
-		`SELECT id, user_id, organization_id, name, COALESCE(name_ne, ''), COALESCE(meal_type, ''), items, created_at
+		`SELECT id, user_id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(meal_type, ''), items, created_at
 		 FROM meal_templates
 		 WHERE id = $1`,
 		id,
@@ -602,12 +611,12 @@ func (r *Repository) CreateCustomFood(ctx context.Context, userID string, input 
 		        carbs_per_100g, fat_per_100g, fiber_per_100g, serving_size_g, serving_label,
 		        barcode, created_by, is_verified)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, false)
-		 RETURNING id, organization_id, name, COALESCE(name_ne, ''), COALESCE(category, ''),
+		 RETURNING id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(category, ''),
 		           COALESCE(calories_per_100g, 0), COALESCE(protein_per_100g, 0),
 		           COALESCE(carbs_per_100g, 0), COALESCE(fat_per_100g, 0),
 		           COALESCE(fiber_per_100g, 0), COALESCE(serving_size_g, 0),
 		           COALESCE(serving_label, ''), COALESCE(serving_label_ne, ''),
-		           is_verified, COALESCE(barcode, ''), created_by, created_at, updated_at`,
+		           is_verified, COALESCE(barcode, ''), created_by::text, created_at, updated_at`,
 		input.Name, nilIfEmpty(input.NameNe), nilIfEmpty(input.Category),
 		input.CaloriesPer100g, input.ProteinPer100g, input.CarbsPer100g,
 		input.FatPer100g, input.FiberPer100g, input.ServingSizeG,
@@ -628,12 +637,12 @@ func (r *Repository) CreateVerifiedFoodFromBarcode(ctx context.Context, name str
 	err := r.db.QueryRow(ctx,
 		`INSERT INTO food_items (name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, barcode, is_verified)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-		 RETURNING id, organization_id, name, COALESCE(name_ne, ''), COALESCE(category, ''),
+		 RETURNING id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(category, ''),
 		           COALESCE(calories_per_100g, 0), COALESCE(protein_per_100g, 0),
 		           COALESCE(carbs_per_100g, 0), COALESCE(fat_per_100g, 0),
 		           COALESCE(fiber_per_100g, 0), COALESCE(serving_size_g, 0),
 		           COALESCE(serving_label, ''), COALESCE(serving_label_ne, ''),
-		           is_verified, COALESCE(barcode, ''), created_by, created_at, updated_at`,
+		           is_verified, COALESCE(barcode, ''), created_by::text, created_at, updated_at`,
 		name, caloriesPer100g, proteinPer100g, carbsPer100g,
 		fatPer100g, fiberPer100g, barcode,
 	).Scan(&f.ID, &f.OrgID, &f.Name, &f.NameNe, &f.Category,
@@ -650,12 +659,12 @@ func (r *Repository) CreateVerifiedFoodFromBarcode(ctx context.Context, name str
 func (r *Repository) GetFoodByBarcode(ctx context.Context, barcode string) (*FoodItem, error) {
 	var f FoodItem
 	err := r.db.QueryRow(ctx,
-		`SELECT id, organization_id, name, COALESCE(name_ne, ''), COALESCE(category, ''),
+		`SELECT id, organization_id::text, name, COALESCE(name_ne, ''), COALESCE(category, ''),
 		        COALESCE(calories_per_100g, 0), COALESCE(protein_per_100g, 0),
 		        COALESCE(carbs_per_100g, 0), COALESCE(fat_per_100g, 0),
 		        COALESCE(fiber_per_100g, 0), COALESCE(serving_size_g, 0),
 		        COALESCE(serving_label, ''), COALESCE(serving_label_ne, ''),
-		        is_verified, COALESCE(barcode, ''), created_by, created_at, updated_at
+		        is_verified, COALESCE(barcode, ''), created_by::text, created_at, updated_at
 		 FROM food_items
 		 WHERE barcode = $1`,
 		barcode,

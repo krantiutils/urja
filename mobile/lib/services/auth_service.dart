@@ -1,11 +1,11 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/user.dart';
 import 'api_client.dart';
+import 'token_storage.dart';
 
 class AuthService {
   final ApiClient _api;
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final TokenStorage _storage = TokenStorage();
 
   AuthService(this._api);
 

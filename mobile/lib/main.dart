@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,9 +6,13 @@ import 'package:mobile/l10n/app_localizations.dart';
 import 'config/theme.dart';
 import 'providers/locale_provider.dart';
 import 'router/app_router.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (!kIsWeb) {
+    await NotificationService().init();
+  }
   runApp(const ProviderScope(child: UrjaApp()));
 }
 

@@ -10,6 +10,7 @@ import '../screens/member/member_packages_screen.dart';
 import '../screens/member/member_health_screen.dart';
 import '../screens/member/member_workouts_screen.dart';
 import '../screens/member/member_nutrition_screen.dart';
+import '../screens/member/nutrition_dashboard_screen.dart';
 import '../screens/member/member_settings_screen.dart';
 import '../screens/member/member_progress_screen.dart';
 import '../screens/tracker/tracker_home_screen.dart';
@@ -62,6 +63,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/login',
     redirect: (context, state) {
+      // Don't redirect while auth state is loading
+      if (auth.status == AuthStatus.initial) return null;
+
       final isLoggedIn = auth.status == AuthStatus.authenticated;
       final isLoginPage = state.matchedLocation == '/login';
       final isOnboardingPage = state.matchedLocation == '/onboarding';
@@ -119,6 +123,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/member/nutrition',
+            builder: (context, state) => const NutritionDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/member/nutrition/log',
             builder: (context, state) => const MemberNutritionScreen(),
           ),
           GoRoute(
@@ -161,6 +169,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/tracker/nutrition',
+            builder: (context, state) => const NutritionDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/tracker/nutrition/log',
             builder: (context, state) => const MemberNutritionScreen(),
           ),
           GoRoute(
