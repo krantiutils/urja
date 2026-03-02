@@ -55,7 +55,7 @@ jobs:
           context: ./web
           push: true
           build-args: |
-            NEXT_PUBLIC_API_URL=https://api.${{ secrets.DOMAIN }}
+            NEXT_PUBLIC_API_URL=https://nepalgym.xyz
           tags: |
             ${{ env.WEB_IMAGE }}:latest
             ${{ env.WEB_IMAGE }}:${{ github.sha }}
@@ -71,11 +71,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /opt/urja
+            cd /home/ubuntu/urja
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            # Wait for API to be healthy
             sleep 5
-            curl -sf http://localhost:8080/healthz || echo "WARNING: health check failed"
-            # Clean up old images
             docker image prune -f
