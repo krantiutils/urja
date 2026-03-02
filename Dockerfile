@@ -1,5 +1,5 @@
 ### Build stage
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates
 
@@ -16,17 +16,23 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 ### Runtime stage
 FROM alpine:3.19
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata curl
+
+# Install golang-migrate
+RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xz \
+    && mv migrate /usr/local/bin/migrate
 
 RUN addgroup -S urja && adduser -S urja -G urja
 
 WORKDIR /app
 
 COPY --from=builder /app/urja-api .
-COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/db/migrations ./migrations
+COPY scripts/entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
 USER urja
 
 EXPOSE 8080
 
-ENTRYPOINT ["./urja-api"]
+ENTRYPOINT ["./entrypoint.sh"]
