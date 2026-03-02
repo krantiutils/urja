@@ -1,0 +1,20 @@
+# .dockerignore
+.git
+.github
+.env
+.env.*
+*.png
+*.md
+web/
+mobile/
+flutter/
+firmware/
+docs/
+tests/
+bin/
+node_modules/
+.next/
+.playwright-mcp/
+state.json
+agent.md
+coverage*
