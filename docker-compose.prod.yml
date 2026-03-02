@@ -3,23 +3,12 @@ services:
     image: ghcr.io/krantiutils/urja-api:${IMAGE_TAG:-latest}
     env_file: .env.prod
     environment:
-      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@host.docker.internal:5432/${DB_NAME}?sslmode=disable
-      DB_HOST: host.docker.internal
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@127.0.0.1:5432/${DB_NAME}?sslmode=disable
+      DB_HOST: 127.0.0.1
       DB_PORT: "5432"
-      REDIS_HOST: host.docker.internal
+      REDIS_HOST: 127.0.0.1
       REDIS_PORT: "6379"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - traefik-proxy
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.urja-api.rule=(Host(`nepalgym.xyz`) || Host(`www.nepalgym.xyz`)) && PathPrefix(`/api/`)
-      - traefik.http.routers.urja-api.entrypoints=websecure
-      - traefik.http.routers.urja-api.tls.certresolver=letsencrypt
-      - traefik.http.routers.urja-api.priority=2
-      - traefik.http.services.urja-api.loadbalancer.server.port=8080
-      - traefik.docker.network=traefik-proxy
+    network_mode: host
     restart: unless-stopped
 
   web:
