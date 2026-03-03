@@ -3,12 +3,27 @@ services:
     image: ghcr.io/krantiutils/urja-api:${IMAGE_TAG:-latest}
     env_file: .env.prod
     environment:
-      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@127.0.0.1:5432/${DB_NAME}?sslmode=disable
-      DB_HOST: 127.0.0.1
+      DATABASE_URL: postgres://${DB_USER:-urja}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-urja}?sslmode=disable
+      DB_HOST: postgres
       DB_PORT: "5432"
-      REDIS_HOST: 127.0.0.1
+      REDIS_HOST: redis
       REDIS_PORT: "6379"
-    network_mode: host
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - traefik-proxy
+      - internal
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.urja-api.rule=(Host(`nepalgym.xyz`) || Host(`www.nepalgym.xyz`)) && PathPrefix(`/api/`)
+      - traefik.http.routers.urja-api.entrypoints=websecure
+      - traefik.http.routers.urja-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.urja-api.priority=2
+      - traefik.http.services.urja-api.loadbalancer.server.port=8080
+      - traefik.docker.network=traefik-proxy
     restart: unless-stopped
 
   web:
@@ -25,6 +40,42 @@ services:
       - traefik.docker.network=traefik-proxy
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-urja}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-urja}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-urja}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
 networks:
   traefik-proxy:
     external: true
+  internal:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

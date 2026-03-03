@@ -10,16 +10,16 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -ldflags="-s -w" -o /app/urja-api ./cmd/api
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /app/urja-api ./cmd/api
 
 ### Runtime stage
 FROM alpine:3.19
 
 RUN apk add --no-cache ca-certificates tzdata curl
 
-# Install golang-migrate
-RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xz \
+# Install golang-migrate (arch-agnostic)
+ARG TARGETARCH
+RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-${TARGETARCH}.tar.gz | tar xz \
     && mv migrate /usr/local/bin/migrate
 
 RUN addgroup -S urja && adduser -S urja -G urja
