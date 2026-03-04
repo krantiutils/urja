@@ -10,6 +10,7 @@ import (
 func (h *Handler) RegisterSelfRoutes(r chi.Router) {
 	r.Get("/", h.GetMe)
 	r.Put("/", h.UpdateMe)
+	r.Delete("/", h.DeleteMe)
 	r.Put("/privacy", h.UpdatePrivacy)
 	r.Get("/leaderboard", h.GetMyLeaderboard)
 }

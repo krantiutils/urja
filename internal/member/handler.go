@@ -140,6 +140,27 @@ func (h *Handler) GetMyLeaderboard(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
+// DeleteMe handles DELETE /api/v1/members/me
+func (h *Handler) DeleteMe(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	if err := h.service.DeleteAccount(r.Context(), userID); err != nil {
+		if errors.Is(err, ErrMemberNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "account not found"})
+			return
+		}
+		h.logger.Error("failed to delete account", "error", err, "user_id", userID)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "account deleted successfully"})
+}
+
 // ListByOrg handles GET /api/v1/orgs/{orgId}/members
 func (h *Handler) ListByOrg(w http.ResponseWriter, r *http.Request) {
 	orgID, ok := middleware.OrgIDFromContext(r.Context())

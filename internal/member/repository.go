@@ -384,6 +384,50 @@ func (r *Repository) GetPrimaryOrgID(ctx context.Context, userID string) (string
 	return orgID, nil
 }
 
+// DeleteAccount soft-deletes a user account by deactivating it and anonymizing PII.
+// All org memberships are set to 'left'.
+func (r *Repository) DeleteAccount(ctx context.Context, userID string) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Deactivate user and anonymize PII
+	tag, err := tx.Exec(ctx,
+		`UPDATE users SET
+			is_active = false,
+			name = 'Deleted User',
+			name_ne = NULL,
+			email = NULL,
+			date_of_birth = NULL,
+			gender = NULL,
+			avatar_url = NULL,
+			emergency_contact_name = NULL,
+			emergency_contact_phone = NULL
+		 WHERE id = $1 AND is_active = true`,
+		userID,
+	)
+	if err != nil {
+		return fmt.Errorf("deactivating user: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrMemberNotFound
+	}
+
+	// Leave all organizations
+	_, err = tx.Exec(ctx,
+		`UPDATE organization_members SET status = 'left'
+		 WHERE user_id = $1 AND status = 'active'`,
+		userID,
+	)
+	if err != nil {
+		return fmt.Errorf("leaving organizations: %w", err)
+	}
+
+	return tx.Commit(ctx)
+}
+
 func nilIfEmpty(s string) *string {
 	if s == "" {
 		return nil

@@ -150,6 +150,14 @@ func (s *Service) DeleteOrgMember(ctx context.Context, orgID, userID string) err
 	return nil
 }
 
+// DeleteAccount deactivates the user's account and anonymizes their personal data.
+func (s *Service) DeleteAccount(ctx context.Context, userID string) error {
+	if err := s.repo.DeleteAccount(ctx, userID); err != nil {
+		return fmt.Errorf("deleting account: %w", err)
+	}
+	return nil
+}
+
 // GetPrimaryOrgID returns the user's primary (earliest active) organization ID.
 func (s *Service) GetPrimaryOrgID(ctx context.Context, userID string) (string, error) {
 	return s.repo.GetPrimaryOrgID(ctx, userID)
