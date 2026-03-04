@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Metadata } from "next";
 
 export default function DeleteAccount() {
   const [phone, setPhone] = useState("");
