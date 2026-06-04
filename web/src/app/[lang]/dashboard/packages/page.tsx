@@ -185,13 +185,13 @@ export default function PackagesPage({
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-fg flex items-center gap-2">
-          <Package className="w-5 h-5 text-accent" />
+        <h1 className="text-xl font-semibold text-md-on-surface flex items-center gap-2">
+          <Package className="w-5 h-5 text-md-primary" />
           {t.packages.title}
         </h1>
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors shadow-accent-glow"
+          className="flex items-center gap-2 px-4 py-2 bg-md-primary text-md-on-primary font-medium text-sm rounded-full hover:bg-md-primary/90 transition-colors shadow-md-1"
         >
           <Plus className="w-4 h-4" />
           {t.packages.addPackage}
@@ -211,10 +211,10 @@ export default function PackagesPage({
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-xs font-mono uppercase rounded-lg border transition-colors ${
+              className={`px-3 py-1.5 text-xs font-mono uppercase rounded-full border transition-colors ${
                 filter === f
-                  ? "bg-accent/10 text-accent border-accent/20"
-                  : "text-fg-muted border-white/[0.06] hover:bg-surface"
+                  ? "bg-md-primary-container text-md-on-primary-container"
+                  : "text-md-on-surface-variant border-md-outline-variant hover:bg-md-surface-container-high"
               }`}
             >
               {label}
@@ -225,7 +225,7 @@ export default function PackagesPage({
 
       {/* Error */}
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
+        <div className="p-3 bg-md-error-container border border-md-error/20 rounded-xl text-sm text-md-error">
           {error}
         </div>
       )}
@@ -233,10 +233,10 @@ export default function PackagesPage({
       {/* Package Cards */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-6 h-6 text-accent animate-spin" />
+          <Loader2 className="w-6 h-6 text-md-primary animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-fg-muted text-sm">
+        <div className="text-center py-16 text-md-on-surface-variant text-sm">
           {t.packages.noPackages}
         </div>
       ) : (
@@ -244,19 +244,19 @@ export default function PackagesPage({
           {filtered.map((pkg) => (
             <div
               key={pkg.id}
-              className={`bg-gradient-to-b from-white/[0.08] to-white/[0.02] border rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-shadow duration-300 ${
+              className={`bg-md-surface-container border rounded-3xl p-5 shadow-md-1 hover:shadow-md-2 transition-shadow duration-300 ${
                 pkg.is_active
-                  ? "border-white/[0.06]"
-                  : "border-red-500/20 opacity-60"
+                  ? "border-md-outline-variant"
+                  : "border-md-error/30 opacity-60"
               }`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-base font-semibold text-fg">
+                  <h3 className="text-base font-semibold text-md-on-surface">
                     {pkg.name}
                   </h3>
                   {pkg.description && (
-                    <p className="text-xs text-fg-muted mt-0.5">
+                    <p className="text-xs text-md-on-surface-variant mt-0.5">
                       {pkg.description}
                     </p>
                   )}
@@ -264,8 +264,8 @@ export default function PackagesPage({
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono uppercase border ${
                     pkg.is_active
-                      ? "bg-accent/10 text-accent border-accent/20"
-                      : "bg-red-500/10 text-red-400 border-red-500/20"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
                   }`}
                 >
                   {pkg.is_active ? t.packages.active : t.packages.inactive}
@@ -274,24 +274,24 @@ export default function PackagesPage({
 
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-fg-muted">{t.packages.price}</span>
-                  <span className="text-fg font-mono font-medium">
+                  <span className="text-md-on-surface-variant">{t.packages.price}</span>
+                  <span className="text-md-on-surface font-mono font-medium">
                     {formatNPR(pkg.price)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-fg-muted">
+                  <span className="text-md-on-surface-variant">
                     {t.packages.duration}
                   </span>
-                  <span className="text-fg font-mono">
+                  <span className="text-md-on-surface font-mono">
                     {pkg.duration_days} {t.packages.days}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-fg-muted">
+                  <span className="text-md-on-surface-variant">
                     {t.packages.maxMembers}
                   </span>
-                  <span className="text-fg font-mono">
+                  <span className="text-md-on-surface font-mono">
                     {pkg.max_members ?? t.packages.unlimited}
                   </span>
                 </div>
@@ -302,7 +302,7 @@ export default function PackagesPage({
                   {pkg.features.map((f) => (
                     <span
                       key={f}
-                      className="px-2 py-0.5 bg-surface border border-white/[0.06] rounded-lg text-[11px] text-fg-muted font-mono"
+                      className="px-2 py-0.5 bg-md-surface-container-high border border-md-outline-variant rounded-full text-[11px] text-md-on-surface-variant font-mono"
                     >
                       {f}
                     </span>
@@ -310,10 +310,10 @@ export default function PackagesPage({
                 </div>
               )}
 
-              <div className="flex items-center gap-1 pt-3 border-t border-white/[0.06]">
+              <div className="flex items-center gap-1 pt-3 border-t border-md-outline-variant">
                 <button
                   onClick={() => openEditModal(pkg)}
-                  className="p-1.5 rounded-lg hover:bg-surface text-fg-muted hover:text-fg transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-md-surface-container-high text-md-on-surface-variant hover:text-md-on-surface transition-colors"
                   title={t.packages.editPackage}
                 >
                   <Pencil className="w-4 h-4" />
@@ -322,8 +322,8 @@ export default function PackagesPage({
                   onClick={() => handleToggleActive(pkg)}
                   className={`p-1.5 rounded-lg transition-colors ${
                     pkg.is_active
-                      ? "hover:bg-red-500/10 text-fg-muted hover:text-red-400"
-                      : "hover:bg-accent/10 text-fg-muted hover:text-accent"
+                      ? "hover:bg-red-100 text-md-on-surface-variant hover:text-red-600"
+                      : "hover:bg-md-primary-container text-md-on-surface-variant hover:text-md-primary"
                   }`}
                   title={
                     pkg.is_active
@@ -339,7 +339,7 @@ export default function PackagesPage({
                 </button>
                 <button
                   onClick={() => handleDelete(pkg.id)}
-                  className="p-1.5 rounded-lg hover:bg-red-500/10 text-fg-muted hover:text-red-400 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-red-100 text-md-on-surface-variant hover:text-red-600 transition-colors"
                   title={t.common.delete}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -352,29 +352,29 @@ export default function PackagesPage({
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-bg-elevated border border-white/[0.06] rounded-2xl shadow-card w-full max-w-md">
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
-              <h2 className="text-base font-semibold text-fg">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-md-surface-container border border-md-outline-variant rounded-3xl shadow-md-1 w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-md-outline-variant">
+              <h2 className="text-base font-semibold text-md-on-surface">
                 {editingPkg
                   ? t.packages.editPackage
                   : t.packages.addPackageTitle}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1 rounded-lg hover:bg-surface text-fg-muted transition-colors"
+                className="p-1 rounded-lg hover:bg-md-surface-container-high text-md-on-surface-variant transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               {formError && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
+                <div className="p-3 bg-md-error-container border border-md-error/20 rounded-xl text-sm text-md-error">
                   {formError}
                 </div>
               )}
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label className="block text-xs text-md-on-surface-variant mb-1.5">
                   {t.packages.name} *
                 </label>
                 <input
@@ -383,11 +383,11 @@ export default function PackagesPage({
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder={t.packages.namePlaceholder}
-                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label className="block text-xs text-md-on-surface-variant mb-1.5">
                   {t.packages.description}
                 </label>
                 <input
@@ -395,12 +395,12 @@ export default function PackagesPage({
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder={t.packages.descriptionPlaceholder}
-                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-fg-muted mb-1.5">
+                  <label className="block text-xs text-md-on-surface-variant mb-1.5">
                     {t.packages.price} ({t.packages.currency}) *
                   </label>
                   <input
@@ -411,11 +411,11 @@ export default function PackagesPage({
                     value={formPrice}
                     onChange={(e) => setFormPrice(e.target.value)}
                     placeholder={t.packages.pricePlaceholder}
-                    className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                    className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-fg-muted mb-1.5">
+                  <label className="block text-xs text-md-on-surface-variant mb-1.5">
                     {t.packages.duration} ({t.packages.days}) *
                   </label>
                   <input
@@ -425,12 +425,12 @@ export default function PackagesPage({
                     value={formDuration}
                     onChange={(e) => setFormDuration(e.target.value)}
                     placeholder={t.packages.durationPlaceholder}
-                    className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                    className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label className="block text-xs text-md-on-surface-variant mb-1.5">
                   {t.packages.maxMembers}
                 </label>
                 <input
@@ -439,11 +439,11 @@ export default function PackagesPage({
                   value={formMaxMembers}
                   onChange={(e) => setFormMaxMembers(e.target.value)}
                   placeholder={t.packages.unlimited}
-                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label className="block text-xs text-md-on-surface-variant mb-1.5">
                   {t.packages.features}
                 </label>
                 <input
@@ -451,21 +451,21 @@ export default function PackagesPage({
                   value={formFeatures}
                   onChange={(e) => setFormFeatures(e.target.value)}
                   placeholder={t.packages.featuresPlaceholder}
-                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2.5 bg-surface border border-white/[0.06] text-fg text-sm rounded-xl hover:bg-surface-hover transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-md-surface-container-high border border-md-outline-variant text-md-on-surface text-sm rounded-full hover:bg-md-surface-container-highest transition-colors"
                 >
                   {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="flex-1 px-4 py-2.5 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-md-primary text-md-on-primary font-medium text-sm rounded-full hover:bg-md-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {formLoading && (
                     <Loader2 className="w-4 h-4 animate-spin" />

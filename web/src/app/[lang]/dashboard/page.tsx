@@ -71,22 +71,22 @@ function StatCard({
   trend?: string;
 }) {
   return (
-    <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-shadow duration-300">
+    <div className="bg-md-surface-container rounded-3xl p-5 shadow-md-1 hover:shadow-md-2 transition-shadow duration-300">
       <div className="flex items-start justify-between">
-        <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-          <Icon className="w-5 h-5 text-accent" />
+        <div className="w-10 h-10 rounded-xl bg-md-primary-container flex items-center justify-center">
+          <Icon className="w-5 h-5 text-md-primary" />
         </div>
         {trend && (
-          <span className="flex items-center gap-0.5 text-xs text-accent font-medium">
+          <span className="flex items-center gap-0.5 text-xs text-md-primary font-medium">
             <TrendingUp className="w-3 h-3" />
             {trend}
           </span>
         )}
       </div>
-      <p className="mt-3 text-2xl font-semibold text-fg tracking-tight">
+      <p className="mt-3 text-2xl font-semibold text-md-on-surface tracking-tight">
         {value}
       </p>
-      <p className="mt-0.5 text-sm text-fg-muted">{label}</p>
+      <p className="mt-0.5 text-sm text-md-on-surface-variant">{label}</p>
     </div>
   );
 }
@@ -102,12 +102,12 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between mb-3">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-fg">
-        <Icon className="w-4 h-4 text-fg-muted" />
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-md-on-surface">
+        <Icon className="w-4 h-4 text-md-on-surface-variant" />
         {title}
       </h3>
       {action && (
-        <button className="flex items-center gap-1 text-xs text-accent hover:text-accent-bright transition-colors">
+        <button className="flex items-center gap-1 text-xs text-md-primary hover:text-md-primary/80 transition-colors">
           {action.label}
           <ArrowUpRight className="w-3 h-3" />
         </button>
@@ -118,13 +118,13 @@ function SectionHeader({
 
 function MethodBadge({ method }: { method: string }) {
   const colors: Record<string, string> = {
-    qr: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    nfc: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    manual: "bg-gray-500/10 text-gray-400 border-gray-500/20",
+    qr: "bg-blue-100 text-blue-700",
+    nfc: "bg-purple-100 text-purple-700",
+    manual: "bg-gray-100 text-gray-600",
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono uppercase border ${
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase ${
         colors[method] ?? colors.manual
       }`}
     >
@@ -135,13 +135,13 @@ function MethodBadge({ method }: { method: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    active: "bg-accent/10 text-accent border-accent/20",
-    expiring: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    expired: "bg-red-500/10 text-red-400 border-red-500/20",
+    active: "bg-green-100 text-green-700",
+    expiring: "bg-amber-100 text-amber-700",
+    expired: "bg-red-100 text-red-700",
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono uppercase border ${
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase ${
         colors[status] ?? colors.active
       }`}
     >
@@ -189,7 +189,7 @@ export default function DashboardHomePage({
       {/* Two-column layout for tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's Attendance */}
-        <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl p-5 shadow-card">
+        <div className="bg-md-surface-container rounded-3xl p-5 shadow-md-1">
           <SectionHeader
             icon={CalendarCheck}
             title={t.dashboard.todayActivity}
@@ -198,14 +198,14 @@ export default function DashboardHomePage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                <tr className="border-b border-md-outline-variant">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.member}
                   </th>
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.checkIn}
                   </th>
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.method}
                   </th>
                 </tr>
@@ -214,10 +214,10 @@ export default function DashboardHomePage({
                 {MOCK_TODAY_ATTENDANCE.map((record) => (
                   <tr
                     key={record.id}
-                    className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    className="border-b border-md-outline-variant/50 last:border-0 hover:bg-md-surface-container-high transition-colors"
                   >
-                    <td className="py-2.5 text-fg">{record.memberName}</td>
-                    <td className="py-2.5 text-fg-muted font-mono text-xs">
+                    <td className="py-2.5 text-md-on-surface">{record.memberName}</td>
+                    <td className="py-2.5 text-md-on-surface-variant text-xs">
                       {record.checkInTime}
                     </td>
                     <td className="py-2.5">
@@ -231,7 +231,7 @@ export default function DashboardHomePage({
         </div>
 
         {/* Expiring Packages */}
-        <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl p-5 shadow-card">
+        <div className="bg-md-surface-container rounded-3xl p-5 shadow-md-1">
           <SectionHeader
             icon={AlertTriangle}
             title={t.dashboard.expiringPackages}
@@ -240,14 +240,14 @@ export default function DashboardHomePage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                <tr className="border-b border-md-outline-variant">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.member}
                   </th>
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.package}
                   </th>
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.status}
                   </th>
                 </tr>
@@ -256,19 +256,19 @@ export default function DashboardHomePage({
                 {MOCK_EXPIRING.map((member) => (
                   <tr
                     key={member.id}
-                    className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    className="border-b border-md-outline-variant/50 last:border-0 hover:bg-md-surface-container-high transition-colors"
                   >
                     <td className="py-2.5">
                       <div>
-                        <p className="text-fg">{member.name}</p>
-                        <p className="text-xs text-fg-muted font-mono">
+                        <p className="text-md-on-surface">{member.name}</p>
+                        <p className="text-xs text-md-on-surface-variant">
                           {member.phone}
                         </p>
                       </div>
                     </td>
-                    <td className="py-2.5 text-fg-muted">{member.package}</td>
+                    <td className="py-2.5 text-md-on-surface-variant">{member.package}</td>
                     <td className="py-2.5">
-                      <span className="text-amber-400 text-xs font-mono">
+                      <span className="text-amber-600 text-xs font-medium">
                         {member.daysLeft}d left
                       </span>
                     </td>
@@ -280,7 +280,7 @@ export default function DashboardHomePage({
         </div>
 
         {/* Expired Packages */}
-        <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl p-5 shadow-card">
+        <div className="bg-md-surface-container rounded-3xl p-5 shadow-md-1">
           <SectionHeader
             icon={Clock}
             title={t.dashboard.expiredPackages}
@@ -289,14 +289,14 @@ export default function DashboardHomePage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                <tr className="border-b border-md-outline-variant">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.member}
                   </th>
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.package}
                   </th>
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.status}
                   </th>
                 </tr>
@@ -305,17 +305,17 @@ export default function DashboardHomePage({
                 {MOCK_EXPIRED.map((member) => (
                   <tr
                     key={member.id}
-                    className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    className="border-b border-md-outline-variant/50 last:border-0 hover:bg-md-surface-container-high transition-colors"
                   >
                     <td className="py-2.5">
                       <div>
-                        <p className="text-fg">{member.name}</p>
-                        <p className="text-xs text-fg-muted font-mono">
+                        <p className="text-md-on-surface">{member.name}</p>
+                        <p className="text-xs text-md-on-surface-variant">
                           {member.phone}
                         </p>
                       </div>
                     </td>
-                    <td className="py-2.5 text-fg-muted">{member.package}</td>
+                    <td className="py-2.5 text-md-on-surface-variant">{member.package}</td>
                     <td className="py-2.5">
                       <StatusBadge status="expired" />
                     </td>
@@ -327,7 +327,7 @@ export default function DashboardHomePage({
         </div>
 
         {/* Recently Joined */}
-        <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl p-5 shadow-card">
+        <div className="bg-md-surface-container rounded-3xl p-5 shadow-md-1">
           <SectionHeader
             icon={UserPlus}
             title={t.dashboard.recentlyJoined}
@@ -336,14 +336,14 @@ export default function DashboardHomePage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                <tr className="border-b border-md-outline-variant">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.member}
                   </th>
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.package}
                   </th>
-                  <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.dashboard.joined}
                   </th>
                 </tr>
@@ -352,18 +352,18 @@ export default function DashboardHomePage({
                 {MOCK_RECENTLY_JOINED.map((member) => (
                   <tr
                     key={member.id}
-                    className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    className="border-b border-md-outline-variant/50 last:border-0 hover:bg-md-surface-container-high transition-colors"
                   >
                     <td className="py-2.5">
                       <div>
-                        <p className="text-fg">{member.name}</p>
-                        <p className="text-xs text-fg-muted font-mono">
+                        <p className="text-md-on-surface">{member.name}</p>
+                        <p className="text-xs text-md-on-surface-variant">
                           {member.phone}
                         </p>
                       </div>
                     </td>
-                    <td className="py-2.5 text-fg-muted">{member.package}</td>
-                    <td className="py-2.5 text-fg-muted font-mono text-xs">
+                    <td className="py-2.5 text-md-on-surface-variant">{member.package}</td>
+                    <td className="py-2.5 text-md-on-surface-variant text-xs">
                       {member.joinedAt}
                     </td>
                   </tr>
@@ -375,7 +375,7 @@ export default function DashboardHomePage({
       </div>
 
       {/* Package Summary — full width */}
-      <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl p-5 shadow-card">
+      <div className="bg-md-surface-container rounded-3xl p-5 shadow-md-1">
         <SectionHeader
           icon={UserMinus}
           title={t.dashboard.packageSummary}
@@ -384,14 +384,14 @@ export default function DashboardHomePage({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="text-left py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+              <tr className="border-b border-md-outline-variant">
+                <th className="text-left py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                   {t.dashboard.name}
                 </th>
-                <th className="text-right py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                <th className="text-right py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                   {t.dashboard.count}
                 </th>
-                <th className="text-right py-2 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                <th className="text-right py-2 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                   {t.dashboard.revenue}
                 </th>
               </tr>
@@ -400,23 +400,23 @@ export default function DashboardHomePage({
               {MOCK_PACKAGE_SUMMARY.map((pkg) => (
                 <tr
                   key={pkg.name}
-                  className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                  className="border-b border-md-outline-variant/50 last:border-0 hover:bg-md-surface-container-high transition-colors"
                 >
-                  <td className="py-2.5 text-fg">{pkg.name}</td>
-                  <td className="py-2.5 text-fg-muted text-right font-mono">
+                  <td className="py-2.5 text-md-on-surface">{pkg.name}</td>
+                  <td className="py-2.5 text-md-on-surface-variant text-right">
                     {pkg.count}
                   </td>
-                  <td className="py-2.5 text-fg-muted text-right font-mono">
+                  <td className="py-2.5 text-md-on-surface-variant text-right">
                     {formatNPR(pkg.revenue)}
                   </td>
                 </tr>
               ))}
-              <tr className="border-t border-white/[0.08]">
-                <td className="py-2.5 text-fg font-semibold">Total</td>
-                <td className="py-2.5 text-fg text-right font-mono font-semibold">
+              <tr className="border-t border-md-outline-variant">
+                <td className="py-2.5 text-md-on-surface font-semibold">Total</td>
+                <td className="py-2.5 text-md-on-surface text-right font-semibold">
                   {MOCK_PACKAGE_SUMMARY.reduce((a, b) => a + b.count, 0)}
                 </td>
-                <td className="py-2.5 text-fg text-right font-mono font-semibold">
+                <td className="py-2.5 text-md-on-surface text-right font-semibold">
                   {formatNPR(
                     MOCK_PACKAGE_SUMMARY.reduce((a, b) => a + b.revenue, 0)
                   )}

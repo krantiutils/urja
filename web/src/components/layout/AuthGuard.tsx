@@ -22,8 +22,8 @@ export function AuthGuard({ children, locale }: AuthGuardProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-base">
-        <Loader2 className="w-8 h-8 text-accent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-md-background">
+        <Loader2 className="w-8 h-8 text-md-primary animate-spin" />
       </div>
     );
   }

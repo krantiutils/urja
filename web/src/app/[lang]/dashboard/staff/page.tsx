@@ -36,13 +36,13 @@ function StatusBadge({
   label: string;
 }) {
   const colors: Record<string, string> = {
-    active: "bg-accent/10 text-accent border-accent/20",
-    suspended: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    left: "bg-red-500/10 text-red-400 border-red-500/20",
+    active: "bg-green-100 text-green-700",
+    suspended: "bg-amber-100 text-amber-700",
+    left: "bg-red-100 text-red-700",
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono uppercase border ${
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono uppercase ${
         colors[status] ?? colors.active
       }`}
     >
@@ -59,14 +59,14 @@ function StaffRoleBadge({
   label: string;
 }) {
   const colors: Record<string, string> = {
-    owner: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    manager: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    trainer: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    receptionist: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+    owner: "bg-amber-100 text-amber-700",
+    manager: "bg-purple-100 text-purple-700",
+    trainer: "bg-blue-100 text-blue-700",
+    receptionist: "bg-cyan-100 text-cyan-700",
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono uppercase border ${
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono uppercase ${
         colors[role] ?? colors.trainer
       }`}
     >
@@ -219,13 +219,13 @@ export default function StaffPage({
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-fg flex items-center gap-2">
-          <UserCog className="w-5 h-5 text-accent" />
+        <h1 className="text-xl font-semibold text-md-on-surface flex items-center gap-2">
+          <UserCog className="w-5 h-5 text-md-primary" />
           {t.staff.title}
         </h1>
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors shadow-accent-glow"
+          className="flex items-center gap-2 px-4 py-2 bg-md-primary text-md-on-primary font-medium text-sm rounded-full hover:bg-md-primary/90 transition-colors shadow-md-1"
         >
           <Plus className="w-4 h-4" />
           {t.staff.addStaff}
@@ -234,54 +234,54 @@ export default function StaffPage({
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-md-on-surface-variant" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t.staff.searchPlaceholder}
-          className="w-full pl-10 pr-4 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+          className="w-full pl-10 pr-4 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
         />
       </div>
 
       {/* Error */}
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
+        <div className="p-3 bg-md-error-container border border-md-error/20 rounded-xl text-sm text-md-error">
           {error}
         </div>
       )}
 
       {/* Table */}
-      <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl shadow-card overflow-hidden">
+      <div className="bg-md-surface-container border border-md-outline-variant rounded-3xl shadow-md-1 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-accent animate-spin" />
+            <Loader2 className="w-6 h-6 text-md-primary animate-spin" />
           </div>
         ) : staffList.length === 0 ? (
-          <div className="text-center py-16 text-fg-muted text-sm">
+          <div className="text-center py-16 text-md-on-surface-variant text-sm">
             {t.staff.noStaff}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left px-5 py-3 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                <tr className="border-b border-md-outline-variant">
+                  <th className="text-left px-5 py-3 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.staff.name}
                   </th>
-                  <th className="text-left px-5 py-3 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left px-5 py-3 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.staff.phone}
                   </th>
-                  <th className="text-left px-5 py-3 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left px-5 py-3 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.staff.staffRole}
                   </th>
-                  <th className="text-left px-5 py-3 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left px-5 py-3 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.staff.status}
                   </th>
-                  <th className="text-left px-5 py-3 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left px-5 py-3 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.staff.joined}
                   </th>
-                  <th className="text-right px-5 py-3 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-right px-5 py-3 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.staff.actions}
                   </th>
                 </tr>
@@ -290,19 +290,19 @@ export default function StaffPage({
                 {staffList.map((s) => (
                   <tr
                     key={s.id}
-                    className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    className="border-b border-md-outline-variant/50 last:border-0 hover:bg-md-surface-container-high transition-colors"
                   >
                     <td className="px-5 py-3">
                       <div>
-                        <p className="text-fg font-medium">{s.name}</p>
+                        <p className="text-md-on-surface font-medium">{s.name}</p>
                         {s.email && (
-                          <p className="text-xs text-fg-muted">
+                          <p className="text-xs text-md-on-surface-variant">
                             {s.email}
                           </p>
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-fg-muted font-mono text-xs">
+                    <td className="px-5 py-3 text-md-on-surface-variant font-mono text-xs">
                       {s.phone}
                     </td>
                     <td className="px-5 py-3">
@@ -317,7 +317,7 @@ export default function StaffPage({
                         label={statusLabel(s.status)}
                       />
                     </td>
-                    <td className="px-5 py-3 text-fg-muted font-mono text-xs">
+                    <td className="px-5 py-3 text-md-on-surface-variant font-mono text-xs">
                       {new Date(s.joined_at).toLocaleDateString()}
                     </td>
                     <td className="px-5 py-3">
@@ -325,14 +325,14 @@ export default function StaffPage({
                         <button
                           onClick={() => openEditModal(s)}
                           title={t.staff.editStaff}
-                          className="p-1.5 rounded-lg hover:bg-surface text-fg-muted hover:text-fg transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-md-surface-container-high text-md-on-surface-variant hover:text-md-on-surface transition-colors"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(s.id)}
                           title={t.common.delete}
-                          className="p-1.5 rounded-lg hover:bg-red-500/10 text-fg-muted hover:text-red-400 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-red-100 text-md-on-surface-variant hover:text-red-600 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -347,8 +347,8 @@ export default function StaffPage({
 
         {/* Count footer */}
         {total > 0 && (
-          <div className="px-5 py-3 border-t border-white/[0.06]">
-            <p className="text-xs text-fg-muted">
+          <div className="px-5 py-3 border-t border-md-outline-variant">
+            <p className="text-xs text-md-on-surface-variant">
               {total} {t.staff.title.toLowerCase()}
             </p>
           </div>
@@ -357,29 +357,29 @@ export default function StaffPage({
 
       {/* Add/Edit Staff Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-bg-elevated border border-white/[0.06] rounded-2xl shadow-card w-full max-w-md">
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
-              <h2 className="text-base font-semibold text-fg">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-md-surface-container border border-md-outline-variant rounded-3xl shadow-md-1 w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-md-outline-variant">
+              <h2 className="text-base font-semibold text-md-on-surface">
                 {editingStaff
                   ? t.staff.editStaff
                   : t.staff.addStaffTitle}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1 rounded-lg hover:bg-surface text-fg-muted transition-colors"
+                className="p-1 rounded-lg hover:bg-md-surface-container-high text-md-on-surface-variant transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               {formError && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
+                <div className="p-3 bg-md-error-container border border-md-error/20 rounded-xl text-sm text-md-error">
                   {formError}
                 </div>
               )}
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label className="block text-xs text-md-on-surface-variant mb-1.5">
                   {t.staff.name} *
                 </label>
                 <input
@@ -388,11 +388,11 @@ export default function StaffPage({
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder={t.staff.namePlaceholder}
-                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label className="block text-xs text-md-on-surface-variant mb-1.5">
                   {t.staff.phone} {editingStaff ? "" : "*"}
                 </label>
                 <input
@@ -402,11 +402,11 @@ export default function StaffPage({
                   value={formPhone}
                   onChange={(e) => setFormPhone(e.target.value)}
                   placeholder={t.staff.phonePlaceholder}
-                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
+                  className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors disabled:opacity-50"
                 />
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label className="block text-xs text-md-on-surface-variant mb-1.5">
                   {t.staff.email}
                 </label>
                 <input
@@ -414,11 +414,11 @@ export default function StaffPage({
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
                   placeholder={t.staff.emailPlaceholder}
-                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label className="block text-xs text-md-on-surface-variant mb-1.5">
                   {t.staff.staffRole} *
                 </label>
                 <select
@@ -426,7 +426,7 @@ export default function StaffPage({
                   onChange={(e) =>
                     setFormStaffRole(e.target.value as StaffRole)
                   }
-                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface focus:outline-none focus:border-md-primary transition-colors"
                 >
                   {STAFF_ROLES.map((r) => (
                     <option key={r} value={r}>
@@ -439,14 +439,14 @@ export default function StaffPage({
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2.5 bg-surface border border-white/[0.06] text-fg text-sm rounded-xl hover:bg-surface-hover transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-md-surface-container-high border border-md-outline-variant text-md-on-surface text-sm rounded-full hover:bg-md-surface-container-highest transition-colors"
                 >
                   {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="flex-1 px-4 py-2.5 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-md-primary text-md-on-primary font-medium text-sm rounded-full hover:bg-md-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {formLoading && (
                     <Loader2 className="w-4 h-4 animate-spin" />

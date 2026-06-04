@@ -20,7 +20,7 @@ export default function DashboardLayout({
 
   return (
     <AuthGuard locale={locale}>
-      <div className="min-h-screen bg-bg-base">
+      <div className="min-h-screen bg-md-background">
         <Sidebar
           t={t}
           locale={locale}

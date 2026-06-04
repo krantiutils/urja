@@ -17,13 +17,13 @@ type MethodFilter = "all" | "qr" | "nfc" | "manual";
 
 function MethodBadge({ method }: { method: string }) {
   const colors: Record<string, string> = {
-    qr: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    nfc: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    manual: "bg-gray-500/10 text-gray-400 border-gray-500/20",
+    qr: "bg-blue-100 text-blue-700",
+    nfc: "bg-purple-100 text-purple-700",
+    manual: "bg-gray-100 text-gray-600",
   };
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono uppercase border ${
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono uppercase ${
         colors[method] ?? colors.manual
       }`}
     >
@@ -139,13 +139,13 @@ export default function AttendancePage({
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-fg flex items-center gap-2">
-          <CalendarCheck className="w-5 h-5 text-accent" />
+        <h1 className="text-xl font-semibold text-md-on-surface flex items-center gap-2">
+          <CalendarCheck className="w-5 h-5 text-md-primary" />
           {t.attendance.title}
         </h1>
         <button
           onClick={() => setShowCheckIn(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors shadow-accent-glow"
+          className="flex items-center gap-2 px-4 py-2 bg-md-primary text-md-on-primary font-medium text-sm rounded-full hover:bg-md-primary/90 transition-colors shadow-md-1"
         >
           <UserPlus className="w-4 h-4" />
           {t.attendance.manualCheckIn}
@@ -154,25 +154,25 @@ export default function AttendancePage({
 
       {/* Stats Card */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl p-5 shadow-card">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
-            <CalendarCheck className="w-5 h-5 text-accent" />
+        <div className="bg-md-surface-container border border-md-outline-variant rounded-2xl p-5 shadow-md-1">
+          <div className="w-10 h-10 rounded-xl bg-md-primary-container flex items-center justify-center mb-3">
+            <CalendarCheck className="w-5 h-5 text-md-primary" />
           </div>
-          <p className="text-2xl font-semibold text-fg tracking-tight">
+          <p className="text-2xl font-semibold text-md-on-surface tracking-tight">
             {todayCount}
           </p>
-          <p className="mt-0.5 text-sm text-fg-muted">
+          <p className="mt-0.5 text-sm text-md-on-surface-variant">
             {t.attendance.todayCheckIns}
           </p>
         </div>
-        <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl p-5 shadow-card">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
-            <Calendar className="w-5 h-5 text-accent" />
+        <div className="bg-md-surface-container border border-md-outline-variant rounded-2xl p-5 shadow-md-1">
+          <div className="w-10 h-10 rounded-xl bg-md-primary-container flex items-center justify-center mb-3">
+            <Calendar className="w-5 h-5 text-md-primary" />
           </div>
-          <p className="text-2xl font-semibold text-fg tracking-tight">
+          <p className="text-2xl font-semibold text-md-on-surface tracking-tight">
             {filtered.length}
           </p>
-          <p className="mt-0.5 text-sm text-fg-muted">
+          <p className="mt-0.5 text-sm text-md-on-surface-variant">
             {t.attendance.totalCheckIns} ({isSelectedToday ? t.attendance.today : selectedDate})
           </p>
         </div>
@@ -182,12 +182,12 @@ export default function AttendancePage({
       <div className="flex flex-wrap items-center gap-3">
         {/* Date Picker */}
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-fg-muted" />
+          <Calendar className="w-4 h-4 text-md-on-surface-variant" />
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-3 py-1.5 bg-input-bg border border-white/[0.06] rounded-lg text-sm text-fg focus:outline-none focus:border-accent/50 transition-colors"
+            className="px-3 py-1.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-lg text-sm text-md-on-surface focus:outline-none focus:border-md-primary transition-colors"
           />
         </div>
 
@@ -206,10 +206,10 @@ export default function AttendancePage({
               <button
                 key={m}
                 onClick={() => setMethodFilter(m)}
-                className={`px-3 py-1.5 text-xs font-mono uppercase rounded-lg border transition-colors ${
+                className={`px-3 py-1.5 text-xs font-mono uppercase rounded-full border transition-colors ${
                   methodFilter === m
-                    ? "bg-accent/10 text-accent border-accent/20"
-                    : "text-fg-muted border-white/[0.06] hover:bg-surface"
+                    ? "bg-md-primary-container text-md-on-primary-container border-transparent"
+                    : "text-md-on-surface-variant border-md-outline-variant hover:bg-md-surface-container-high"
                 }`}
               >
                 {label}
@@ -221,36 +221,36 @@ export default function AttendancePage({
 
       {/* Error */}
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
+        <div className="p-3 bg-md-error-container border border-md-error/20 rounded-xl text-sm text-md-error">
           {error}
         </div>
       )}
 
       {/* Table */}
-      <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl shadow-card overflow-hidden">
+      <div className="bg-md-surface-container border border-md-outline-variant rounded-2xl shadow-md-1 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-accent animate-spin" />
+            <Loader2 className="w-6 h-6 text-md-primary animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-fg-muted text-sm">
+          <div className="text-center py-16 text-md-on-surface-variant text-sm">
             {t.attendance.noRecords}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left px-5 py-3 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                <tr className="border-b border-md-outline-variant">
+                  <th className="text-left px-5 py-3 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.attendance.member}
                   </th>
-                  <th className="text-left px-5 py-3 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left px-5 py-3 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.attendance.date}
                   </th>
-                  <th className="text-left px-5 py-3 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left px-5 py-3 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.attendance.time}
                   </th>
-                  <th className="text-left px-5 py-3 text-xs font-mono tracking-widest text-fg-muted uppercase">
+                  <th className="text-left px-5 py-3 text-xs font-medium tracking-wider text-md-on-surface-variant uppercase">
                     {t.attendance.method}
                   </th>
                 </tr>
@@ -259,15 +259,15 @@ export default function AttendancePage({
                 {filtered.map((record) => (
                   <tr
                     key={record.id}
-                    className="border-b border-white/[0.03] last:border-0 hover:bg-surface transition-colors"
+                    className="border-b border-md-outline-variant/50 last:border-0 hover:bg-md-surface-container-high transition-colors"
                   >
-                    <td className="px-5 py-3 text-fg">
+                    <td className="px-5 py-3 text-md-on-surface">
                       {record.member_name ?? record.user_id}
                     </td>
-                    <td className="px-5 py-3 text-fg-muted font-mono text-xs">
+                    <td className="px-5 py-3 text-md-on-surface-variant font-mono text-xs">
                       {formatDate(record.check_in_at)}
                     </td>
-                    <td className="px-5 py-3 text-fg-muted font-mono text-xs">
+                    <td className="px-5 py-3 text-md-on-surface-variant font-mono text-xs">
                       {formatTime(record.check_in_at)}
                     </td>
                     <td className="px-5 py-3">
@@ -283,27 +283,27 @@ export default function AttendancePage({
 
       {/* Manual Check-in Modal */}
       {showCheckIn && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-bg-elevated border border-white/[0.06] rounded-2xl shadow-card w-full max-w-sm">
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
-              <h2 className="text-base font-semibold text-fg">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-md-surface-container border border-md-outline-variant rounded-2xl shadow-md-1 w-full max-w-sm">
+            <div className="flex items-center justify-between p-5 border-b border-md-outline-variant">
+              <h2 className="text-base font-semibold text-md-on-surface">
                 {t.attendance.manualCheckIn}
               </h2>
               <button
                 onClick={() => setShowCheckIn(false)}
-                className="p-1 rounded-lg hover:bg-surface text-fg-muted transition-colors"
+                className="p-1 rounded-lg hover:bg-md-surface-container-high text-md-on-surface-variant transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={handleManualCheckIn} className="p-5 space-y-4">
               {checkInError && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
+                <div className="p-3 bg-md-error-container border border-md-error/20 rounded-xl text-sm text-md-error">
                   {checkInError}
                 </div>
               )}
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label className="block text-xs text-md-on-surface-variant mb-1.5">
                   {t.attendance.checkInMember}
                 </label>
                 <input
@@ -312,21 +312,21 @@ export default function AttendancePage({
                   value={checkInMemberId}
                   onChange={(e) => setCheckInMemberId(e.target.value)}
                   placeholder={t.attendance.memberIdPlaceholder}
-                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-md-surface-container-lowest border border-md-outline-variant rounded-xl text-sm text-md-on-surface placeholder:text-md-on-surface-variant focus:outline-none focus:border-md-primary transition-colors"
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowCheckIn(false)}
-                  className="flex-1 px-4 py-2.5 bg-surface border border-white/[0.06] text-fg text-sm rounded-xl hover:bg-surface-hover transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-md-surface-container-high border border-md-outline-variant text-md-on-surface text-sm rounded-full hover:bg-md-surface-container-highest transition-colors"
                 >
                   {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={checkInLoading}
-                  className="flex-1 px-4 py-2.5 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-md-primary text-md-on-primary font-medium text-sm rounded-full hover:bg-md-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {checkInLoading && (
                     <Loader2 className="w-4 h-4 animate-spin" />

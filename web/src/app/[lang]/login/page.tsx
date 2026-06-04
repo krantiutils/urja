@@ -122,31 +122,32 @@ export default function LoginPage({
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-base">
-        <Loader2 className="w-8 h-8 text-accent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-md-background">
+        <Loader2 className="w-8 h-8 text-md-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-base px-4">
-      {/* Background subtle gradient */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,#0a0a0f_0%,#050506_50%,#020203_100%)]" />
+    <div className="min-h-screen flex items-center justify-center bg-md-background px-4">
+      {/* Background organic shapes */}
+      <div className="fixed top-20 -left-32 w-[500px] h-[500px] rounded-full bg-md-primary-container blur-[150px] opacity-30 pointer-events-none" />
+      <div className="fixed bottom-20 -right-20 w-[400px] h-[400px] rounded-full bg-md-tertiary-container blur-[120px] opacity-25 pointer-events-none" />
 
       <div className="relative w-full max-w-sm animate-fade-in">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-semibold tracking-tight bg-gradient-to-b from-white via-white/95 to-white/70 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold tracking-tight text-md-on-surface">
             {t.common.appName}
           </h1>
-          <p className="mt-2 text-fg-muted text-sm">
+          <p className="mt-2 text-md-on-surface-variant text-sm">
             {t.auth.subtitle}
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl p-6 shadow-card">
-          <h2 className="text-lg font-semibold text-fg mb-6">
+        <div className="bg-md-surface-container border border-md-outline-variant rounded-3xl p-6 shadow-md-1">
+          <h2 className="text-lg font-semibold text-md-on-surface mb-6">
             {t.auth.signIn}
           </h2>
 
@@ -155,19 +156,19 @@ export default function LoginPage({
               <div>
                 <label
                   htmlFor="phone"
-                  className="block text-xs font-mono tracking-widest text-fg-muted uppercase mb-2"
+                  className="block text-xs font-medium tracking-wider text-md-on-surface-variant uppercase mb-2"
                 >
                   {t.auth.phoneLabel}
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-md-on-surface-variant" />
                   <input
                     id="phone"
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder={t.auth.phonePlaceholder}
-                    className="w-full bg-input-bg border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-fg placeholder:text-gray-500 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors"
+                    className="w-full bg-md-surface-container-lowest border border-md-outline rounded-xl py-2.5 pl-10 pr-4 text-md-on-surface placeholder:text-md-on-surface-variant/50 focus:outline-none focus:border-md-primary focus:ring-2 focus:ring-md-primary/20 transition-colors"
                     autoComplete="tel"
                     autoFocus
                   />
@@ -175,13 +176,13 @@ export default function LoginPage({
               </div>
 
               {error && (
-                <p className="text-red-400 text-sm">{error}</p>
+                <p className="text-md-error text-sm">{error}</p>
               )}
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-bright text-bg-base font-semibold py-2.5 rounded-lg shadow-accent-glow hover:shadow-[0_0_0_1px_rgba(132,204,22,0.6),0_4px_16px_rgba(132,204,22,0.4)] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 bg-md-primary hover:bg-md-primary/90 text-md-on-primary font-medium py-2.5 rounded-full shadow-md-1 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -195,19 +196,19 @@ export default function LoginPage({
             </form>
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <p className="text-sm text-fg-muted mb-2">
+              <p className="text-sm text-md-on-surface-variant mb-2">
                 {t.auth.otpSent}
               </p>
 
               <div>
                 <label
                   htmlFor="otp"
-                  className="block text-xs font-mono tracking-widest text-fg-muted uppercase mb-2"
+                  className="block text-xs font-medium tracking-wider text-md-on-surface-variant uppercase mb-2"
                 >
                   {t.auth.otpLabel}
                 </label>
                 <div className="relative">
-                  <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
+                  <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-md-on-surface-variant" />
                   <input
                     id="otp"
                     type="text"
@@ -219,7 +220,7 @@ export default function LoginPage({
                       setOtp(e.target.value.replace(/\D/g, ""))
                     }
                     placeholder={t.auth.otpPlaceholder}
-                    className="w-full bg-input-bg border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-fg placeholder:text-gray-500 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors tracking-[0.3em] text-center font-mono"
+                    className="w-full bg-md-surface-container-lowest border border-md-outline rounded-xl py-2.5 pl-10 pr-4 text-md-on-surface placeholder:text-md-on-surface-variant/50 focus:outline-none focus:border-md-primary focus:ring-2 focus:ring-md-primary/20 transition-colors tracking-[0.3em] text-center"
                     autoComplete="one-time-code"
                     autoFocus
                   />
@@ -227,13 +228,13 @@ export default function LoginPage({
               </div>
 
               {error && (
-                <p className="text-red-400 text-sm">{error}</p>
+                <p className="text-md-error text-sm">{error}</p>
               )}
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-bright text-bg-base font-semibold py-2.5 rounded-lg shadow-accent-glow hover:shadow-[0_0_0_1px_rgba(132,204,22,0.6),0_4px_16px_rgba(132,204,22,0.4)] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 bg-md-primary hover:bg-md-primary/90 text-md-on-primary font-medium py-2.5 rounded-full shadow-md-1 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -253,7 +254,7 @@ export default function LoginPage({
                     setOtp("");
                     setError("");
                   }}
-                  className="text-fg-muted hover:text-fg transition-colors"
+                  className="text-md-on-surface-variant hover:text-md-on-surface transition-colors"
                 >
                   &larr; {t.auth.phoneLabel}
                 </button>
@@ -261,7 +262,7 @@ export default function LoginPage({
                   type="button"
                   onClick={handleResendOtp}
                   disabled={resendTimer > 0 || isSubmitting}
-                  className="text-accent hover:text-accent-bright disabled:text-fg-muted disabled:cursor-not-allowed transition-colors"
+                  className="text-md-primary hover:text-md-primary/80 disabled:text-md-on-surface-variant disabled:cursor-not-allowed transition-colors"
                 >
                   {resendTimer > 0
                     ? `${t.auth.resendIn} ${resendTimer}s`

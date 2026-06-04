@@ -99,34 +99,34 @@ export function Sidebar({ t, locale, isOpen, onClose }: SidebarProps) {
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-bg-elevated border-r border-white/[0.06] z-50 flex flex-col transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-full w-64 bg-md-surface-container border-r border-md-outline-variant z-50 flex flex-col transition-transform duration-300 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between p-4 border-b border-md-outline-variant">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-accent/20 flex items-center justify-center">
-              <Dumbbell className="w-4 h-4 text-accent" />
+            <div className="w-8 h-8 rounded-xl bg-md-primary flex items-center justify-center">
+              <Dumbbell className="w-4 h-4 text-md-on-primary" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-fg truncate">
+              <h2 className="text-sm font-semibold text-md-on-surface truncate">
                 {t.common.appName}
               </h2>
-              <p className="text-xs text-fg-muted truncate">Gym Name</p>
+              <p className="text-xs text-md-on-surface-variant truncate">Gym Name</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="lg:hidden p-1 rounded-lg hover:bg-surface transition-colors"
+            className="lg:hidden p-1 rounded-full hover:bg-md-surface-container-high transition-colors"
           >
-            <X className="w-4 h-4 text-fg-muted" />
+            <X className="w-4 h-4 text-md-on-surface-variant" />
           </button>
         </div>
 
@@ -136,7 +136,7 @@ export function Sidebar({ t, locale, isOpen, onClose }: SidebarProps) {
             <div key={section.label} className="mb-2">
               <button
                 onClick={() => toggleSection(section.label)}
-                className="flex items-center justify-between w-full px-2 py-1.5 text-[11px] font-mono tracking-widest uppercase text-fg-muted hover:text-fg transition-colors"
+                className="flex items-center justify-between w-full px-2 py-1.5 text-[11px] font-medium tracking-widest uppercase text-md-on-surface-variant hover:text-md-on-surface transition-colors"
               >
                 {section.label}
                 <ChevronDown
@@ -155,13 +155,13 @@ export function Sidebar({ t, locale, isOpen, onClose }: SidebarProps) {
                         key={item.href}
                         href={item.href}
                         onClick={onClose}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                        className={`flex items-center gap-3 px-3 py-2 rounded-full text-sm transition-all duration-200 ${
                           active
-                            ? "bg-accent/10 text-accent font-medium"
-                            : "text-fg-muted hover:bg-surface hover:text-fg"
+                            ? "bg-md-primary-container text-md-on-primary-container font-medium"
+                            : "text-md-on-surface-variant hover:bg-md-surface-container-high hover:text-md-on-surface"
                         }`}
                       >
-                        <span className={active ? "text-accent" : ""}>
+                        <span className={active ? "text-md-primary" : ""}>
                           {item.icon}
                         </span>
                         {item.label}
@@ -175,13 +175,13 @@ export function Sidebar({ t, locale, isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Settings at bottom */}
-        <div className="p-3 border-t border-white/[0.06]">
+        <div className="p-3 border-t border-md-outline-variant">
           <Link
             href={`/${locale}/dashboard/settings`}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+            className={`flex items-center gap-3 px-3 py-2 rounded-full text-sm transition-all duration-200 ${
               isActive(`/${locale}/dashboard/settings`)
-                ? "bg-accent/10 text-accent font-medium"
-                : "text-fg-muted hover:bg-surface hover:text-fg"
+                ? "bg-md-primary-container text-md-on-primary-container font-medium"
+                : "text-md-on-surface-variant hover:bg-md-surface-container-high hover:text-md-on-surface"
             }`}
           >
             <Settings className="w-4 h-4" />

@@ -54,15 +54,15 @@ export function TopBar({ t, locale, onMenuToggle }: TopBarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 h-14 bg-bg-elevated/80 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-4 lg:px-6">
-      {/* Left: menu toggle (mobile) + page title area */}
+    <header className="sticky top-0 z-30 h-14 bg-md-surface/90 backdrop-blur-xl border-b border-md-outline-variant flex items-center justify-between px-4 lg:px-6">
+      {/* Left: menu toggle (mobile) */}
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuToggle}
-          className="lg:hidden p-2 rounded-lg hover:bg-surface transition-colors"
+          className="lg:hidden p-2 rounded-full hover:bg-md-surface-container transition-colors"
           aria-label="Toggle menu"
         >
-          <Menu className="w-5 h-5 text-fg-muted" />
+          <Menu className="w-5 h-5 text-md-on-surface-variant" />
         </button>
       </div>
 
@@ -71,18 +71,18 @@ export function TopBar({ t, locale, onMenuToggle }: TopBarProps) {
         {/* Language toggle */}
         <button
           onClick={toggleLocale}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-fg-muted hover:bg-surface hover:text-fg transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-md-on-surface-variant hover:bg-md-surface-container hover:text-md-on-surface transition-colors"
           title={locale === "en" ? "नेपालीमा हेर्नुहोस्" : "View in English"}
         >
           <Globe className="w-4 h-4" />
-          <span className="text-xs font-mono uppercase">
+          <span className="text-xs font-medium uppercase">
             {locale === "en" ? "NE" : "EN"}
           </span>
         </button>
 
         {/* QR Code button */}
         <button
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-fg-muted hover:bg-surface hover:text-fg transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm text-md-on-surface-variant hover:bg-md-surface-container hover:text-md-on-surface transition-colors"
           title={t.topbar.orgQr}
         >
           <QrCode className="w-4 h-4" />
@@ -93,35 +93,35 @@ export function TopBar({ t, locale, onMenuToggle }: TopBarProps) {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setProfileOpen(!profileOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-surface transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-md-surface-container transition-colors"
           >
-            <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center">
-              <User className="w-3.5 h-3.5 text-accent" />
+            <div className="w-7 h-7 rounded-full bg-md-primary-container flex items-center justify-center">
+              <User className="w-3.5 h-3.5 text-md-primary" />
             </div>
-            <span className="hidden sm:inline text-sm text-fg-muted">
+            <span className="hidden sm:inline text-sm text-md-on-surface-variant">
               {user?.phone ?? ""}
             </span>
             <ChevronDown
-              className={`w-3 h-3 text-fg-muted transition-transform duration-200 ${
+              className={`w-3 h-3 text-md-on-surface-variant transition-transform duration-200 ${
                 profileOpen ? "rotate-180" : ""
               }`}
             />
           </button>
 
           {profileOpen && (
-            <div className="absolute right-0 top-full mt-1 w-48 bg-bg-elevated border border-white/[0.06] rounded-xl shadow-card overflow-hidden animate-fade-in">
-              <div className="px-3 py-2 border-b border-white/[0.06]">
-                <p className="text-sm text-fg font-medium truncate">
+            <div className="absolute right-0 top-full mt-1 w-48 bg-md-surface-container-lowest border border-md-outline-variant rounded-2xl shadow-md-2 overflow-hidden animate-fade-in">
+              <div className="px-3 py-2 border-b border-md-outline-variant">
+                <p className="text-sm text-md-on-surface font-medium truncate">
                   {user?.phone}
                 </p>
-                <p className="text-xs text-fg-muted capitalize">
+                <p className="text-xs text-md-on-surface-variant capitalize">
                   {user?.role}
                 </p>
               </div>
               <div className="py-1">
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-surface transition-colors"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-md-error hover:bg-md-error-container transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
                   {t.topbar.logout}
