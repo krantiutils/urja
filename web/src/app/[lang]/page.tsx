@@ -12,7 +12,6 @@ import {
   Activity,
   NfcIcon,
   Mail,
-  Check,
   ArrowRight,
 } from "lucide-react";
 import { MobileNav, FaqAccordion } from "@/components/landing/LandingInteractive";
@@ -51,43 +50,6 @@ export default function LandingPage({
     { question: t.landing.faq5Q, answer: t.landing.faq5A },
   ];
 
-  const pricingPlans = [
-    {
-      name: t.landing.pricingBasic,
-      price: locale === "en" ? "1,500" : t.landing.pricingBasicPrice,
-      period: t.landing.pricingPerMonth,
-      popular: false,
-      features: [
-        t.landing.pricingBasicFeature1,
-        t.landing.pricingBasicFeature2,
-        t.landing.pricingBasicFeature3,
-      ],
-    },
-    {
-      name: t.landing.pricingPro,
-      price: locale === "en" ? "4,000" : t.landing.pricingProPrice,
-      period: t.landing.pricingPer3Months,
-      popular: true,
-      features: [
-        t.landing.pricingProFeature1,
-        t.landing.pricingProFeature2,
-        t.landing.pricingProFeature3,
-        t.landing.pricingProFeature4,
-      ],
-    },
-    {
-      name: t.landing.pricingEnterprise,
-      price: locale === "en" ? "12,000" : t.landing.pricingEnterprisePrice,
-      period: t.landing.pricingPerYear,
-      popular: false,
-      features: [
-        t.landing.pricingEnterpriseFeature1,
-        t.landing.pricingEnterpriseFeature2,
-        t.landing.pricingEnterpriseFeature3,
-        t.landing.pricingEnterpriseFeature4,
-      ],
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-bg-deep text-fg">
@@ -106,9 +68,6 @@ export default function LandingPage({
           <nav className="hidden lg:flex items-center gap-8">
             <a href="#features" className="text-sm text-fg-muted hover:text-fg transition-colors">
               {t.landing.navFeatures}
-            </a>
-            <a href="#pricing" className="text-sm text-fg-muted hover:text-fg transition-colors">
-              {t.landing.navPricing}
             </a>
             <a href="#faq" className="text-sm text-fg-muted hover:text-fg transition-colors">
               {t.landing.navFaq}
@@ -226,63 +185,6 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* ── Pricing ── */}
-      <section id="pricing" className="py-20 sm:py-28 border-t border-white/[0.04]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-              {t.landing.pricingTitle}
-            </h2>
-            <p className="mt-4 text-fg-muted text-lg max-w-xl mx-auto">
-              {t.landing.pricingSubtitle}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {pricingPlans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative rounded-2xl p-6 border backdrop-blur-sm ${
-                  plan.popular
-                    ? "border-accent/30 bg-accent/[0.04] shadow-card-hover"
-                    : "border-white/[0.06] bg-bg-elevated/50"
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-xs font-semibold bg-accent text-bg-deep rounded-full">
-                    {t.landing.pricingMostPopular}
-                  </div>
-                )}
-                <h3 className="text-lg font-semibold mb-1">{plan.name}</h3>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-sm text-fg-muted">NPR</span>
-                  <span className="text-3xl font-bold">{plan.price}</span>
-                  <span className="text-sm text-fg-muted">{plan.period}</span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((feat) => (
-                    <li key={feat} className="flex items-start gap-2.5 text-sm text-fg-muted">
-                      <Check className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                      {feat}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={`/${locale}/login`}
-                  className={`block w-full text-center py-2.5 text-sm font-semibold rounded-xl transition-colors ${
-                    plan.popular
-                      ? "bg-accent text-bg-deep hover:bg-accent-bright shadow-accent-glow"
-                      : "border border-white/[0.1] text-fg hover:bg-surface"
-                  }`}
-                >
-                  {t.landing.pricingCta}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── FAQ ── */}
       <section id="faq" className="py-20 sm:py-28 border-t border-white/[0.04]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -321,7 +223,6 @@ export default function LandingPage({
               <h4 className="text-sm font-semibold mb-4">{t.landing.footerProduct}</h4>
               <ul className="space-y-2.5">
                 <li><a href="#features" className="text-sm text-fg-muted hover:text-fg transition-colors">{t.landing.navFeatures}</a></li>
-                <li><a href="#pricing" className="text-sm text-fg-muted hover:text-fg transition-colors">{t.landing.navPricing}</a></li>
                 <li><a href="#faq" className="text-sm text-fg-muted hover:text-fg transition-colors">{t.landing.navFaq}</a></li>
               </ul>
             </div>

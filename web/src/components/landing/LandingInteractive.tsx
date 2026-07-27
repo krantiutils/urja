@@ -40,13 +40,6 @@ export function MobileNav({ t, locale }: MobileNavProps) {
               {t.landing.navFeatures}
             </a>
             <a
-              href="#pricing"
-              onClick={() => setOpen(false)}
-              className="px-4 py-3 text-fg-muted hover:text-fg hover:bg-surface rounded-lg transition-colors"
-            >
-              {t.landing.navPricing}
-            </a>
-            <a
               href="#faq"
               onClick={() => setOpen(false)}
               className="px-4 py-3 text-fg-muted hover:text-fg hover:bg-surface rounded-lg transition-colors"
