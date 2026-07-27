@@ -225,6 +225,18 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	callerID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	callerRole, ok := middleware.OrgRoleFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden: no organization role"})
+		return
+	}
+
 	memberID := chi.URLParam(r, "memberId")
 	if memberID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing member ID"})
@@ -237,9 +249,13 @@ func (h *Handler) UpdateOrgMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.UpdateOrgMember(r.Context(), orgID, memberID, &input); err != nil {
+	if err := h.service.UpdateOrgMember(r.Context(), callerID, callerRole, orgID, memberID, &input); err != nil {
 		if errors.Is(err, ErrMemberNotFound) {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "member not found in this organization"})
+			return
+		}
+		if errors.Is(err, ErrForbidden) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": err.Error()})
 			return
 		}
 		if isValidationError(err) {

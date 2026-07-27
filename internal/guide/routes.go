@@ -13,9 +13,10 @@ func (h *Handler) RegisterPublicRoutes(r chi.Router) {
 }
 
 // RegisterOrgRoutes mounts org-scoped training guide management routes (under /orgs/{orgId}/training-guides).
-// All operations require staff or admin role.
+// Requires the caller's role *in this organization* to be staff or admin — the
+// JWT role claim carries no authority, see pkg/middleware/rbac.go.
 func (h *Handler) RegisterOrgRoutes(r chi.Router) {
-	r.Use(middleware.RequireRole("staff", "admin"))
+	r.Use(middleware.RequireOrgRole("staff", "admin"))
 
 	r.Get("/", h.ListAll)
 	r.Get("/{id}", h.GetAdmin)

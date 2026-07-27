@@ -8,7 +8,7 @@ import (
 // RegisterRoutes mounts accounts routes (under /orgs/{orgId}/accounts).
 // All accounts routes require admin or staff role.
 func (h *Handler) RegisterRoutes(r chi.Router) {
-	r.Use(middleware.RequireRole("admin", "staff"))
+	r.Use(middleware.RequireOrgRole("admin", "staff"))
 
 	r.Get("/", h.List)
 	r.Post("/", h.Create)

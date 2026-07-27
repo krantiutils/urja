@@ -8,7 +8,7 @@ import (
 // RegisterOrgRoutes mounts org-scoped SMS routes (under /orgs/{orgId}/sms).
 // All SMS operations require admin role.
 func (h *Handler) RegisterOrgRoutes(r chi.Router) {
-	r.Use(middleware.RequireRole("admin"))
+	r.Use(middleware.RequireOrgRole("admin"))
 
 	r.Get("/balance", h.GetBalance)
 	r.Post("/send", h.Send)

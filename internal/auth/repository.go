@@ -101,34 +101,35 @@ func (r *Repository) RevokeAllRefreshTokens(ctx context.Context, userID string) 
 	return iter.Err()
 }
 
-// GetUserByID retrieves a user's phone, role, and super admin status by their ID.
+// GetUserByID retrieves a user's phone and super admin status by their ID.
+// The returned role is always "member": a user's authority varies per organization
+// (see organization_members.role), so no single global role can describe it. The
+// JWT's role claim built from this value must never be treated as authoritative —
+// per-organization authority is resolved per-request by OrgScope/RequireOrgRole
+// (pkg/middleware/orgscope.go, pkg/middleware/rbac.go), never from the token.
 func (r *Repository) GetUserByID(ctx context.Context, userID string) (phone, role string, isSuperAdmin bool, err error) {
 	err = r.db.QueryRow(ctx,
-		`SELECT u.phone, COALESCE(
-			(SELECT om.role FROM organization_members om WHERE om.user_id = u.id LIMIT 1),
-			'member'
-		), u.is_super_admin FROM users u WHERE u.id = $1`,
+		`SELECT u.phone, u.is_super_admin FROM users u WHERE u.id = $1`,
 		userID,
-	).Scan(&phone, &role, &isSuperAdmin)
+	).Scan(&phone, &isSuperAdmin)
 	if err != nil {
 		return "", "", false, fmt.Errorf("user not found: %w", err)
 	}
-	return phone, role, isSuperAdmin, nil
+	return phone, "member", isSuperAdmin, nil
 }
 
 // FindOrCreateUserByPhone looks up a user by phone number, creating one if not found.
 // Returns the user ID, role, super admin status, and whether the user was newly created.
+// The returned role is always "member" for the same reason documented on GetUserByID:
+// per-organization authority is resolved per-request by OrgScope, never from the token.
 func (r *Repository) FindOrCreateUserByPhone(ctx context.Context, phone string) (string, string, bool, bool, error) {
-	var userID, role string
+	var userID string
 	var isSuperAdmin bool
 
 	err := r.db.QueryRow(ctx,
-		`SELECT id, COALESCE(
-			(SELECT role FROM organization_members WHERE user_id = users.id LIMIT 1),
-			'member'
-		), is_super_admin FROM users WHERE phone = $1`,
+		`SELECT id, is_super_admin FROM users WHERE phone = $1`,
 		phone,
-	).Scan(&userID, &role, &isSuperAdmin)
+	).Scan(&userID, &isSuperAdmin)
 
 	if err != nil {
 		// User doesn't exist; create one.
@@ -142,7 +143,7 @@ func (r *Repository) FindOrCreateUserByPhone(ctx context.Context, phone string) 
 		return userID, "member", false, true, nil
 	}
 
-	return userID, role, isSuperAdmin, false, nil
+	return userID, "member", isSuperAdmin, false, nil
 }
 
 // GetUserOnboardingStatus retrieves onboarding_completed for a user.

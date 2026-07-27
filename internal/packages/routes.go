@@ -13,7 +13,7 @@ func (h *Handler) RegisterPublicRoutes(r chi.Router) {
 // RegisterOrgRoutes mounts org-scoped package routes (under /orgs/{orgId}/packages).
 // These require admin role.
 func (h *Handler) RegisterOrgRoutes(r chi.Router) {
-	r.Use(middleware.RequireRole("admin"))
+	r.Use(middleware.RequireOrgRole("admin"))
 	r.Get("/", h.ListByOrg)
 	r.Post("/", h.Create)
 	r.Put("/{id}", h.Update)

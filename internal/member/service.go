@@ -35,6 +35,9 @@ type UpdateOrgMemberInput struct {
 	Status *string `json:"status,omitempty"`
 }
 
+// ErrForbidden indicates the caller does not have permission to perform the requested change.
+var ErrForbidden = errors.New("forbidden")
+
 var (
 	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	phoneRegex = regexp.MustCompile(`^[9876]\d{9}$`)
@@ -131,9 +134,23 @@ func (s *Service) CreateOrgMember(ctx context.Context, orgID string, input *Crea
 }
 
 // UpdateOrgMember updates a member's role or status within an org.
-func (s *Service) UpdateOrgMember(ctx context.Context, orgID, userID string, upd *UpdateOrgMemberInput) error {
+// callerID and callerRole identify the authenticated caller and their role within
+// orgID (as resolved by OrgScope/RequireOrgRole for this request) — never trust a
+// role embedded in the JWT itself. Changing the role field requires the caller to
+// be an admin of this org, and a caller may never change their own role, even if
+// they are an admin themselves.
+func (s *Service) UpdateOrgMember(ctx context.Context, callerID, callerRole, orgID, userID string, upd *UpdateOrgMemberInput) error {
 	if err := validateUpdateOrgMemberInput(upd); err != nil {
 		return err
+	}
+
+	if upd.Role != nil {
+		if callerRole != "admin" {
+			return fmt.Errorf("%w: only admins can change a member's role", ErrForbidden)
+		}
+		if callerID == userID {
+			return fmt.Errorf("%w: cannot change your own role", ErrForbidden)
+		}
 	}
 
 	if err := s.repo.UpdateOrgMember(ctx, orgID, userID, upd); err != nil {

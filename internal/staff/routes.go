@@ -8,7 +8,7 @@ import (
 // RegisterOrgRoutes mounts org-scoped staff management routes (under /orgs/{orgId}/staff).
 // All routes require staff or admin role.
 func (h *Handler) RegisterOrgRoutes(r chi.Router) {
-	r.Use(middleware.RequireRole("staff", "admin"))
+	r.Use(middleware.RequireOrgRole("staff", "admin"))
 
 	r.Get("/", h.List)
 	r.Post("/", h.Create)

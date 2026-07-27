@@ -204,24 +204,19 @@ func (r *Repository) ListPurchases(ctx context.Context, orgID string, limit, off
 }
 
 // GetOrgMemberPhones retrieves phone numbers of active members in the org.
-// If memberIDs is non-empty, only retrieves those specific members.
+// memberIDs must be explicit: an empty list returns an empty slice, never "everyone" —
+// callers (e.g. SendSMS) must not be able to broadcast to the whole org by omitting IDs.
 func (r *Repository) GetOrgMemberPhones(ctx context.Context, orgID string, memberIDs []string) ([]string, error) {
-	var query string
-	var args []interface{}
-
-	if len(memberIDs) > 0 {
-		query = `SELECT u.phone FROM users u
-			 JOIN organization_members om ON om.user_id = u.id
-			 WHERE om.organization_id = $1 AND om.status = 'active' AND u.id = ANY($2)`
-		args = []interface{}{orgID, memberIDs}
-	} else {
-		query = `SELECT u.phone FROM users u
-			 JOIN organization_members om ON om.user_id = u.id
-			 WHERE om.organization_id = $1 AND om.status = 'active'`
-		args = []interface{}{orgID}
+	if len(memberIDs) == 0 {
+		return []string{}, nil
 	}
 
-	rows, err := r.db.Query(ctx, query, args...)
+	rows, err := r.db.Query(ctx,
+		`SELECT u.phone FROM users u
+		 JOIN organization_members om ON om.user_id = u.id
+		 WHERE om.organization_id = $1 AND om.status = 'active' AND u.id = ANY($2)`,
+		orgID, memberIDs,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("querying member phones: %w", err)
 	}

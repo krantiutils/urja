@@ -11,7 +11,7 @@ func (h *Handler) RegisterOrgRoutes(r chi.Router) {
 	r.Post("/", h.Create)
 
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireRole("staff", "admin"))
+		r.Use(middleware.RequireOrgRole("staff", "admin"))
 		r.Get("/", h.List)
 	})
 }

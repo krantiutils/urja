@@ -34,16 +34,16 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 }
 
 // Create inserts a new training guide.
-func (r *Repository) Create(ctx context.Context, title, titleNe, content, contentNe, category, coverImageURL, authorID string) (*TrainingGuide, error) {
+func (r *Repository) Create(ctx context.Context, orgID, title, titleNe, content, contentNe, category, coverImageURL, authorID string) (*TrainingGuide, error) {
 	var g TrainingGuide
 	err := r.db.QueryRow(ctx,
-		`INSERT INTO training_guides (title, title_ne, content, content_ne, category, cover_image_url, author_id)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		`INSERT INTO training_guides (organization_id, title, title_ne, content, content_ne, category, cover_image_url, author_id)
+		 VALUES ($8, $1, $2, $3, $4, $5, $6, $7)
 		 RETURNING id, title, COALESCE(title_ne, ''), content, COALESCE(content_ne, ''),
 		           COALESCE(category, ''), COALESCE(cover_image_url, ''), COALESCE(author_id::text, ''),
 		           is_published, created_at, updated_at`,
 		title, nilIfEmpty(titleNe), content, nilIfEmpty(contentNe),
-		nilIfEmpty(category), nilIfEmpty(coverImageURL), nilIfEmpty(authorID),
+		nilIfEmpty(category), nilIfEmpty(coverImageURL), nilIfEmpty(authorID), orgID,
 	).Scan(&g.ID, &g.Title, &g.TitleNe, &g.Content, &g.ContentNe,
 		&g.Category, &g.CoverImageURL, &g.AuthorID,
 		&g.IsPublished, &g.CreatedAt, &g.UpdatedAt)
@@ -53,15 +53,18 @@ func (r *Repository) Create(ctx context.Context, title, titleNe, content, conten
 	return &g, nil
 }
 
-// GetByID retrieves a training guide by ID.
-func (r *Repository) GetByID(ctx context.Context, guideID string) (*TrainingGuide, error) {
+// GetByID retrieves a training guide owned by an organization. Platform presets
+// (organization_id IS NULL) are readable here so admins can see the full library,
+// but the mutating methods below deliberately exclude them.
+func (r *Repository) GetByID(ctx context.Context, orgID, guideID string) (*TrainingGuide, error) {
 	var g TrainingGuide
 	err := r.db.QueryRow(ctx,
 		`SELECT id, title, COALESCE(title_ne, ''), content, COALESCE(content_ne, ''),
 		        COALESCE(category, ''), COALESCE(cover_image_url, ''), COALESCE(author_id::text, ''),
 		        is_published, created_at, updated_at
-		 FROM training_guides WHERE id = $1`,
-		guideID,
+		 FROM training_guides
+		 WHERE id = $1 AND (organization_id = $2 OR organization_id IS NULL)`,
+		guideID, orgID,
 	).Scan(&g.ID, &g.Title, &g.TitleNe, &g.Content, &g.ContentNe,
 		&g.Category, &g.CoverImageURL, &g.AuthorID,
 		&g.IsPublished, &g.CreatedAt, &g.UpdatedAt)
@@ -149,10 +152,11 @@ func (r *Repository) ListPublished(ctx context.Context, category, search string,
 }
 
 // ListAll retrieves all training guides (for admin) with optional category filter, search, and pagination.
-func (r *Repository) ListAll(ctx context.Context, category, search string, limit, offset int) ([]TrainingGuide, int, error) {
-	conditions := []string{}
-	args := []interface{}{}
-	argIdx := 1
+func (r *Repository) ListAll(ctx context.Context, orgID, category, search string, limit, offset int) ([]TrainingGuide, int, error) {
+	// Always scoped: the org's own guides plus the platform presets.
+	conditions := []string{"(organization_id = $1 OR organization_id IS NULL)"}
+	args := []interface{}{orgID}
+	argIdx := 2
 
 	if category != "" {
 		conditions = append(conditions, fmt.Sprintf("category = $%d", argIdx))
@@ -211,17 +215,17 @@ func (r *Repository) ListAll(ctx context.Context, category, search string, limit
 }
 
 // Update modifies an existing training guide.
-func (r *Repository) Update(ctx context.Context, guideID, title, titleNe, content, contentNe, category, coverImageURL string) (*TrainingGuide, error) {
+func (r *Repository) Update(ctx context.Context, orgID, guideID, title, titleNe, content, contentNe, category, coverImageURL string) (*TrainingGuide, error) {
 	var g TrainingGuide
 	err := r.db.QueryRow(ctx,
 		`UPDATE training_guides
 		 SET title = $2, title_ne = $3, content = $4, content_ne = $5, category = $6, cover_image_url = $7
-		 WHERE id = $1
+		 WHERE id = $1 AND organization_id = $8
 		 RETURNING id, title, COALESCE(title_ne, ''), content, COALESCE(content_ne, ''),
 		           COALESCE(category, ''), COALESCE(cover_image_url, ''), COALESCE(author_id::text, ''),
 		           is_published, created_at, updated_at`,
 		guideID, title, nilIfEmpty(titleNe), content, nilIfEmpty(contentNe),
-		nilIfEmpty(category), nilIfEmpty(coverImageURL),
+		nilIfEmpty(category), nilIfEmpty(coverImageURL), orgID,
 	).Scan(&g.ID, &g.Title, &g.TitleNe, &g.Content, &g.ContentNe,
 		&g.Category, &g.CoverImageURL, &g.AuthorID,
 		&g.IsPublished, &g.CreatedAt, &g.UpdatedAt)
@@ -232,16 +236,16 @@ func (r *Repository) Update(ctx context.Context, guideID, title, titleNe, conten
 }
 
 // SetPublished updates the published status of a training guide.
-func (r *Repository) SetPublished(ctx context.Context, guideID string, isPublished bool) (*TrainingGuide, error) {
+func (r *Repository) SetPublished(ctx context.Context, orgID, guideID string, isPublished bool) (*TrainingGuide, error) {
 	var g TrainingGuide
 	err := r.db.QueryRow(ctx,
 		`UPDATE training_guides
 		 SET is_published = $2
-		 WHERE id = $1
+		 WHERE id = $1 AND organization_id = $3
 		 RETURNING id, title, COALESCE(title_ne, ''), content, COALESCE(content_ne, ''),
 		           COALESCE(category, ''), COALESCE(cover_image_url, ''), COALESCE(author_id::text, ''),
 		           is_published, created_at, updated_at`,
-		guideID, isPublished,
+		guideID, isPublished, orgID,
 	).Scan(&g.ID, &g.Title, &g.TitleNe, &g.Content, &g.ContentNe,
 		&g.Category, &g.CoverImageURL, &g.AuthorID,
 		&g.IsPublished, &g.CreatedAt, &g.UpdatedAt)
@@ -252,10 +256,12 @@ func (r *Repository) SetPublished(ctx context.Context, guideID string, isPublish
 }
 
 // Delete removes a training guide.
-func (r *Repository) Delete(ctx context.Context, guideID string) error {
+func (r *Repository) Delete(ctx context.Context, orgID, guideID string) error {
 	tag, err := r.db.Exec(ctx,
-		`DELETE FROM training_guides WHERE id = $1`,
-		guideID,
+		// organization_id must match: a NULL-org platform preset is never
+		// deletable through an org route.
+		`DELETE FROM training_guides WHERE id = $1 AND organization_id = $2`,
+		guideID, orgID,
 	)
 	if err != nil {
 		return fmt.Errorf("deleting training guide: %w", err)

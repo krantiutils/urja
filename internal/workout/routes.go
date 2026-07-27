@@ -12,7 +12,7 @@ func (h *Handler) RegisterOrgRoutes(r chi.Router) {
 	r.Get("/{id}", h.GetTemplate)
 
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireRole("staff", "admin"))
+		r.Use(middleware.RequireOrgRole("staff", "admin"))
 		r.Post("/", h.CreateTemplate)
 		r.Put("/{id}", h.UpdateTemplate)
 		r.Delete("/{id}", h.DeleteTemplate)
@@ -23,7 +23,7 @@ func (h *Handler) RegisterOrgRoutes(r chi.Router) {
 // Only staff/admin can assign plans.
 func (h *Handler) RegisterMemberRoutes(r chi.Router) {
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireRole("staff", "admin"))
+		r.Use(middleware.RequireOrgRole("staff", "admin"))
 		r.Post("/assign-plan", h.AssignPlan)
 	})
 }

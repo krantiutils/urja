@@ -1,6 +1,8 @@
 package member
 
 import (
+	"context"
+	"errors"
 	"testing"
 )
 
@@ -326,3 +328,57 @@ func TestValidateUpdateOrgMemberInput(t *testing.T) {
 		})
 	}
 }
+
+// TestUpdateOrgMember_RoleChangeGuards exercises the privilege-escalation guards in
+// UpdateOrgMember. All of these cases are rejected before the service ever reaches
+// the repository (repo stays nil), so a zero-value Service is sufficient here — no
+// database required. Non-role edits and the "staff can edit non-role fields" case
+// require a live repository and are covered instead by tests/e2e/authz_test.go.
+func TestUpdateOrgMember_RoleChangeGuards(t *testing.T) {
+	tests := []struct {
+		name       string
+		callerID   string
+		callerRole string
+		memberID   string
+	}{
+		{
+			name:       "staff cannot change another member's role",
+			callerID:   "user-1",
+			callerRole: "staff",
+			memberID:   "user-2",
+		},
+		{
+			name:       "staff cannot change their own role",
+			callerID:   "user-1",
+			callerRole: "staff",
+			memberID:   "user-1",
+		},
+		{
+			name:       "member cannot change another member's role",
+			callerID:   "user-1",
+			callerRole: "member",
+			memberID:   "user-2",
+		},
+		{
+			name:       "admin cannot change their own role",
+			callerID:   "user-1",
+			callerRole: "admin",
+			memberID:   "user-1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := &Service{}
+			err := svc.UpdateOrgMember(context.Background(), tt.callerID, tt.callerRole, "org-1", tt.memberID,
+				&UpdateOrgMemberInput{Role: strPtr("admin")})
+			if err == nil {
+				t.Fatal("expected forbidden error, got nil")
+			}
+			if !errors.Is(err, ErrForbidden) {
+				t.Fatalf("expected ErrForbidden, got %v", err)
+			}
+		})
+	}
+}
+

@@ -8,7 +8,7 @@ import (
 func TestCreate_EmptyTitle(t *testing.T) {
 	s := NewService(nil, testLogger())
 
-	_, err := s.Create(context.Background(), "", "", "content", "", "strength", "", "user-1")
+	_, err := s.Create(context.Background(), "org-1", "", "", "content", "", "strength", "", "user-1")
 	if err == nil {
 		t.Fatal("expected error for empty title")
 	}
@@ -20,7 +20,7 @@ func TestCreate_EmptyTitle(t *testing.T) {
 func TestCreate_EmptyContent(t *testing.T) {
 	s := NewService(nil, testLogger())
 
-	_, err := s.Create(context.Background(), "Title", "", "", "", "strength", "", "user-1")
+	_, err := s.Create(context.Background(), "org-1", "Title", "", "", "", "strength", "", "user-1")
 	if err == nil {
 		t.Fatal("expected error for empty content")
 	}
@@ -32,7 +32,7 @@ func TestCreate_EmptyContent(t *testing.T) {
 func TestCreate_WhitespaceOnlyTitle(t *testing.T) {
 	s := NewService(nil, testLogger())
 
-	_, err := s.Create(context.Background(), "   ", "", "content", "", "", "", "user-1")
+	_, err := s.Create(context.Background(), "org-1", "   ", "", "content", "", "", "", "user-1")
 	if err == nil {
 		t.Fatal("expected error for whitespace-only title")
 	}
@@ -41,7 +41,7 @@ func TestCreate_WhitespaceOnlyTitle(t *testing.T) {
 func TestCreate_InvalidCategory(t *testing.T) {
 	s := NewService(nil, testLogger())
 
-	_, err := s.Create(context.Background(), "Title", "", "content", "", "invalid_cat", "", "user-1")
+	_, err := s.Create(context.Background(), "org-1", "Title", "", "content", "", "invalid_cat", "", "user-1")
 	if err == nil {
 		t.Fatal("expected error for invalid category")
 	}
@@ -53,7 +53,7 @@ func TestCreate_InvalidCategory(t *testing.T) {
 func TestUpdate_EmptyTitle(t *testing.T) {
 	s := NewService(nil, testLogger())
 
-	_, err := s.Update(context.Background(), "guide-1", "", "", "content", "", "strength", "")
+	_, err := s.Update(context.Background(), "org-1", "guide-1", "", "", "content", "", "strength", "")
 	if err == nil {
 		t.Fatal("expected error for empty title")
 	}
@@ -62,7 +62,7 @@ func TestUpdate_EmptyTitle(t *testing.T) {
 func TestUpdate_EmptyContent(t *testing.T) {
 	s := NewService(nil, testLogger())
 
-	_, err := s.Update(context.Background(), "guide-1", "Title", "", "", "", "strength", "")
+	_, err := s.Update(context.Background(), "org-1", "guide-1", "Title", "", "", "", "strength", "")
 	if err == nil {
 		t.Fatal("expected error for empty content")
 	}
@@ -71,7 +71,7 @@ func TestUpdate_EmptyContent(t *testing.T) {
 func TestUpdate_InvalidCategory(t *testing.T) {
 	s := NewService(nil, testLogger())
 
-	_, err := s.Update(context.Background(), "guide-1", "Title", "", "content", "", "bogus", "")
+	_, err := s.Update(context.Background(), "org-1", "guide-1", "Title", "", "content", "", "bogus", "")
 	if err == nil {
 		t.Fatal("expected error for invalid category")
 	}

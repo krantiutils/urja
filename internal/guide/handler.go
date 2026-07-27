@@ -80,12 +80,18 @@ func (h *Handler) GetPublished(w http.ResponseWriter, r *http.Request) {
 
 // ListAll handles GET /api/v1/orgs/{orgId}/training-guides (admin)
 func (h *Handler) ListAll(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+
 	category := r.URL.Query().Get("category")
 	search := r.URL.Query().Get("search")
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 
-	guides, total, err := h.service.ListAll(r.Context(), category, search, limit, offset)
+	guides, total, err := h.service.ListAll(r.Context(), orgID, category, search, limit, offset)
 	if err != nil {
 		h.logger.Error("failed to list training guides", "error", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
@@ -97,13 +103,19 @@ func (h *Handler) ListAll(w http.ResponseWriter, r *http.Request) {
 
 // GetAdmin handles GET /api/v1/orgs/{orgId}/training-guides/{id} (admin, includes unpublished)
 func (h *Handler) GetAdmin(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+
 	guideID := chi.URLParam(r, "id")
 	if guideID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing guide ID"})
 		return
 	}
 
-	g, err := h.service.GetByID(r.Context(), guideID)
+	g, err := h.service.GetByID(r.Context(), orgID, guideID)
 	if err != nil {
 		h.logger.Error("failed to get training guide", "error", err, "guide_id", guideID)
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "training guide not found"})
@@ -115,9 +127,17 @@ func (h *Handler) GetAdmin(w http.ResponseWriter, r *http.Request) {
 
 // Create handles POST /api/v1/orgs/{orgId}/training-guides
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+	// Authentication is checked before organization scope: an anonymous caller
+	// gets 401, not a 400 that would imply their request was merely malformed.
 	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
 		return
 	}
 
@@ -127,7 +147,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	g, err := h.service.Create(r.Context(), req.Title, req.TitleNe, req.Content, req.ContentNe,
+	g, err := h.service.Create(r.Context(), orgID, req.Title, req.TitleNe, req.Content, req.ContentNe,
 		req.Category, req.CoverImageURL, userID)
 	if err != nil {
 		h.logger.Error("failed to create training guide", "error", err)
@@ -140,6 +160,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Update handles PUT /api/v1/orgs/{orgId}/training-guides/{id}
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+
 	guideID := chi.URLParam(r, "id")
 	if guideID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing guide ID"})
@@ -152,7 +178,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	g, err := h.service.Update(r.Context(), guideID, req.Title, req.TitleNe, req.Content, req.ContentNe,
+	g, err := h.service.Update(r.Context(), orgID, guideID, req.Title, req.TitleNe, req.Content, req.ContentNe,
 		req.Category, req.CoverImageURL)
 	if err != nil {
 		h.logger.Error("failed to update training guide", "error", err, "guide_id", guideID)
@@ -165,6 +191,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 // Publish handles PATCH /api/v1/orgs/{orgId}/training-guides/{id}/publish
 func (h *Handler) Publish(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+
 	guideID := chi.URLParam(r, "id")
 	if guideID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing guide ID"})
@@ -182,7 +214,7 @@ func (h *Handler) Publish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	g, err := h.service.SetPublished(r.Context(), guideID, *req.IsPublished)
+	g, err := h.service.SetPublished(r.Context(), orgID, guideID, *req.IsPublished)
 	if err != nil {
 		h.logger.Error("failed to update training guide publish status", "error", err, "guide_id", guideID)
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "training guide not found"})
@@ -194,13 +226,19 @@ func (h *Handler) Publish(w http.ResponseWriter, r *http.Request) {
 
 // Delete handles DELETE /api/v1/orgs/{orgId}/training-guides/{id}
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+
 	guideID := chi.URLParam(r, "id")
 	if guideID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing guide ID"})
 		return
 	}
 
-	if err := h.service.Delete(r.Context(), guideID); err != nil {
+	if err := h.service.Delete(r.Context(), orgID, guideID); err != nil {
 		h.logger.Error("failed to delete training guide", "error", err, "guide_id", guideID)
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return

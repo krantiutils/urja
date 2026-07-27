@@ -13,7 +13,7 @@ func (h *Handler) RegisterOrgRoutes(r chi.Router) {
 
 	// Staff/admin-only operations
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireRole("staff", "admin"))
+		r.Use(middleware.RequireOrgRole("staff", "admin"))
 		r.Post("/", h.Create)
 		r.Put("/{id}", h.Update)
 		r.Delete("/{id}", h.Delete)
