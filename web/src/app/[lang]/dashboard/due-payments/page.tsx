@@ -101,12 +101,19 @@ export default function DuePaymentsPage({
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orgId || !payingDue) return;
-    setPayLoading(true);
     setPayError(null);
+
+    const parsedAmount = Number(payAmount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setPayError(t.common.invalidAmount);
+      return;
+    }
+
+    setPayLoading(true);
 
     try {
       await api.payDue(orgId, payingDue.id, {
-        amount: payAmount,
+        amount: parsedAmount,
         payment_method: payMethod,
         payment_reference: payReference || undefined,
       });
@@ -319,12 +326,13 @@ export default function DuePaymentsPage({
               </div>
 
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="due-pay-amount" className="block text-xs text-fg-muted mb-1.5">
                   {t.dues.payAmount} *
                 </label>
                 <input
+                  id="due-pay-amount"
                   type="text"
-                  required
+                  inputMode="decimal"
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value)}
                   placeholder="0.00"
@@ -332,10 +340,11 @@ export default function DuePaymentsPage({
                 />
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="due-pay-method" className="block text-xs text-fg-muted mb-1.5">
                   {t.dues.paymentMethod} *
                 </label>
                 <select
+                  id="due-pay-method"
                   value={payMethod}
                   onChange={(e) =>
                     setPayMethod(e.target.value as "cash" | "esewa" | "bank")
@@ -348,10 +357,11 @@ export default function DuePaymentsPage({
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="due-pay-reference" className="block text-xs text-fg-muted mb-1.5">
                   {t.dues.paymentReference}
                 </label>
                 <input
+                  id="due-pay-reference"
                   type="text"
                   value={payReference}
                   onChange={(e) => setPayReference(e.target.value)}

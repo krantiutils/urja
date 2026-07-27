@@ -346,6 +346,12 @@ class ApiClient {
     });
   }
 
+  async deleteMyAccount(): Promise<{ message: string }> {
+    return this.request("/api/v1/members/me", {
+      method: "DELETE",
+    });
+  }
+
   async getMyAttendance(
     params: { limit?: number; offset?: number } = {}
   ): Promise<{ data: MemberAttendanceRecord[] }> {
@@ -610,7 +616,7 @@ class ApiClient {
   async payDue(
     orgId: string,
     dueId: string,
-    data: { amount: string; payment_method: string; payment_reference?: string }
+    data: { amount: number; payment_method: string; payment_reference?: string }
   ): Promise<{ message: string }> {
     return this.request(`/api/v1/orgs/${orgId}/dues/${dueId}/pay`, {
       method: "POST",
@@ -637,7 +643,7 @@ class ApiClient {
 
   async createTransaction(
     orgId: string,
-    data: { category: string; description: string; transaction_date: string; transaction_type: string; amount: string; payment_type: string; reference?: string }
+    data: { category: string; description: string; transaction_date: string; transaction_type: string; amount: number; payment_type: string; reference?: string }
   ): Promise<{ message: string }> {
     return this.request(`/api/v1/orgs/${orgId}/accounts`, {
       method: "POST",
@@ -648,7 +654,7 @@ class ApiClient {
   async updateTransaction(
     orgId: string,
     id: string,
-    data: { category?: string; description?: string; transaction_date?: string; transaction_type?: string; amount?: string; payment_type?: string; reference?: string }
+    data: { category?: string; description?: string; transaction_date?: string; transaction_type?: string; amount?: number; payment_type?: string; reference?: string }
   ): Promise<{ message: string }> {
     return this.request(`/api/v1/orgs/${orgId}/accounts/${id}`, {
       method: "PUT",

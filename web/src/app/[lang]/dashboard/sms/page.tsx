@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getDictionary } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { api, ApiRequestError } from "@/lib/api";
-import type { Locale, SmsBalance, SmsPurchase } from "@/types";
+import type { Locale, OrgMember, SmsBalance, SmsPurchase } from "@/types";
 import {
   MessageSquare,
   Send,
@@ -13,7 +13,16 @@ import {
   ShoppingCart,
   BarChart3,
   CreditCard,
+  Search,
+  X,
 } from "lucide-react";
+
+// The members list endpoint caps `limit` at 100 per page (anything higher
+// resets to the default of 20), so paging is required to build a full
+// recipient picker. MAX_MEMBER_PAGES is a sane upper bound (~5,000 members)
+// to guarantee this loop always terminates.
+const MEMBER_FETCH_LIMIT = 100;
+const MAX_MEMBER_PAGES = 50;
 
 function formatDate(isoStr: string): string {
   return new Date(isoStr).toLocaleDateString();
@@ -59,6 +68,13 @@ export default function SmsPage({
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccess, setSendSuccess] = useState(false);
 
+  // Recipient picker state
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
@@ -79,20 +95,106 @@ export default function SmsPage({
     }
   }, [orgId, t.common.error]);
 
+  const fetchAllMembers = useCallback(async () => {
+    if (!orgId) return;
+    setMembersLoading(true);
+    try {
+      let offset = 0;
+      let all: OrgMember[] = [];
+      for (let page = 0; page < MAX_MEMBER_PAGES; page++) {
+        const res = await api.listMembers(orgId, {
+          limit: MEMBER_FETCH_LIMIT,
+          offset,
+        });
+        const batch = res.data ?? [];
+        all = all.concat(batch);
+        const total = res.total ?? all.length;
+        if (batch.length < MEMBER_FETCH_LIMIT || all.length >= total) break;
+        offset += MEMBER_FETCH_LIMIT;
+      }
+      setMembers(all);
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError ? err.message : t.common.error
+      );
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [orgId, t.common.error]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const handleSendSms = async (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchAllMembers();
+  }, [fetchAllMembers]);
+
+  const filteredMembers = useMemo(() => {
+    const q = memberSearch.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter(
+      (m) => m.name.toLowerCase().includes(q) || m.phone.includes(q)
+    );
+  }, [members, memberSearch]);
+
+  const allFilteredSelected =
+    filteredMembers.length > 0 &&
+    filteredMembers.every((m) => selectedIds.has(m.id));
+
+  const toggleMember = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllToggle = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        filteredMembers.forEach((m) => next.delete(m.id));
+      } else {
+        filteredMembers.forEach((m) => next.add(m.id));
+      }
+      return next;
+    });
+  };
+
+  const insufficientBalance =
+    balance != null && selectedIds.size > balance.balance;
+
+  const handleOpenConfirm = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orgId || !message.trim()) return;
+    if (!orgId || !message.trim() || selectedIds.size === 0) return;
+    setSendError(null);
+    setSendSuccess(false);
+    setShowConfirm(true);
+  };
+
+  const handleConfirmSend = async () => {
+    if (!orgId) return;
     setSending(true);
     setSendError(null);
     setSendSuccess(false);
     try {
-      await api.sendSms(orgId, { message: message.trim(), member_ids: [] });
+      // member_ids is always sent explicitly and non-empty here — Send is
+      // disabled until at least one recipient is picked, and "Select all"
+      // fills this array rather than leaving it empty, since the backend
+      // treats an empty list as "every active member in the org".
+      await api.sendSms(orgId, {
+        message: message.trim(),
+        member_ids: Array.from(selectedIds),
+      });
       setSendSuccess(true);
       setMessage("");
+      setSelectedIds(new Set());
+      setShowConfirm(false);
       // Refresh balance after sending
       const balanceRes = await api.getSmsBalance(orgId);
       setBalance(balanceRes);
@@ -100,6 +202,7 @@ export default function SmsPage({
       setSendError(
         err instanceof ApiRequestError ? err.message : t.common.error
       );
+      setShowConfirm(false);
     } finally {
       setSending(false);
     }
@@ -198,16 +301,17 @@ export default function SmsPage({
 
             {sendSuccess && (
               <div className="mb-4 p-3 bg-accent/10 border border-accent/20 rounded-xl text-sm text-accent">
-                SMS sent successfully
+                {t.sms.sendSuccessMessage}
               </div>
             )}
 
-            <form onSubmit={handleSendSms} className="space-y-4">
+            <form onSubmit={handleOpenConfirm} className="space-y-4">
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="sms-message" className="block text-xs text-fg-muted mb-1.5">
                   {t.sms.message}
                 </label>
                 <textarea
+                  id="sms-message"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={t.sms.messagePlaceholder}
@@ -216,14 +320,85 @@ export default function SmsPage({
                 />
               </div>
 
-              <p className="text-xs text-fg-muted">
-                {t.sms.selectMembers}: Select members from the Members page
-              </p>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs text-fg-muted">
+                    {t.sms.selectMembers} *
+                  </label>
+                  <span className="text-xs text-fg-muted font-mono">
+                    {selectedIds.size} {t.sms.of} {members.length}{" "}
+                    {t.sms.selected}
+                  </span>
+                </div>
+
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
+                  <input
+                    type="text"
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                    placeholder={t.sms.searchMembersPlaceholder}
+                    className="w-full pl-10 pr-4 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 transition-colors"
+                  />
+                </div>
+
+                <div className="border border-white/[0.06] rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={handleSelectAllToggle}
+                    disabled={filteredMembers.length === 0}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-accent hover:bg-surface transition-colors border-b border-white/[0.06] disabled:opacity-40"
+                  >
+                    <input
+                      type="checkbox"
+                      readOnly
+                      checked={allFilteredSelected}
+                      className="w-3.5 h-3.5 accent-accent pointer-events-none"
+                    />
+                    {allFilteredSelected ? t.sms.deselectAll : t.sms.selectAll}
+                  </button>
+
+                  <div className="max-h-56 overflow-y-auto divide-y divide-white/[0.03]">
+                    {membersLoading ? (
+                      <div className="flex items-center justify-center py-6 text-xs text-fg-muted gap-2">
+                        <Loader2 className="w-4 h-4 text-accent animate-spin" />
+                        {t.sms.loadingMembers}
+                      </div>
+                    ) : filteredMembers.length === 0 ? (
+                      <div className="text-center py-6 text-fg-muted text-xs">
+                        {t.sms.noMembersFound}
+                      </div>
+                    ) : (
+                      filteredMembers.map((m) => (
+                        <label
+                          key={m.id}
+                          className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-surface transition-colors cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(m.id)}
+                            onChange={() => toggleMember(m.id)}
+                            className="w-3.5 h-3.5 accent-accent"
+                          />
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-fg truncate">
+                              {m.name}
+                            </span>
+                            <span className="block text-xs text-fg-muted font-mono">
+                              {m.phone}
+                            </span>
+                          </span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
 
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  disabled={sending || !message.trim()}
+                  disabled={sending || !message.trim() || selectedIds.size === 0}
                   className="flex items-center gap-2 px-5 py-2.5 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors shadow-accent-glow disabled:opacity-50"
                 >
                   {sending ? (
@@ -236,6 +411,80 @@ export default function SmsPage({
               </div>
             </form>
           </div>
+
+          {/* Confirm Send Modal */}
+          {showConfirm && (
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              data-testid="sms-confirm-modal"
+            >
+              <div className="bg-bg-elevated border border-white/[0.06] rounded-2xl shadow-card w-full max-w-sm">
+                <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+                  <h2 className="text-base font-semibold text-fg">
+                    {t.sms.confirmSendTitle}
+                  </h2>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="p-1 rounded-lg hover:bg-surface text-fg-muted transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="p-5 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-fg-muted">
+                      {t.sms.confirmRecipientsLabel}
+                    </span>
+                    <span
+                      className="text-fg font-mono font-semibold"
+                      data-testid="sms-confirm-recipients-count"
+                    >
+                      {selectedIds.size}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-fg-muted">
+                      {t.sms.confirmCreditsLabel}
+                    </span>
+                    <span
+                      className="text-fg font-mono font-semibold"
+                      data-testid="sms-confirm-credits-count"
+                    >
+                      {selectedIds.size}
+                    </span>
+                  </div>
+                  {insufficientBalance && (
+                    <p className="text-xs text-red-400">
+                      {t.sms.insufficientBalance}
+                    </p>
+                  )}
+                  <p className="text-xs text-fg-muted">
+                    {t.sms.confirmSendWarning}
+                  </p>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(false)}
+                      data-testid="sms-confirm-cancel-btn"
+                      className="flex-1 px-4 py-2.5 bg-surface border border-white/[0.06] text-fg text-sm rounded-xl hover:bg-surface-hover transition-colors"
+                    >
+                      {t.common.cancel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmSend}
+                      disabled={sending || insufficientBalance}
+                      data-testid="sms-confirm-send-btn"
+                      className="flex-1 px-4 py-2.5 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {sending && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {t.sms.confirmSend}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Purchase History */}
           <div>

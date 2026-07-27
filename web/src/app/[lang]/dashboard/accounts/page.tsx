@@ -143,8 +143,15 @@ export default function AccountsPage({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orgId) return;
-    setFormLoading(true);
     setFormError(null);
+
+    const parsedAmount = Number(formAmount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setFormError(t.common.invalidAmount);
+      return;
+    }
+
+    setFormLoading(true);
 
     try {
       if (editingTransaction) {
@@ -153,7 +160,7 @@ export default function AccountsPage({
           description: formDescription,
           transaction_date: formDate,
           transaction_type: formType,
-          amount: formAmount,
+          amount: parsedAmount,
           payment_type: formPaymentType,
           reference: formReference || undefined,
         });
@@ -163,7 +170,7 @@ export default function AccountsPage({
           description: formDescription,
           transaction_date: formDate,
           transaction_type: formType,
-          amount: formAmount,
+          amount: parsedAmount,
           payment_type: formPaymentType,
           reference: formReference || undefined,
         });
@@ -444,10 +451,11 @@ export default function AccountsPage({
                 </div>
               )}
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="tx-category" className="block text-xs text-fg-muted mb-1.5">
                   {t.accounts.category} *
                 </label>
                 <input
+                  id="tx-category"
                   type="text"
                   required
                   value={formCategory}
@@ -457,10 +465,11 @@ export default function AccountsPage({
                 />
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="tx-description" className="block text-xs text-fg-muted mb-1.5">
                   {t.accounts.description} *
                 </label>
                 <input
+                  id="tx-description"
                   type="text"
                   required
                   value={formDescription}
@@ -470,10 +479,11 @@ export default function AccountsPage({
                 />
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="tx-date" className="block text-xs text-fg-muted mb-1.5">
                   {t.accounts.date} *
                 </label>
                 <input
+                  id="tx-date"
                   type="date"
                   required
                   value={formDate}
@@ -482,10 +492,11 @@ export default function AccountsPage({
                 />
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="tx-type" className="block text-xs text-fg-muted mb-1.5">
                   {t.accounts.type} *
                 </label>
                 <select
+                  id="tx-type"
                   value={formType}
                   onChange={(e) =>
                     setFormType(e.target.value as TransactionType)
@@ -497,12 +508,13 @@ export default function AccountsPage({
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="tx-amount" className="block text-xs text-fg-muted mb-1.5">
                   {t.accounts.amount} *
                 </label>
                 <input
+                  id="tx-amount"
                   type="text"
-                  required
+                  inputMode="decimal"
                   value={formAmount}
                   onChange={(e) => setFormAmount(e.target.value)}
                   placeholder={t.accounts.amountPlaceholder}
@@ -510,10 +522,11 @@ export default function AccountsPage({
                 />
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="tx-payment-type" className="block text-xs text-fg-muted mb-1.5">
                   {t.accounts.paymentType} *
                 </label>
                 <select
+                  id="tx-payment-type"
                   value={formPaymentType}
                   onChange={(e) =>
                     setFormPaymentType(e.target.value as PaymentType)
@@ -526,10 +539,11 @@ export default function AccountsPage({
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-fg-muted mb-1.5">
+                <label htmlFor="tx-reference" className="block text-xs text-fg-muted mb-1.5">
                   {t.accounts.reference}
                 </label>
                 <input
+                  id="tx-reference"
                   type="text"
                   value={formReference}
                   onChange={(e) => setFormReference(e.target.value)}

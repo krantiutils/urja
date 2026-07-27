@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { api, ApiRequestError } from "@/lib/api";
 
 export default function DeleteAccount() {
   const [phone, setPhone] = useState("");
@@ -18,24 +19,14 @@ export default function DeleteAccount() {
 
     try {
       // Request OTP for verification
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || ""}/api/v1/auth/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone }),
-        }
-      );
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || "Failed to send OTP. Please try again.");
-        return;
-      }
-
+      await api.login(phone);
       setSubmitted(true);
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError
+          ? err.message
+          : "Failed to send OTP. Please try again."
+      );
     }
   };
 
@@ -48,46 +39,42 @@ export default function DeleteAccount() {
     setError("");
     setDeleting(true);
 
+    // Verify OTP to get a real session token (the API route is
+    // /auth/verify-otp, not /auth/verify, and the response is shaped
+    // {access_token, refresh_token, ...} — there is no `token` field).
+    let tokens;
     try {
-      // Verify OTP to get token
-      const verifyRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || ""}/api/v1/auth/verify`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, otp }),
-        }
+      tokens = await api.verifyOtp(phone, otp);
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError
+          ? err.message
+          : "Invalid OTP. Please try again."
       );
-
-      if (!verifyRes.ok) {
-        const data = await verifyRes.json().catch(() => ({}));
-        setError(data.error || "Invalid OTP. Please try again.");
-        setDeleting(false);
-        return;
-      }
-
-      const { token } = await verifyRes.json();
-
-      // Delete account
-      const deleteRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || ""}/api/v1/members/me`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!deleteRes.ok) {
-        const data = await deleteRes.json().catch(() => ({}));
-        setError(data.error || "Failed to delete account. Please try again.");
-        setDeleting(false);
-        return;
-      }
-
-      setDeleted(true);
-    } catch {
-      setError("Network error. Please try again.");
       setDeleting(false);
+      return;
+    }
+
+    // api.ts pulls the bearer token for every request from localStorage,
+    // so the freshly verified session has to live there for the DELETE
+    // call to be authorized as this account (and not a stale session that
+    // happened to already be in this browser).
+    localStorage.setItem("access_token", tokens.access_token);
+    localStorage.setItem("refresh_token", tokens.refresh_token);
+
+    try {
+      await api.deleteMyAccount();
+      setDeleted(true);
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError
+          ? err.message
+          : "Failed to delete account. Please try again."
+      );
+      setDeleting(false);
+    } finally {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
     }
   };
 
