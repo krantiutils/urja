@@ -205,7 +205,6 @@ func TestMain(m *testing.M) {
 
 	memberRepo := member.NewRepository(pool)
 	memberSvc := member.NewService(memberRepo, testLogger)
-	memberHandler := member.NewHandler(memberSvc, testLogger)
 
 	attendanceRepo := attendance.NewRepository(pool)
 	attendanceSvc := attendance.NewService(attendanceRepo, []byte(cfg.Auth.JWTSecret), testLogger)
@@ -223,7 +222,7 @@ func TestMain(m *testing.M) {
 	activityLogSvc := activitylog.NewService(activityLogRepo, testLogger)
 	activityLogHandler := activitylog.NewHandler(activityLogSvc, testLogger)
 
-	qrHandler := qrcode.NewHandler(cfg.Server.BaseURL, testLogger)
+	qrHandler := qrcode.NewHandler(cfg.Server.BaseURL, orgRepo, testLogger)
 
 	noticeRepo := notice.NewRepository(pool)
 	noticeSvc := notice.NewService(noticeRepo, testLogger)
@@ -272,6 +271,10 @@ func TestMain(m *testing.M) {
 	leaderboardRepo := leaderboard.NewRepository(pool)
 	leaderboardSvc := leaderboard.NewService(leaderboardRepo, testLogger)
 	leaderboardHandler := leaderboard.NewHandler(leaderboardSvc, testLogger)
+
+	// Member handler is built after leaderboard so it can use leaderboardSvc,
+	// mirroring the wiring order in cmd/api/main.go.
+	memberHandler := member.NewHandler(memberSvc, leaderboardSvc, testLogger)
 
 	workoutRepo := workout.NewRepository(pool)
 	workoutSvc := workout.NewService(workoutRepo, testLogger)

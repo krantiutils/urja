@@ -75,6 +75,25 @@ are recorded here for later.
 | 37 | `activitylog` org route has no role gate (write path currently unwired) | `internal/activitylog/routes.go:8` |
 | 38 | `decodeJWT` calls `atob()` on a base64url segment without char translation | `lib/auth.tsx:32` |
 
+## Found while restoring the test baseline (not in either audit)
+
+**Workout self-routes accept a missing `organization_id` and write orphaned rows.**
+`tests/e2e/workout_test.go` has three tests — `TestWorkout_GetMyPlan_MissingOrgID`,
+`TestWorkout_CreateLog_MissingOrgID`, `TestWorkout_ListLogs_MissingOrgID` —
+asserting a 400 when `organization_id` is absent. The handlers
+(`internal/workout/handler.go:200,220,244`) never validate it: `GetMyPlan` reads
+the query param into an empty string, and `CreateMyLog` persists a log with
+`organization_id: null`.
+
+These three tests have been failing since before this work. They cannot simply be
+made to pass: `web/src/app/[lang]/member/page.tsx:332` calls
+`getMyWorkoutPlan()` with no org ID at all, so returning 400 would break the
+member dashboard. The real fix is to resolve the member's organization
+server-side when the parameter is omitted (falling back to their sole active
+membership, and 400-ing only when they belong to several), then backfill the
+existing NULL rows. That is a behavior change needing its own task, deliberately
+not folded into the test-signature repair.
+
 ## Stale test signatures — breaks `go vet` and `go test`
 
 | File | Problem |

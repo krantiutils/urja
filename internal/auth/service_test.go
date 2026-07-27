@@ -73,7 +73,7 @@ func TestGenerateAccessToken(t *testing.T) {
 	cfg := testAuthConfig()
 	s := &Service{cfg: cfg}
 
-	tokenStr, err := s.generateAccessToken("user-123", "9801234567", "admin")
+	tokenStr, err := s.generateAccessToken("user-123", "9801234567", "admin", false)
 	if err != nil {
 		t.Fatalf("generateAccessToken() error: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestValidateAccessToken(t *testing.T) {
 	s := &Service{cfg: cfg}
 
 	// Generate a valid token
-	tokenStr, err := s.generateAccessToken("user-789", "9801234567", "member")
+	tokenStr, err := s.generateAccessToken("user-789", "9801234567", "member", false)
 	if err != nil {
 		t.Fatalf("setup: generateAccessToken error: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestValidateAccessToken_WrongSecret(t *testing.T) {
 			AccessTokenExpiry: 15 * time.Minute,
 		},
 	}
-	tokenStr, err := otherService.generateAccessToken("user-123", "9801234567", "member")
+	tokenStr, err := otherService.generateAccessToken("user-123", "9801234567", "member", false)
 	if err != nil {
 		t.Fatalf("setup error: %v", err)
 	}
@@ -221,7 +221,7 @@ func TestValidateAccessToken_ExpiredToken(t *testing.T) {
 	cfg.AccessTokenExpiry = -1 * time.Hour // Already expired
 	s := &Service{cfg: cfg}
 
-	tokenStr, err := s.generateAccessToken("user-123", "9801234567", "member")
+	tokenStr, err := s.generateAccessToken("user-123", "9801234567", "member", false)
 	if err != nil {
 		t.Fatalf("setup error: %v", err)
 	}
@@ -245,8 +245,8 @@ func TestNormalizePhoneIntegration(t *testing.T) {
 		{"9779801234567", "9801234567", true},
 		{" 9801234567 ", "9801234567", true},
 		{"+977 9801234567", "9801234567", true}, // space between prefix and number
-		{"1234567890", "1234567890", false},       // doesn't start with 9[6-9]
-		{"980123456", "980123456", false},          // too short
+		{"1234567890", "1234567890", false},     // doesn't start with 9[6-9]
+		{"980123456", "980123456", false},       // too short
 	}
 	for _, tt := range tests {
 		normalized := sms.NormalizePhone(tt.input)

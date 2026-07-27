@@ -17,8 +17,17 @@ func testLogger() *slog.Logger {
 	return slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 }
 
+// stubOrgSlug is a fixed-response OrgSlugLookup for handler tests.
+type stubOrgSlug struct{ slug string }
+
+func (s stubOrgSlug) GetSlugByID(context.Context, string) (string, error) {
+	return s.slug, nil
+}
+
+func testOrgSlug() OrgSlugLookup { return stubOrgSlug{slug: "test-gym"} }
+
 func TestGenerateQR_PNG(t *testing.T) {
-	h := NewHandler("https://urja.app", testLogger())
+	h := NewHandler("https://urja.app", testOrgSlug(), testLogger())
 
 	req := httptest.NewRequest(http.MethodGet, "/qr-code", nil)
 	// Inject org ID into context (simulates OrgScope middleware)
@@ -48,7 +57,7 @@ func TestGenerateQR_PNG(t *testing.T) {
 }
 
 func TestGenerateQR_JSON(t *testing.T) {
-	h := NewHandler("https://urja.app", testLogger())
+	h := NewHandler("https://urja.app", testOrgSlug(), testLogger())
 
 	req := httptest.NewRequest(http.MethodGet, "/qr-code?format=json", nil)
 	ctx := context.WithValue(req.Context(), middleware.OrgIDKey, "test-org-id")
@@ -71,13 +80,15 @@ func TestGenerateQR_JSON(t *testing.T) {
 	if resp["org_id"] != "test-org-id" {
 		t.Errorf("org_id = %q, want %q", resp["org_id"], "test-org-id")
 	}
-	if resp["checkin_url"] != "https://urja.app/checkin/test-org-id" {
-		t.Errorf("checkin_url = %q, want %q", resp["checkin_url"], "https://urja.app/checkin/test-org-id")
+	// The check-in URL is slug-based, not ID-based: handler.go resolves the org's
+	// slug via OrgSlugLookup so the printed QR carries a human-readable gym name.
+	if resp["checkin_url"] != "https://urja.app/checkin?gym=test-gym" {
+		t.Errorf("checkin_url = %q, want %q", resp["checkin_url"], "https://urja.app/checkin?gym=test-gym")
 	}
 }
 
 func TestGenerateQR_MissingOrgID(t *testing.T) {
-	h := NewHandler("https://urja.app", testLogger())
+	h := NewHandler("https://urja.app", testOrgSlug(), testLogger())
 
 	req := httptest.NewRequest(http.MethodGet, "/qr-code", nil)
 	// No org ID in context
@@ -90,7 +101,7 @@ func TestGenerateQR_MissingOrgID(t *testing.T) {
 }
 
 func TestRegisterOrgRoutes(t *testing.T) {
-	h := NewHandler("https://urja.app", testLogger())
+	h := NewHandler("https://urja.app", testOrgSlug(), testLogger())
 	r := chi.NewRouter()
 	h.RegisterOrgRoutes(r)
 
