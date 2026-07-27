@@ -33,6 +33,7 @@ import (
 	"github.com/urja-gym/urja/internal/org"
 	"github.com/urja-gym/urja/internal/packages"
 	"github.com/urja-gym/urja/internal/qrcode"
+	"github.com/urja-gym/urja/internal/site"
 	"github.com/urja-gym/urja/internal/smsapi"
 	"github.com/urja-gym/urja/internal/staff"
 	"github.com/urja-gym/urja/internal/subscription"
@@ -221,6 +222,11 @@ func main() {
 	waterService := water.NewService(waterRepo, logger)
 	waterHandler := water.NewHandler(waterService, logger)
 
+	// Tenant sites (public gym websites at <slug>.nepalgym.xyz)
+	siteRepo := site.NewRepository(pool)
+	siteService := site.NewService(siteRepo, logger)
+	siteHandler := site.NewHandler(siteService, logger)
+
 	// Router
 	r := chi.NewRouter()
 
@@ -281,6 +287,12 @@ func main() {
 
 		r.Route("/training-guides", func(r chi.Router) {
 			guideHandler.RegisterPublicRoutes(r)
+		})
+
+		// Tenant gym websites — read by the public pages served on
+		// <slug>.nepalgym.xyz. Only live sites and published pages are exposed.
+		r.Route("/sites", func(r chi.Router) {
+			siteHandler.RegisterPublicRoutes(r)
 		})
 
 		// Device routes (no JWT — authenticated via X-Device-Key header)
@@ -383,6 +395,10 @@ func main() {
 
 				r.Route("/leaderboard", func(r chi.Router) {
 					leaderboardHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/site", func(r chi.Router) {
+					siteHandler.RegisterOrgRoutes(r)
 				})
 			})
 		})
