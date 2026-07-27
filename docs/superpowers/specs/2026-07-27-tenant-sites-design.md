@@ -340,7 +340,9 @@ bilingual (`title` / `titleNe`).
 section JSON — they are not backed by dedicated entities in this phase, so an
 admin types classes and coaches directly into the builder. `membership_plans`
 supports two data sources: `auto`, which reads the org's active packages from
-the existing packages API, and `manual`.
+the existing packages API, and `manual`. `fight_record` gains an optional `auto`
+source in Phase 4, reading a named member's `bout_records`; its `manual` source
+remains the default so the section works standalone.
 
 Each renderer lives in `web/src/components/site/sections/<Type>Renderer.tsx`,
 dispatched by `SectionRenderer.tsx`. Renderers are server components except
