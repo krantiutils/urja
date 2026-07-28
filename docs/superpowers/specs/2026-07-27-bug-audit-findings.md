@@ -152,12 +152,36 @@ HAVING count(DISTINCT om.role) > 1;
 
 Empty result means nobody's access changes.
 
-**Wildcard DNS and TLS.** `*.nepalgym.xyz` must resolve to the host before any
-tenant site is reachable. Traefik issues the wildcard certificate through the
-Porkbun DNS-01 resolver (`letsencrypt-dns`), which is already configured in
-`docker-compose.prod.yml` — but the first issuance needs the Porkbun
-credentials present in the Traefik environment.
+**Wildcard DNS already resolves.** Verified: an arbitrary label
+(`zzz-does-not-exist.nepalgym.xyz`) returns `178.104.21.224`, so the
+`*.nepalgym.xyz` A record exists and points at hetzner-1. Nothing to do here.
 
-**`SITE_BASE_DOMAIN`.** The API reads this to decide which origins are tenant
-sites. Unset, tenant subdomains fall back to exact-match CORS and every gym's
-enquiry form is blocked by the browser.
+**The wildcard certificate does not exist yet.** A TLS handshake against
+hetzner-1 with SNI `ibckirtipur.nepalgym.xyz` returns `CN = TRAEFIK DEFAULT
+CERT`; the apex serves a real certificate covering only `nepalgym.xyz` and
+`www.nepalgym.xyz`. Ignoring the certificate, Traefik answers 404 — no router
+matches tenant hosts. So a visitor to a gym site today gets a browser security
+warning and then nothing.
+
+Both follow from the same cause: the deployed `docker-compose.prod.yml` predates
+the tenant-site work. The router rule, the `letsencrypt-dns` resolver and the
+wildcard SANs are all in the repo's copy now, and issuance happens on its own
+once Traefik sees them — provided the Porkbun credentials are present in
+`/home/ubuntu/traefik/.env`, which is where `deploy.md` says they live (they are
+*not* in `~/.fmw`, which holds unrelated keys).
+
+**The deploy workflow never shipped the compose file.** It ran `docker compose
+pull && up -d` against whatever copy was already on the server, so a routing or
+TLS change merged to this repo would silently never take effect. Fixed by adding
+an scp step ahead of the deploy.
+
+**`SITE_BASE_DOMAIN`.** The API reads this at runtime to decide which origins are
+tenant sites. Unset, tenant subdomains fall back to exact-match CORS and every
+gym's enquiry form is blocked by the browser. It defaults correctly in compose.
+
+**`NEXT_PUBLIC_BASE_DOMAIN` is a build arg, not a runtime variable.** Next inlines
+`NEXT_PUBLIC_*` at build time, including into the middleware that does the
+subdomain routing. It was briefly set under `environment:` in compose, which
+looks like it works and changes nothing — it is now a Docker build arg passed by
+the workflow. This only matters for a domain other than the default, e.g.
+staging.

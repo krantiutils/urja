@@ -30,9 +30,9 @@ services:
 
   web:
     image: ghcr.io/krantiutils/urja-web:${IMAGE_TAG:-latest}
-    environment:
-      # The middleware needs this to tell a tenant subdomain from the apex.
-      NEXT_PUBLIC_BASE_DOMAIN: ${SITE_BASE_DOMAIN:-nepalgym.xyz}
+    # No NEXT_PUBLIC_BASE_DOMAIN here on purpose: Next inlines NEXT_PUBLIC_* at
+    # build time, so it is a build arg in web/Dockerfile. Setting it here would
+    # look like it worked and change nothing.
     networks:
       - traefik-proxy
     labels:

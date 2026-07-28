@@ -13,6 +13,12 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
+# Which domain's subdomains are tenant gym sites. Next inlines NEXT_PUBLIC_*
+# at build time — including into the middleware that does the routing — so this
+# has to be a build arg. Setting it at runtime silently does nothing.
+ARG NEXT_PUBLIC_BASE_DOMAIN=nepalgym.xyz
+ENV NEXT_PUBLIC_BASE_DOMAIN=${NEXT_PUBLIC_BASE_DOMAIN}
+
 # Ensure public directory exists (may be empty)
 RUN mkdir -p public
 

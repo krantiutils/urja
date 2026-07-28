@@ -60,6 +60,7 @@ jobs:
           push: true
           build-args: |
             NEXT_PUBLIC_API_URL=https://nepalgym.xyz
+            NEXT_PUBLIC_BASE_DOMAIN=nepalgym.xyz
           tags: |
             ${{ env.WEB_IMAGE }}:latest
             ${{ env.WEB_IMAGE }}:${{ github.sha }}
@@ -68,6 +69,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-api, build-web]
     steps:
+      - uses: actions/checkout@v4
+
+      # The compose file carries the Traefik routing and TLS configuration, not
+      # just the image tags. Without this step it is whatever was last copied to
+      # the server by hand, so a routing change merged here would never take
+      # effect and nothing would report that.
+      - name: Ship the compose file
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: docker-compose.prod.yml
+          target: /home/ubuntu/urja
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
