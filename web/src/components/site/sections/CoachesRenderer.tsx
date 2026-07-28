@@ -1,5 +1,6 @@
 import type { Section } from "@/types/site";
 import type { Locale } from "@/types";
+import { Instagram } from "lucide-react";
 import { list, itemText, str, strList, text } from "@/lib/site/content";
 import { SectionHeading } from "@/components/site/primitives/SectionShell";
 import { SiteImage } from "@/components/site/primitives/SiteImage";
@@ -7,6 +8,27 @@ import { SiteImage } from "@/components/site/primitives/SiteImage";
 /**
  * coaches — cards | list | spotlight
  */
+
+/**
+ * A coach's own Instagram, when the gym has given one. Coaches in this trade
+ * are usually easier to find on Instagram than anywhere else, and it is how a
+ * prospective member checks somebody is real before turning up.
+ */
+function CoachSocial({ handle }: { handle: string }) {
+  if (!handle) return null;
+  const label = handle.replace(/^https?:\/\/(www\.)?instagram\.com\//, "@").replace(/\/$/, "");
+  return (
+    <a
+      href={handle}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-3 inline-flex items-center gap-1.5 text-sm text-[var(--site-accent)] hover:underline"
+    >
+      <Instagram className="h-4 w-4" aria-hidden="true" />
+      {label}
+    </a>
+  );
+}
 
 function CredentialTags({ credentials }: { credentials: string[] }) {
   if (credentials.length === 0) return null;
@@ -50,6 +72,7 @@ export default function CoachesRenderer({ section, locale }: { section: Section;
                 <div className="min-w-0">
                   <h3 className="font-medium">{itemText(coach, "name", locale)}</h3>
                   <p className="text-sm text-[var(--site-fg-muted)]">{itemText(coach, "role", locale)}</p>
+                  <CoachSocial handle={str(coach, "instagram")} />
                 </div>
                 {str(coach, "record") ? (
                   <span className="ml-auto shrink-0 text-sm text-[var(--site-accent)]">{str(coach, "record")}</span>
@@ -86,6 +109,7 @@ export default function CoachesRenderer({ section, locale }: { section: Section;
                     <p className="mt-4 leading-relaxed text-[var(--site-fg-muted)]">{itemText(coach, "bio", locale)}</p>
                   ) : null}
                   <CredentialTags credentials={strList(coach, "credentials")} />
+                  <CoachSocial handle={str(coach, "instagram")} />
                 </div>
               </div>
             ))}
@@ -116,6 +140,7 @@ export default function CoachesRenderer({ section, locale }: { section: Section;
                   </p>
                 ) : null}
                 <CredentialTags credentials={strList(coach, "credentials")} />
+                  <CoachSocial handle={str(coach, "instagram")} />
               </div>
             </div>
           ))}
