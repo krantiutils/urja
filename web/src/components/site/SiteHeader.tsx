@@ -6,19 +6,9 @@ import { Menu, X, Globe } from "lucide-react";
 import type { Locale } from "@/types";
 import type { PublicSite } from "@/types/site";
 import { text } from "@/lib/site/content";
+import { pageHref, siteHref } from "@/lib/site/links";
 
-/**
- * Tenant site navigation.
- *
- * Links are relative to the subdomain root: on ibckirtipur.nepalgym.xyz a page
- * lives at /classes (or /ne/classes), never at /site/ibckirtipur/classes — the
- * middleware rewrite is invisible to the visitor and must stay that way.
- */
-
-function pageHref(locale: Locale, pageSlug: string): string {
-  const path = pageSlug === "home" ? "" : `/${pageSlug}`;
-  return locale === "en" ? path || "/" : `/ne${path}`;
-}
+/** Tenant site navigation. */
 
 export function SiteHeader({
   site,
@@ -79,7 +69,7 @@ export function SiteHeader({
           {extraLinks.map((l, i) => (
             <a
               key={`${l.href}-${i}`}
-              href={l.href}
+              href={siteHref(locale, l.href)}
               className="text-sm opacity-70 hover:opacity-100 transition-opacity"
             >
               {locale === "ne" && l.labelNe ? l.labelNe : l.label}
@@ -98,7 +88,7 @@ export function SiteHeader({
           </Link>
           {ctaLabel && ctaHref ? (
             <a
-              href={ctaHref}
+              href={siteHref(locale, ctaHref)}
               className="px-4 py-2 text-sm bg-[var(--site-accent)] text-[var(--site-accent-fg)] rounded-[var(--site-radius)]"
             >
               {ctaLabel}
@@ -136,7 +126,7 @@ export function SiteHeader({
               </Link>
             ))}
             {extraLinks.map((l, i) => (
-              <a key={`${l.href}-${i}`} href={l.href} className="py-2.5 text-sm">
+              <a key={`${l.href}-${i}`} href={siteHref(locale, l.href)} className="py-2.5 text-sm">
                 {locale === "ne" && l.labelNe ? l.labelNe : l.label}
               </a>
             ))}

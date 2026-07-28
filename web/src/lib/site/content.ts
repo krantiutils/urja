@@ -8,6 +8,7 @@
  */
 
 import type { Locale } from "@/types";
+import { siteHref } from "@/lib/site/links";
 
 type Content = Record<string, unknown> | undefined | null;
 
@@ -94,6 +95,10 @@ export interface ButtonSpec {
 /**
  * Reads a button array, dropping entries without a usable label and forcing the
  * style to a known value.
+ *
+ * Hrefs are localized here rather than in each renderer: a CTA is authored once
+ * as "/contact" and read in both languages, so without this every Nepali
+ * visitor who clicks one lands on the English page.
  */
 export function buttons(content: Content, locale: Locale): ButtonSpec[] {
   return list(content, "buttons")
@@ -101,7 +106,7 @@ export function buttons(content: Content, locale: Locale): ButtonSpec[] {
       const style = str(b, "style", "solid");
       return {
         label: itemText(b, "label", locale),
-        href: str(b, "href", "#"),
+        href: siteHref(locale, str(b, "href", "#")),
         style: (["solid", "outline", "pill"].includes(style) ? style : "solid") as
           | "solid"
           | "outline"

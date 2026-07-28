@@ -55,6 +55,7 @@ export default async function SitePage({
             locale={locale}
             siteSlug={site.slug}
             packages={packages}
+            sourcePage={pageSlug}
           />
         ))}
       </main>

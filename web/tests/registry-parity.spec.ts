@@ -45,9 +45,16 @@ function parseGoRegistry(source: string): Record<string, GoSpec> {
     const [, type, block] = match;
 
     const variantsMatch = block.match(/Variants:\s*\[\]string\{([^}]*)\}/);
-    const variants = variantsMatch
-      ? [...variantsMatch[1].matchAll(/"([^"]+)"/g)].map((m) => m[1])
-      : [];
+    // An exec loop rather than [...matchAll]: spreading an iterator needs
+    // downlevelIteration, which the app's tsconfig does not set.
+    const variants: string[] = [];
+    if (variantsMatch) {
+      const variantPattern = /"([^"]+)"/g;
+      let variant: RegExpExecArray | null;
+      while ((variant = variantPattern.exec(variantsMatch[1])) !== null) {
+        variants.push(variant[1]);
+      }
+    }
 
     const categoryMatch = block.match(/Category:\s*"([^"]+)"/);
 

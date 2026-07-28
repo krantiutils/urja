@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Locale } from "@/types";
 import type { PublicSite } from "@/types/site";
 import { text } from "@/lib/site/content";
+import { pageHref } from "@/lib/site/links";
 
 /** Social platforms rendered in the footer, in a stable order. */
 const SOCIAL_KEYS = [
@@ -11,11 +12,6 @@ const SOCIAL_KEYS = [
   ["tiktok", "TikTok"],
   ["whatsapp", "WhatsApp"],
 ] as const;
-
-function pageHref(locale: Locale, pageSlug: string): string {
-  const path = pageSlug === "home" ? "" : `/${pageSlug}`;
-  return locale === "en" ? path || "/" : `/ne${path}`;
-}
 
 export function SiteFooter({
   site,

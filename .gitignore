@@ -36,3 +36,6 @@ docker-compose.override.yml
 
 # Firebase
 firebase-service-account.json
+
+# Playwright MCP browser artifacts
+.playwright-mcp/
