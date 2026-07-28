@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { getDictionary } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { api, ApiRequestError } from "@/lib/api";
-import type { Locale, Due } from "@/types";
+import type { Locale, Due, OrgMember } from "@/types";
 import {
   CreditCard,
+  Plus,
   Search,
   X,
   Loader2,
@@ -61,6 +62,17 @@ export default function DuePaymentsPage({
   const [payReference, setPayReference] = useState("");
   const [payError, setPayError] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
+
+  // Recording a new due
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [newMember, setNewMember] = useState<OrgMember | null>(null);
+  const [newAmount, setNewAmount] = useState("");
+  const [newDate, setNewDate] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newError, setNewError] = useState<string | null>(null);
+  const [newLoading, setNewLoading] = useState(false);
 
   const orgId = user?.org_id;
 
@@ -137,6 +149,66 @@ export default function DuePaymentsPage({
     return map[s] ?? s;
   };
 
+  /**
+   * Opens the form and loads members to pick from. Fetched on open rather than
+   * with the page: most visits here are to take a payment, not to raise a new
+   * due, and a gym can have hundreds of members.
+   */
+  const openNewDue = useCallback(async () => {
+    setNewMember(null);
+    setNewAmount("");
+    setNewDescription("");
+    // Defaults to today, which is what a gym recording an unpaid month wants.
+    setNewDate(new Date().toISOString().slice(0, 10));
+    setNewError(null);
+    setShowNewModal(true);
+
+    if (!orgId || members.length > 0) return;
+    try {
+      const res = await api.listMembers(orgId, { limit: 500 });
+      setMembers(res.data ?? []);
+    } catch {
+      setNewError(t.common.error);
+    }
+  }, [orgId, members.length, t.common.error]);
+
+  const handleCreateDue = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!orgId || !newMember) return;
+
+      const amount = parseFloat(newAmount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        setNewError(t.common.invalidAmount);
+        return;
+      }
+
+      setNewLoading(true);
+      setNewError(null);
+      try {
+        await api.createDue(orgId, {
+          user_id: newMember.id,
+          amount,
+          due_date: newDate,
+          description: newDescription.trim() || undefined,
+        });
+        setShowNewModal(false);
+        await fetchDues();
+      } catch (err) {
+        setNewError(err instanceof ApiRequestError ? err.message : t.common.error);
+      } finally {
+        setNewLoading(false);
+      }
+    },
+    [orgId, newMember, newAmount, newDate, newDescription, fetchDues, t]
+  );
+
+  const filteredMembers = memberSearch
+    ? members.filter((m) =>
+        `${m.name} ${m.phone}`.toLowerCase().includes(memberSearch.toLowerCase())
+      )
+    : members;
+
   const filterTabs: { key: DueStatus | "all"; label: string }[] = [
     { key: "all", label: t.dues.all },
     { key: "unpaid", label: t.dues.unpaid },
@@ -152,6 +224,14 @@ export default function DuePaymentsPage({
           <CreditCard className="w-5 h-5 text-accent" />
           {t.dues.title}
         </h1>
+        <button
+          type="button"
+          onClick={openNewDue}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent text-bg-base text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          <Plus className="w-4 h-4" />
+          {t.dues.recordDue}
+        </button>
       </div>
 
       {/* Search */}
@@ -390,6 +470,146 @@ export default function DuePaymentsPage({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Record a new due */}
+      {showNewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60"
+            onClick={() => setShowNewModal(false)}
+            aria-hidden="true"
+          />
+          <form
+            onSubmit={handleCreateDue}
+            className="relative w-full max-w-md bg-bg-elevated border border-white/[0.06] rounded-2xl p-5 shadow-card"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-fg">{t.dues.newDue}</h2>
+              <button
+                type="button"
+                onClick={() => setShowNewModal(false)}
+                className="p-1.5 rounded-lg text-fg-muted hover:bg-surface transition-colors"
+                aria-label={t.common.cancel}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {newError && (
+              <p className="mb-3 text-sm text-red-400" role="alert">
+                {newError}
+              </p>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-xs text-fg-muted mb-1.5">
+                {t.dues.selectMember}
+              </label>
+              {newMember ? (
+                <div className="flex items-center justify-between px-3 py-2.5 bg-input-bg border border-accent/30 rounded-xl text-sm text-fg">
+                  <span>
+                    {newMember.name}
+                    <span className="ml-2 font-mono text-xs text-fg-muted">
+                      {newMember.phone}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setNewMember(null)}
+                    className="p-0.5 rounded hover:bg-surface text-fg-muted"
+                    aria-label={t.common.cancel}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                    placeholder={t.dues.searchMember}
+                    className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50"
+                  />
+                  <div className="mt-1 max-h-40 overflow-y-auto rounded-xl border border-white/[0.06]">
+                    {filteredMembers.length === 0 ? (
+                      <p className="px-3 py-3 text-sm text-fg-muted text-center">
+                        {t.dues.noMemberSelected}
+                      </p>
+                    ) : (
+                      filteredMembers.slice(0, 50).map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setNewMember(m)}
+                          className="w-full text-left px-3 py-2.5 text-sm hover:bg-surface transition-colors border-b border-white/[0.03] last:border-0"
+                        >
+                          <span className="text-fg">{m.name}</span>
+                          <span className="ml-2 font-mono text-xs text-fg-muted">
+                            {m.phone}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label htmlFor="due-amount" className="block text-xs text-fg-muted mb-1.5">
+                  {t.dues.amount}
+                </label>
+                <input
+                  id="due-amount"
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+                />
+              </div>
+              <div>
+                <label htmlFor="due-date" className="block text-xs text-fg-muted mb-1.5">
+                  {t.dues.dueDate}
+                </label>
+                <input
+                  id="due-date"
+                  type="date"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+                />
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label htmlFor="due-desc" className="block text-xs text-fg-muted mb-1.5">
+                {t.dues.description}
+              </label>
+              <input
+                id="due-desc"
+                type="text"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                maxLength={500}
+                className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={newLoading || !newMember || !newAmount}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-bg-base text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {newLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {t.dues.saveDue}
+            </button>
+          </form>
         </div>
       )}
     </div>

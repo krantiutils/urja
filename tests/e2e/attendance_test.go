@@ -70,3 +70,50 @@ func TestAttendance_NoAuth(t *testing.T) {
 	resp := doRequest(t, http.MethodGet, "/api/v1/members/me/attendance/attendance", nil, "")
 	assertStatus(t, resp, http.StatusUnauthorized)
 }
+
+// OrgScope proves membership, not authority. Without a role gate a plain
+// member could mark anybody present — including themselves — and attendance
+// drives streaks, the leaderboard and absentee SMS.
+func TestAttendance_ManualCheckIn_MemberForbidden(t *testing.T) {
+	cleanupTables(t)
+
+	adminID := createTestSuperAdmin(t, "9800100001", "Admin")
+	orgID := createTestOrg(t, adminID, "Attendance Gym")
+	memberID := createTestUser(t, "9800100002", "Member")
+	createTestOrgMember(t, memberID, orgID, "member")
+
+	token := generateTestToken(memberID, "member")
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/attendance/check-in",
+		map[string]string{"member_id": memberID}, token)
+	assertStatus(t, resp, http.StatusForbidden)
+}
+
+// The whole gym's attendance history is other people's data.
+func TestAttendance_ListByOrg_MemberForbidden(t *testing.T) {
+	cleanupTables(t)
+
+	adminID := createTestSuperAdmin(t, "9800100001", "Admin")
+	orgID := createTestOrg(t, adminID, "Attendance Gym")
+	memberID := createTestUser(t, "9800100002", "Member")
+	createTestOrgMember(t, memberID, orgID, "member")
+
+	token := generateTestToken(memberID, "member")
+	resp := doRequest(t, http.MethodGet, "/api/v1/orgs/"+orgID+"/attendance", nil, token)
+	assertStatus(t, resp, http.StatusForbidden)
+}
+
+func TestAttendance_ManualCheckIn_StaffAllowed(t *testing.T) {
+	cleanupTables(t)
+
+	adminID := createTestSuperAdmin(t, "9800100001", "Admin")
+	orgID := createTestOrg(t, adminID, "Attendance Gym")
+	staffID := createTestUser(t, "9800100003", "Staff")
+	createTestOrgMember(t, staffID, orgID, "staff")
+	memberID := createTestUser(t, "9800100002", "Member")
+	createTestOrgMember(t, memberID, orgID, "member")
+
+	token := generateTestToken(staffID, "member")
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/attendance/check-in",
+		map[string]string{"member_id": memberID}, token)
+	assertStatus(t, resp, http.StatusCreated)
+}

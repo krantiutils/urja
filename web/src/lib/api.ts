@@ -37,6 +37,7 @@ import type {
   DailySummary,
   WeeklySummaryDay,
   DueList,
+  Due,
   TransactionList,
   AccountsSummary,
   Notice,
@@ -645,6 +646,17 @@ class ApiClient {
     if (params.offset) q.set("offset", String(params.offset));
     const qs = q.toString();
     return this.request(`/api/v1/orgs/${orgId}/dues${qs ? `?${qs}` : ""}`);
+  }
+
+  /** Records that a member owes money. */
+  async createDue(
+    orgId: string,
+    data: { user_id: string; amount: number; due_date: string; description?: string }
+  ): Promise<Due> {
+    return this.request(`/api/v1/orgs/${orgId}/dues`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 
   async payDue(
