@@ -26,6 +26,7 @@ export type SectionType =
   | "fight_record"
   | "rich_text"
   | "media"
+  | "reel_wall"
   | "divider";
 
 export type SectionBackground = "base" | "surface" | "accent" | "none";

@@ -114,6 +114,10 @@ var SectionSpecs = map[string]SectionSpec{
 		Variants: []string{"standard", "two_column", "centered"},
 		Label:    "Text", LabelNe: "पाठ", Category: "content",
 	},
+	"reel_wall": {
+		Variants: []string{"grid", "strip"},
+		Label:    "Reel Wall", LabelNe: "रिल वाल", Category: "media",
+	},
 	"media": {
 		Variants: []string{"image", "video"},
 		Label:    "Image or Video", LabelNe: "तस्बिर वा भिडियो", Category: "media",

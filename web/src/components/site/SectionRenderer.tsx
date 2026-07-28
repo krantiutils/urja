@@ -18,6 +18,7 @@ import MediaRenderer from "@/components/site/sections/MediaRenderer";
 import MembershipPlansRenderer from "@/components/site/sections/MembershipPlansRenderer";
 import OpeningHoursRenderer from "@/components/site/sections/OpeningHoursRenderer";
 import ProgramsGridRenderer from "@/components/site/sections/ProgramsGridRenderer";
+import ReelWallRenderer from "@/components/site/sections/ReelWallRenderer";
 import RichTextRenderer from "@/components/site/sections/RichTextRenderer";
 import StatsBarRenderer from "@/components/site/sections/StatsBarRenderer";
 import TestimonialsRenderer from "@/components/site/sections/TestimonialsRenderer";
@@ -114,6 +115,8 @@ function renderBody({
       return <RichTextRenderer section={section} locale={locale} />;
     case "media":
       return <MediaRenderer section={section} locale={locale} />;
+    case "reel_wall":
+      return <ReelWallRenderer section={section} locale={locale} />;
     case "divider":
       return <DividerRenderer section={section} locale={locale} />;
     default:

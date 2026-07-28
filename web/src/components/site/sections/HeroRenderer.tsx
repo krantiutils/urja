@@ -126,8 +126,11 @@ export default function HeroRenderer({ section, locale }: { section: Section; lo
 
         <div className="relative w-full max-w-6xl mx-auto px-5 sm:px-8 pb-12 sm:pb-20">
           {eyebrow ? (
-            <p className="mb-5 text-[11px] sm:text-xs font-mono uppercase tracking-[0.32em] text-[var(--site-accent)]">
-              {eyebrow}
+            <p className="mb-5 inline-flex items-center gap-2.5 text-[11px] sm:text-xs font-mono uppercase tracking-[0.32em]">
+              <span className="h-px w-8 bg-[var(--site-accent)]" aria-hidden="true" />
+              {/* On its own the accent was unreadable against moving footage;
+                  the rule carries the colour and the label stays legible. */}
+              <span className="text-[var(--site-fg)]">{eyebrow}</span>
             </p>
           ) : null}
 

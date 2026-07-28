@@ -87,20 +87,27 @@ export default function ProgramsGridRenderer({ section, locale }: { section: Sec
       <>
         <SectionHeading title={title} subtitle={subtitle} align={align} />
         {items.length > 0 ? (
-          <div className="flex flex-col gap-6">
+          // Two columns from md up: a single column of short entries left most
+          // of the page empty, which read as unfinished rather than spacious.
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 border-t border-[var(--site-border)]">
             {items.map((item, i) => (
-              <div key={i} className="flex items-start gap-5">
+              <div
+                key={i}
+                className="flex items-baseline gap-5 border-b border-[var(--site-border)] py-6"
+              >
                 <span
-                  className="text-3xl sm:text-4xl leading-none text-[var(--site-fg-muted)] shrink-0"
+                  className="shrink-0 text-4xl sm:text-5xl leading-none text-[var(--site-accent)] opacity-90"
                   style={{ fontFamily: "var(--site-font-display)" }}
                   aria-hidden="true"
                 >
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div>
-                  <h3 className="text-lg font-medium">{itemText(item, "title", locale)}</h3>
+                  <h3 className="text-xl sm:text-2xl" style={{ fontFamily: "var(--site-font-display)" }}>
+                    {itemText(item, "title", locale)}
+                  </h3>
                   {itemText(item, "description", locale) ? (
-                    <p className="mt-1 text-sm text-[var(--site-fg-muted)] leading-relaxed">
+                    <p className="mt-1.5 text-sm text-[var(--site-fg-muted)] leading-relaxed">
                       {itemText(item, "description", locale)}
                     </p>
                   ) : null}

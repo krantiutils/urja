@@ -305,6 +305,21 @@ export const SECTION_SPECS: Record<SectionType, SectionSpec> = {
     },
     defaultStyle: { background: "base", padding: "md", width: "narrow", align: "left" },
   },
+  reel_wall: {
+    variants: ["grid", "strip"],
+    label: "Reel Wall",
+    labelNe: "रिल वाल",
+    category: "media",
+    defaultContent: {
+      title: "Inside the gym",
+      titleNe: "जिम भित्र",
+      subtitle: "",
+      subtitleNe: "",
+      items: [],
+    },
+    defaultStyle: contained,
+  },
+
   media: {
     variants: ["image", "video"],
     label: "Image or Video",
