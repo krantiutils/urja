@@ -8,6 +8,8 @@ services:
       DB_PORT: "5432"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      # Lets CORS accept every gym's own subdomain without enumerating them.
+      SITE_BASE_DOMAIN: ${SITE_BASE_DOMAIN:-nepalgym.xyz}
     depends_on:
       postgres:
         condition: service_healthy
@@ -28,13 +30,22 @@ services:
 
   web:
     image: ghcr.io/krantiutils/urja-web:${IMAGE_TAG:-latest}
+    environment:
+      # The middleware needs this to tell a tenant subdomain from the apex.
+      NEXT_PUBLIC_BASE_DOMAIN: ${SITE_BASE_DOMAIN:-nepalgym.xyz}
     networks:
       - traefik-proxy
     labels:
       - traefik.enable=true
-      - traefik.http.routers.urja-web.rule=Host(`nepalgym.xyz`) || Host(`www.nepalgym.xyz`)
+      # HostRegexp catches every gym's subdomain: tenants are created at runtime,
+      # so they cannot be listed here.
+      - traefik.http.routers.urja-web.rule=Host(`nepalgym.xyz`) || HostRegexp(`.+\.nepalgym\.xyz`)
       - traefik.http.routers.urja-web.entrypoints=websecure
-      - traefik.http.routers.urja-web.tls.certresolver=letsencrypt
+      # DNS-01 (Porkbun) rather than HTTP-01: a wildcard certificate cannot be
+      # issued from an HTTP challenge.
+      - traefik.http.routers.urja-web.tls.certresolver=letsencrypt-dns
+      - traefik.http.routers.urja-web.tls.domains[0].main=nepalgym.xyz
+      - traefik.http.routers.urja-web.tls.domains[0].sans=*.nepalgym.xyz
       - traefik.http.routers.urja-web.priority=1
       - traefik.http.services.urja-web.loadbalancer.server.port=3000
       - traefik.docker.network=traefik-proxy

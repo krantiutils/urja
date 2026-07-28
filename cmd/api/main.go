@@ -247,26 +247,19 @@ func main() {
 	if corsOrigins == "" {
 		corsOrigins = "http://localhost:3000,http://localhost:3001,http://localhost:8888,http://192.168.1.67:8888,http://192.168.1.67:3001,http://192.168.1.67:3000,http://100.117.21.47:3001,http://100.117.21.47:8888"
 	}
-	allowedOrigins := make(map[string]bool)
+	allowedOrigins := make([]string, 0)
 	for _, o := range strings.Split(corsOrigins, ",") {
-		allowedOrigins[strings.TrimSpace(o)] = true
+		if trimmed := strings.TrimSpace(o); trimmed != "" {
+			allowedOrigins = append(allowedOrigins, trimmed)
+		}
 	}
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			origin := r.Header.Get("Origin")
-			if allowedOrigins[origin] {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-			}
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			if r.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	})
+	// Every gym's site is its own origin, so tenant hosts are matched by rule
+	// rather than enumerated — a new gym must not need a redeploy before its
+	// lead form works.
+	r.Use(middleware.CORS(middleware.CORSConfig{
+		AllowedOrigins:   allowedOrigins,
+		TenantBaseDomain: os.Getenv("SITE_BASE_DOMAIN"),
+	}))
 
 	// Health check
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
