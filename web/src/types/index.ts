@@ -854,3 +854,40 @@ export interface CreateCustomFoodInput {
   serving_label?: string;
   barcode?: string;
 }
+
+
+/** A package a member currently holds. Mirrors internal/subscription. */
+export interface MemberSubscription {
+  id: string;
+  package_id: string;
+  package_name: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  days_remaining: number;
+  amount_paid: number;
+  payment_method?: string;
+  created_at: string;
+}
+
+export interface SubscriptionPayment {
+  id: string;
+  member_package_id: string;
+  particular: string;
+  total_amount: number;
+  discount: number;
+  paid_amount: number;
+  due: number;
+  payment_method?: string;
+  payment_reference?: string;
+  payment_date: string;
+}
+
+export interface AssignPackageRequest {
+  package_id: string;
+  start_date: string;
+  payment_method: string;
+  amount_paid: number;
+  discount?: number;
+  payment_reference?: string;
+}

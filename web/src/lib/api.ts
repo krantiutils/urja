@@ -60,6 +60,9 @@ import type {
   DailyDashboard,
   WeightTrend,
   CreateCustomFoodInput,
+  MemberSubscription,
+  SubscriptionPayment,
+  AssignPackageRequest,
 } from "@/types";
 import type {
   SiteSettings,
@@ -1060,6 +1063,50 @@ class ApiClient {
 
   getQrCodeUrl(orgId: string): string {
     return `${this.baseUrl}/api/v1/orgs/${orgId}/qr-code`;
+  }
+
+  // --- Memberships (selling a package to a member) ---
+
+  async assignPackage(
+    orgId: string,
+    memberId: string,
+    data: AssignPackageRequest
+  ): Promise<{ subscription: MemberSubscription; payment: SubscriptionPayment }> {
+    return this.request(`/api/v1/orgs/${orgId}/members/${memberId}/packages/assign`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async renewPackage(
+    orgId: string,
+    memberId: string,
+    data: {
+      member_package_id: string;
+      payment_method: string;
+      amount_paid: number;
+      discount?: number;
+      payment_reference?: string;
+    }
+  ): Promise<{ subscription: MemberSubscription; payment: SubscriptionPayment }> {
+    return this.request(`/api/v1/orgs/${orgId}/members/${memberId}/packages/renew`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listMemberSubscriptions(
+    orgId: string,
+    memberId: string
+  ): Promise<{ data: MemberSubscription[] }> {
+    return this.request(`/api/v1/orgs/${orgId}/members/${memberId}/subscriptions`);
+  }
+
+  async listMemberPayments(
+    orgId: string,
+    memberId: string
+  ): Promise<{ data: SubscriptionPayment[] }> {
+    return this.request(`/api/v1/orgs/${orgId}/members/${memberId}/payments`);
   }
 
   // --- Tenant website ---

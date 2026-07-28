@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { getDictionary } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { api, ApiRequestError } from "@/lib/api";
-import type { Locale, OrgMember, CreateMemberRequest } from "@/types";
+import type { Locale, OrgMember, OrgPackage, CreateMemberRequest } from "@/types";
 import {
   Users,
+  CreditCard,
   Plus,
   Search,
   ChevronLeft,
@@ -82,6 +83,19 @@ export default function MembersPage({
   const [formEmail, setFormEmail] = useState("");
   const [formRole, setFormRole] = useState<"member" | "staff" | "admin">("member");
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Selling a package to a member. The gym could define packages and add
+  // members but had no way to put the two together — the central transaction
+  // of the business was unreachable from the product.
+  const [sellFor, setSellFor] = useState<OrgMember | null>(null);
+  const [packages, setPackages] = useState<OrgPackage[]>([]);
+  const [sellPackageId, setSellPackageId] = useState("");
+  const [sellStart, setSellStart] = useState("");
+  const [sellPaid, setSellPaid] = useState("");
+  const [sellDiscount, setSellDiscount] = useState("");
+  const [sellMethod, setSellMethod] = useState("cash");
+  const [sellError, setSellError] = useState<string | null>(null);
+  const [sellLoading, setSellLoading] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
 
   const orgId = user?.org_id;
@@ -162,6 +176,63 @@ export default function MembersPage({
       );
     }
   };
+
+  const openSell = useCallback(
+    async (member: OrgMember) => {
+      setSellFor(member);
+      setSellPackageId("");
+      setSellStart(new Date().toISOString().slice(0, 10));
+      setSellPaid("");
+      setSellDiscount("");
+      setSellMethod("cash");
+      setSellError(null);
+
+      if (!orgId || packages.length > 0) return;
+      try {
+        const res = await api.listPackages(orgId, { limit: 100 });
+        setPackages((res.data ?? []).filter((p) => p.is_active));
+      } catch {
+        setSellError(t.common.error);
+      }
+    },
+    [orgId, packages.length, t.common.error]
+  );
+
+  const handleSell = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!orgId || !sellFor || !sellPackageId) return;
+
+      setSellLoading(true);
+      setSellError(null);
+      try {
+        await api.assignPackage(orgId, sellFor.id, {
+          package_id: sellPackageId,
+          start_date: sellStart,
+          payment_method: sellMethod,
+          amount_paid: parseFloat(sellPaid) || 0,
+          discount: parseFloat(sellDiscount) || 0,
+        });
+        setSellFor(null);
+        await fetchMembers();
+      } catch (err) {
+        setSellError(err instanceof ApiRequestError ? err.message : t.common.error);
+      } finally {
+        setSellLoading(false);
+      }
+    },
+    [orgId, sellFor, sellPackageId, sellStart, sellMethod, sellPaid, sellDiscount, fetchMembers, t]
+  );
+
+  const selectedPackage = packages.find((p) => p.id === sellPackageId);
+  const sellBalance = selectedPackage
+    ? Math.max(
+        0,
+        parseFloat(selectedPackage.price) -
+          (parseFloat(sellDiscount) || 0) -
+          (parseFloat(sellPaid) || 0)
+      )
+    : 0;
 
   const handleRemove = async (memberId: string) => {
     if (!orgId) return;
@@ -301,6 +372,13 @@ export default function MembersPage({
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => openSell(member)}
+                          title={t.members.sellPackage}
+                          className="p-1.5 rounded-lg hover:bg-accent/10 text-fg-muted hover:text-accent transition-colors"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                        </button>
                         {member.status === "active" ? (
                           <button
                             onClick={() =>
@@ -470,6 +548,145 @@ export default function MembersPage({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Sell a package to a member */}
+      {sellFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60"
+            onClick={() => setSellFor(null)}
+            aria-hidden="true"
+          />
+          <form
+            onSubmit={handleSell}
+            className="relative w-full max-w-md bg-bg-elevated border border-white/[0.06] rounded-2xl p-5 shadow-card"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-base font-semibold text-fg">{t.members.assignPackage}</h2>
+              <button
+                type="button"
+                onClick={() => setSellFor(null)}
+                className="p-1.5 rounded-lg text-fg-muted hover:bg-surface transition-colors"
+                aria-label={t.common.cancel}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-fg-muted mb-4">{sellFor.name}</p>
+
+            {sellError && (
+              <p className="mb-3 text-sm text-red-400" role="alert">
+                {sellError}
+              </p>
+            )}
+
+            <div className="mb-4">
+              <label htmlFor="sell-pkg" className="block text-xs text-fg-muted mb-1.5">
+                {t.members.choosePackage}
+              </label>
+              <select
+                id="sell-pkg"
+                value={sellPackageId}
+                onChange={(e) => setSellPackageId(e.target.value)}
+                className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+              >
+                <option value="">—</option>
+                {packages.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} · {p.currency} {p.price} · {p.duration_days}d
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label htmlFor="sell-start" className="block text-xs text-fg-muted mb-1.5">
+                  {t.members.startDate}
+                </label>
+                <input
+                  id="sell-start"
+                  type="date"
+                  value={sellStart}
+                  onChange={(e) => setSellStart(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+                />
+              </div>
+              <div>
+                <label htmlFor="sell-method" className="block text-xs text-fg-muted mb-1.5">
+                  {t.members.paymentMethod}
+                </label>
+                <select
+                  id="sell-method"
+                  value={sellMethod}
+                  onChange={(e) => setSellMethod(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+                >
+                  <option value="cash">{t.dues.cash}</option>
+                  <option value="esewa">{t.dues.esewa}</option>
+                  <option value="bank">{t.dues.bank}</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="sell-paid" className="block text-xs text-fg-muted mb-1.5">
+                  {t.members.amountPaid}
+                </label>
+                <input
+                  id="sell-paid"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={sellPaid}
+                  onChange={(e) => setSellPaid(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+                />
+              </div>
+              <div>
+                <label htmlFor="sell-discount" className="block text-xs text-fg-muted mb-1.5">
+                  {t.members.discount}
+                </label>
+                <input
+                  id="sell-discount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={sellDiscount}
+                  onChange={(e) => setSellDiscount(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+                />
+              </div>
+            </div>
+
+            {/* The balance is the thing a gym gets wrong on paper, so it is
+                shown before saving rather than discovered later on the dues
+                screen. */}
+            {selectedPackage && (
+              <div className="mb-5 px-3 py-2.5 rounded-xl bg-surface text-sm">
+                <div className="flex justify-between text-fg-muted">
+                  <span>{selectedPackage.currency} {selectedPackage.price}</span>
+                  <span>
+                    {t.members.amountPaid}: {parseFloat(sellPaid) || 0}
+                  </span>
+                </div>
+                {sellBalance > 0 && (
+                  <p className="mt-1.5 text-amber-400">
+                    {t.dues.title}: {selectedPackage.currency} {sellBalance.toLocaleString()} — {t.members.balanceNote}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={sellLoading || !sellPackageId}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-bg-base text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {sellLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {t.members.assignPackage}
+            </button>
+          </form>
         </div>
       )}
     </div>
