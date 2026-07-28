@@ -608,6 +608,7 @@ const dictionaries = {
       myExercises: "Exercises",
       myPrograms: "Programs",
       myProgress: "Progress",
+      myBoxing: "Boxing",
       profile: "Profile",
     },
     memberPages: {
@@ -1426,6 +1427,7 @@ const dictionaries = {
       myExercises: "व्यायामहरू",
       myPrograms: "कार्यक्रमहरू",
       myProgress: "प्रगति",
+      myBoxing: "बक्सिङ",
       profile: "प्रोफाइल",
     },
     memberPages: {
