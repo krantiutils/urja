@@ -404,3 +404,29 @@ func nilIfEmpty(s string) interface{} {
 	}
 	return s
 }
+
+// ActiveOrgIDs returns the organizations a user is an active member of.
+//
+// Self-service routes take the organization as a query parameter, which
+// clients have not always sent. Rather than storing a NULL and orphaning the
+// row, the service resolves it from real membership — this is the lookup.
+func (r *Repository) ActiveOrgIDs(ctx context.Context, userID string) ([]string, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT organization_id FROM organization_members
+		 WHERE user_id = $1 AND status = 'active'
+		 ORDER BY joined_at`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("listing active memberships: %w", err)
+	}
+	defer rows.Close()
+
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scanning membership: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}

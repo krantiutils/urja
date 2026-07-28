@@ -3,6 +3,7 @@ package workout
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -324,4 +325,43 @@ func (s *Service) ListLogs(ctx context.Context, userID, orgID string, from, to *
 		offset = 0
 	}
 	return s.repo.ListLogs(ctx, userID, orgID, from, to, limit, offset)
+}
+
+// ErrOrgRequired is returned when a member's organization cannot be inferred.
+var ErrOrgRequired = errors.New("organization_id is required")
+
+// ResolveOrg determines which organization a self-service request belongs to.
+//
+// A member who trains at one gym should not have to name it, and older clients
+// omit the parameter entirely — but the alternative, writing the row with a
+// NULL organization, orphans it: it belongs to no gym, so no gym's queries ever
+// return it again. So an omitted parameter falls back to the member's sole
+// active membership, and is an error only when there is genuinely a choice to
+// make.
+//
+// A supplied organization is always verified against real membership, so naming
+// someone else's gym cannot write into it.
+func (s *Service) ResolveOrg(ctx context.Context, userID, requested string) (string, error) {
+	orgs, err := s.repo.ActiveOrgIDs(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+
+	if requested != "" {
+		for _, id := range orgs {
+			if id == requested {
+				return requested, nil
+			}
+		}
+		return "", fmt.Errorf("%w: not an active member of that organization", ErrOrgRequired)
+	}
+
+	switch len(orgs) {
+	case 1:
+		return orgs[0], nil
+	case 0:
+		return "", fmt.Errorf("%w: you are not an active member of any gym", ErrOrgRequired)
+	default:
+		return "", fmt.Errorf("%w: you belong to several gyms, so it must be specified", ErrOrgRequired)
+	}
 }

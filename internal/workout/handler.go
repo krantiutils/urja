@@ -204,7 +204,11 @@ func (h *Handler) GetMyPlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := r.URL.Query().Get("organization_id")
+	orgID, err := h.service.ResolveOrg(r.Context(), userID, r.URL.Query().Get("organization_id"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
 
 	plan, err := h.service.GetPlan(r.Context(), userID, orgID)
 	if err != nil {
@@ -230,6 +234,13 @@ func (h *Handler) CreateMyLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orgID, err := h.service.ResolveOrg(r.Context(), userID, input.OrgID)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	input.OrgID = orgID
+
 	l, err := h.service.CreateLog(r.Context(), userID, &input)
 	if err != nil {
 		h.logger.Error("failed to log workout", "error", err, "user_id", userID)
@@ -248,7 +259,11 @@ func (h *Handler) ListMyLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := r.URL.Query().Get("organization_id")
+	orgID, err := h.service.ResolveOrg(r.Context(), userID, r.URL.Query().Get("organization_id"))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
 
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))

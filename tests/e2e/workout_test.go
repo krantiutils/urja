@@ -447,6 +447,67 @@ func TestWorkout_ListLogs_MissingOrgID(t *testing.T) {
 	assertStatus(t, resp, http.StatusBadRequest)
 }
 
+// A member who trains at one gym should not have to name it. Omitting the
+// parameter used to store a NULL organization, which orphaned the row.
+func TestWorkout_CreateLog_InfersSoleOrg(t *testing.T) {
+	cleanupTables(t)
+
+	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
+	orgID := createTestOrg(t, adminID, "Workout Gym")
+
+	memberID := createTestUser(t, "9800800002", "Member")
+	createTestOrgMember(t, memberID, orgID, "member")
+	token := generateTestToken(memberID, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/members/me/workout-logs",
+		map[string]interface{}{"exercises": []map[string]interface{}{}}, token)
+	assertStatus(t, resp, http.StatusCreated)
+
+	var body map[string]interface{}
+	parseJSON(t, resp, &body)
+	if body["organization_id"] != orgID {
+		t.Errorf("expected the log filed under %s, got %v", orgID, body["organization_id"])
+	}
+}
+
+// Naming a gym you do not belong to must not write into it.
+func TestWorkout_CreateLog_RejectsForeignOrg(t *testing.T) {
+	cleanupTables(t)
+
+	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
+	mineID := createTestOrg(t, adminID, "Mine Gym")
+	theirsID := createTestOrg(t, adminID, "Theirs Gym")
+
+	memberID := createTestUser(t, "9800800002", "Member")
+	createTestOrgMember(t, memberID, mineID, "member")
+	token := generateTestToken(memberID, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/members/me/workout-logs",
+		map[string]interface{}{
+			"organization_id": theirsID,
+			"exercises":       []map[string]interface{}{},
+		}, token)
+	assertStatus(t, resp, http.StatusBadRequest)
+}
+
+// With a genuine choice to make, the caller has to make it.
+func TestWorkout_CreateLog_AmbiguousOrgRejected(t *testing.T) {
+	cleanupTables(t)
+
+	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
+	orgA := createTestOrg(t, adminID, "Gym A")
+	orgB := createTestOrg(t, adminID, "Gym B")
+
+	memberID := createTestUser(t, "9800800002", "Member")
+	createTestOrgMember(t, memberID, orgA, "member")
+	createTestOrgMember(t, memberID, orgB, "member")
+	token := generateTestToken(memberID, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/members/me/workout-logs",
+		map[string]interface{}{"exercises": []map[string]interface{}{}}, token)
+	assertStatus(t, resp, http.StatusBadRequest)
+}
+
 func TestWorkout_ListLogs_DateFiltering(t *testing.T) {
 	cleanupTables(t)
 

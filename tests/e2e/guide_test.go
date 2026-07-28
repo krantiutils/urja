@@ -9,8 +9,9 @@ func TestGuide_ListPublished(t *testing.T) {
 	cleanupTables(t)
 
 	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
-	createTestGuide(t, adminID, "Published Guide", "Some content", "strength", true)
-	createTestGuide(t, adminID, "Draft Guide", "Hidden content", "cardio", false)
+	orgID := createTestOrg(t, adminID, "Guide Gym")
+	createTestGuide(t, orgID, adminID, "Published Guide", "Some content", "strength", true)
+	createTestGuide(t, orgID, adminID, "Draft Guide", "Hidden content", "cardio", false)
 
 	// Public endpoint - no auth required
 	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides", nil, "")
@@ -32,8 +33,9 @@ func TestGuide_ListPublished_CategoryFilter(t *testing.T) {
 	cleanupTables(t)
 
 	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
-	createTestGuide(t, adminID, "Strength Guide", "Content", "strength", true)
-	createTestGuide(t, adminID, "Cardio Guide", "Content", "cardio", true)
+	orgID := createTestOrg(t, adminID, "Guide Gym")
+	createTestGuide(t, orgID, adminID, "Strength Guide", "Content", "strength", true)
+	createTestGuide(t, orgID, adminID, "Cardio Guide", "Content", "cardio", true)
 
 	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides?category=strength", nil, "")
 	assertStatus(t, resp, http.StatusOK)
@@ -50,8 +52,9 @@ func TestGuide_ListPublished_Search(t *testing.T) {
 	cleanupTables(t)
 
 	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
-	createTestGuide(t, adminID, "Yoga Basics", "Flexibility content", "flexibility", true)
-	createTestGuide(t, adminID, "Running Tips", "Cardio content", "cardio", true)
+	orgID := createTestOrg(t, adminID, "Guide Gym")
+	createTestGuide(t, orgID, adminID, "Yoga Basics", "Flexibility content", "flexibility", true)
+	createTestGuide(t, orgID, adminID, "Running Tips", "Cardio content", "cardio", true)
 
 	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides?search=yoga", nil, "")
 	assertStatus(t, resp, http.StatusOK)
@@ -68,7 +71,8 @@ func TestGuide_GetPublished(t *testing.T) {
 	cleanupTables(t)
 
 	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
-	guideID := createTestGuide(t, adminID, "Published Guide", "Content", "strength", true)
+	orgID := createTestOrg(t, adminID, "Guide Gym")
+	guideID := createTestGuide(t, orgID, adminID, "Published Guide", "Content", "strength", true)
 
 	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides/"+guideID, nil, "")
 	assertStatus(t, resp, http.StatusOK)
@@ -78,7 +82,8 @@ func TestGuide_GetPublished_DraftNotFound(t *testing.T) {
 	cleanupTables(t)
 
 	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
-	guideID := createTestGuide(t, adminID, "Draft Guide", "Hidden content", "strength", false)
+	orgID := createTestOrg(t, adminID, "Guide Gym")
+	guideID := createTestGuide(t, orgID, adminID, "Draft Guide", "Hidden content", "strength", false)
 
 	// Draft should not be accessible via public endpoint
 	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides/"+guideID, nil, "")
@@ -157,7 +162,7 @@ func TestGuide_AdminUpdate(t *testing.T) {
 
 	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
 	orgID := createTestOrg(t, adminID, "Guide Gym")
-	guideID := createTestGuide(t, adminID, "Old Title", "Old content", "strength", false)
+	guideID := createTestGuide(t, orgID, adminID, "Old Title", "Old content", "strength", false)
 	token := generateTestToken(adminID, "admin")
 
 	resp := doRequest(t, http.MethodPut, "/api/v1/orgs/"+orgID+"/training-guides/"+guideID,
@@ -179,7 +184,7 @@ func TestGuide_AdminPublish(t *testing.T) {
 
 	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
 	orgID := createTestOrg(t, adminID, "Guide Gym")
-	guideID := createTestGuide(t, adminID, "Guide", "Content", "strength", false)
+	guideID := createTestGuide(t, orgID, adminID, "Guide", "Content", "strength", false)
 	token := generateTestToken(adminID, "admin")
 
 	// Publish
@@ -209,7 +214,7 @@ func TestGuide_AdminDelete(t *testing.T) {
 
 	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
 	orgID := createTestOrg(t, adminID, "Guide Gym")
-	guideID := createTestGuide(t, adminID, "To Delete", "Will be deleted", "strength", false)
+	guideID := createTestGuide(t, orgID, adminID, "To Delete", "Will be deleted", "strength", false)
 	token := generateTestToken(adminID, "admin")
 
 	resp := doRequest(t, http.MethodDelete, "/api/v1/orgs/"+orgID+"/training-guides/"+guideID, nil, token)
@@ -225,8 +230,8 @@ func TestGuide_AdminListAll(t *testing.T) {
 
 	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
 	orgID := createTestOrg(t, adminID, "Guide Gym")
-	createTestGuide(t, adminID, "Published", "Content", "strength", true)
-	createTestGuide(t, adminID, "Draft", "Content", "cardio", false)
+	createTestGuide(t, orgID, adminID, "Published", "Content", "strength", true)
+	createTestGuide(t, orgID, adminID, "Draft", "Content", "cardio", false)
 	token := generateTestToken(adminID, "admin")
 
 	resp := doRequest(t, http.MethodGet, "/api/v1/orgs/"+orgID+"/training-guides", nil, token)

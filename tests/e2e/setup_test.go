@@ -628,13 +628,16 @@ func createTestNotice(t *testing.T, orgID, userID, title, content string) string
 }
 
 // createTestGuide inserts a training guide and returns its ID.
-func createTestGuide(t *testing.T, authorID, title, content, category string, published bool) string {
+// createTestGuide inserts a training guide belonging to an organization.
+// Guides are org-scoped: one written without an organization is visible to no
+// gym's admin routes, which is exactly what the production tables now enforce.
+func createTestGuide(t *testing.T, orgID, authorID, title, content, category string, published bool) string {
 	t.Helper()
 	var id string
 	err := testPool.QueryRow(context.Background(),
-		`INSERT INTO training_guides (title, content, category, author_id, is_published)
-		 VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-		title, content, category, authorID, published,
+		`INSERT INTO training_guides (organization_id, title, content, category, author_id, is_published)
+		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+		orgID, title, content, category, authorID, published,
 	).Scan(&id)
 	if err != nil {
 		t.Fatalf("createTestGuide: %v", err)
