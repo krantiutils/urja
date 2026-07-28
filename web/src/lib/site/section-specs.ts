@@ -190,6 +190,8 @@ export const SECTION_SPECS: Record<SectionType, SectionSpec> = {
     defaultStyle: { background: "base", padding: "lg", width: "narrow", align: "left" },
   },
   cta_banner: {
+    // "solid" is the default variant and leans on the shell's accent; gradient
+    // and image paint their own and want background "none".
     variants: ["solid", "gradient", "image", "split"],
     label: "Call to Action",
     labelNe: "कार्य आह्वान",

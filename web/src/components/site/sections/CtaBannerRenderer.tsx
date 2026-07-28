@@ -7,9 +7,11 @@ import { SiteImage } from "@/components/site/primitives/SiteImage";
 /**
  * cta_banner — solid | gradient | image | split
  *
- * SectionShell already paints the section's own background (usually
- * `accent` for this type). `solid` leans on that as-is; the other three
- * variants layer their own treatment on top of it.
+ * SectionShell already paints the section's own background. `solid` leans on
+ * that as-is and expects an `accent` background. `gradient` and `image` paint
+ * their own treatment, so they expect a `none` background — pair either with
+ * `accent` and the shell's colour shows through above and below as a band the
+ * treatment does not cover.
  */
 export default function CtaBannerRenderer({ section, locale }: { section: Section; locale: Locale }) {
   const { content, variant } = section;
