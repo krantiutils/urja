@@ -15,6 +15,10 @@ Criticals and highs are fixed in Phase 0 of
 [the tenant sites design](2026-07-27-tenant-sites-design.md). Mediums and lows
 are recorded here for later.
 
+Findings 39–42 below were not in either audit. They were found by running the
+stack and using it — three of them only became visible once there was a tenant
+site to load.
+
 ---
 
 ## Critical
@@ -85,14 +89,28 @@ asserting a 400 when `organization_id` is absent. The handlers
 the query param into an empty string, and `CreateMyLog` persists a log with
 `organization_id: null`.
 
-These three tests have been failing since before this work. They cannot simply be
-made to pass: `web/src/app/[lang]/member/page.tsx:332` calls
-`getMyWorkoutPlan()` with no org ID at all, so returning 400 would break the
-member dashboard. The real fix is to resolve the member's organization
-server-side when the parameter is omitted (falling back to their sole active
-membership, and 400-ing only when they belong to several), then backfill the
-existing NULL rows. That is a behavior change needing its own task, deliberately
-not folded into the test-signature repair.
+**Fixed.** `workout.Service.ResolveOrg` now resolves the organization from real
+membership: a member of one gym does not have to name it, a supplied
+organization is verified against membership, and it is an error only when the
+member belongs to several. Migration `000051_backfill_workout_org` repairs the
+rows already stored, limited to owners with exactly one active membership —
+a member of two gyms could have trained at either, and guessing would file
+their work under the wrong gym. The three tests pass, alongside three new ones
+covering inference, a foreign org and the ambiguous case.
+
+## Found while building and running the tenant site
+
+| # | Finding | Location | Status |
+|---|---------|----------|--------|
+| 39 | `GET /api/v1/packages` ignored the org entirely and returned every gym's active packages to any caller — a cross-tenant price-list leak, and the wrong prices on a tenant site's `membership_plans` | `internal/packages/repository.go:61` | Fixed |
+| 40 | CORS matched origins against a static allow-list, so every newly created gym's enquiry form was blocked by the browser with nothing in the server logs | `cmd/api/main.go:246` | Fixed — `pkg/middleware/cors.go` |
+| 41 | Internal links written by an admin or stored in section content kept their English path on the Nepali site, sending Nepali visitors to English pages | `web/src/components/site/SiteHeader.tsx`, `lib/site/content.ts` | Fixed — `lib/site/links.ts` |
+| 42 | The enquiry form posted cross-origin to the API, making a gym's only conversion path depend on `NEXT_PUBLIC_API_URL` being baked in at image-build time; a bad build fails silently | `web/src/components/site/sections/LeadFormRenderer.tsx` | Fixed — same-origin proxy at `app/api/site-leads` |
+
+Findings 40 and 42 were only reachable by loading a real page in a browser and
+clicking the button: both `go build` and `npm run build` were clean throughout,
+and 42 in particular would have passed every test that did not involve a
+browser actually submitting the form.
 
 ## Stale test signatures — breaks `go vet` and `go test`
 
@@ -109,3 +127,37 @@ not folded into the test-signature repair.
 migrations. The two disagree on column names (`nfc_cards.hex_code` vs live
 `card_hex`; `attendance.method` vs live `check_in_method`) and all Go code uses
 the live names. Delete it to prevent confusion.
+
+---
+
+## Before deploying
+
+**Check for multi-org users whose roles differ.** The authorization fix
+(finding 1) replaced the global JWT `role` claim with the per-org role. A user
+who is an admin of gym A and a plain member of gym B previously carried one
+global role into both; they now get gym B's real role there. That is the
+intended behavior, but it is a visible change for anyone affected, so it is
+worth knowing who they are first:
+
+```sql
+SELECT u.phone, u.name, count(DISTINCT om.role) AS distinct_roles,
+       array_agg(o.slug || '=' || om.role ORDER BY o.slug) AS roles
+FROM organization_members om
+JOIN users u ON u.id = om.user_id
+JOIN organizations o ON o.id = om.organization_id
+WHERE om.status = 'active'
+GROUP BY u.id, u.phone, u.name
+HAVING count(DISTINCT om.role) > 1;
+```
+
+Empty result means nobody's access changes.
+
+**Wildcard DNS and TLS.** `*.nepalgym.xyz` must resolve to the host before any
+tenant site is reachable. Traefik issues the wildcard certificate through the
+Porkbun DNS-01 resolver (`letsencrypt-dns`), which is already configured in
+`docker-compose.prod.yml` — but the first issuance needs the Porkbun
+credentials present in the Traefik environment.
+
+**`SITE_BASE_DOMAIN`.** The API reads this to decide which origins are tenant
+sites. Unset, tenant subdomains fall back to exact-match CORS and every gym's
+enquiry form is blocked by the browser.
