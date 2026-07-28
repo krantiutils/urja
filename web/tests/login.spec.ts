@@ -65,7 +65,8 @@ test.describe("Login page", () => {
     await expect(page.getByText("ऊर्जा")).toBeVisible();
 
     // Nepali sign in text
-    await expect(page.getByText("साइन इन")).toBeVisible();
+    // Matched by role: the password option's label contains this same phrase.
+    await expect(page.getByRole("heading", { name: "साइन इन" })).toBeVisible();
 
     // Phone input still present
     await expect(page.locator("#phone")).toBeVisible();

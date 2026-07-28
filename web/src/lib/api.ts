@@ -122,6 +122,25 @@ class ApiClient {
     });
   }
 
+  /** Password sign-in, for staff and admins who log in several times a day. */
+  async passwordLogin(phone: string, password: string): Promise<AuthTokens> {
+    return this.request("/api/v1/auth/password-login", {
+      method: "POST",
+      body: JSON.stringify({ phone, password }),
+    });
+  }
+
+  async setPassword(password: string): Promise<{ message: string }> {
+    return this.request("/api/v1/auth/password", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+  }
+
+  async passwordStatus(): Promise<{ password_set: boolean }> {
+    return this.request("/api/v1/auth/password");
+  }
+
   async verifyOtp(phone: string, otp: string): Promise<AuthTokens> {
     return this.request("/api/v1/auth/verify-otp", {
       method: "POST",

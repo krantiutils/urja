@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { User, UserType, JWTPayload } from "@/types";
+import type { User, UserType, JWTPayload, AuthTokens } from "@/types";
 import { api, ApiRequestError } from "./api";
 
 interface AuthState {
@@ -20,6 +20,7 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (phone: string) => Promise<void>;
   verifyOtp: (phone: string, otp: string) => Promise<{ is_new_user: boolean; onboarding_completed: boolean }>;
+  passwordLogin: (phone: string, password: string) => Promise<{ is_new_user: boolean; onboarding_completed: boolean }>;
   logout: () => Promise<void>;
 }
 
@@ -167,8 +168,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await api.login(phone);
   }, []);
 
-  const verifyOtp = useCallback(async (phone: string, otp: string) => {
-    const tokens = await api.verifyOtp(phone, otp);
+  /** Establishes the session from a token pair, whichever route issued it. */
+  const adoptTokens = useCallback(async (tokens: AuthTokens) => {
     localStorage.setItem("access_token", tokens.access_token);
     localStorage.setItem("refresh_token", tokens.refresh_token);
     const user = getUserFromToken(tokens.access_token);
@@ -189,6 +190,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const verifyOtp = useCallback(
+    async (phone: string, otp: string) => adoptTokens(await api.verifyOtp(phone, otp)),
+    [adoptTokens]
+  );
+
+  const passwordLogin = useCallback(
+    async (phone: string, password: string) =>
+      adoptTokens(await api.passwordLogin(phone, password)),
+    [adoptTokens]
+  );
+
   const logout = useCallback(async () => {
     const refreshToken = localStorage.getItem("refresh_token");
     if (refreshToken) {
@@ -207,8 +219,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ ...state, login, verifyOtp, logout }),
-    [state, login, verifyOtp, logout]
+    () => ({ ...state, login, verifyOtp, passwordLogin, logout }),
+    [state, login, verifyOtp, passwordLogin, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

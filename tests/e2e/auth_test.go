@@ -1,6 +1,9 @@
 package e2e
 
 import (
+	"context"
+
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"testing"
 )
@@ -136,4 +139,108 @@ func TestAuth_ProtectedEndpoint_MalformedHeader(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertStatus(t, resp, http.StatusUnauthorized)
+}
+
+// --- Password login ---
+
+func setTestPassword(t *testing.T, userID, password string) {
+	t.Helper()
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 4)
+	if err != nil {
+		t.Fatalf("hashing test password: %v", err)
+	}
+	_, err = testPool.Exec(context.Background(),
+		`UPDATE users SET password_hash = $2, password_set_at = NOW() WHERE id = $1`,
+		userID, string(hash))
+	if err != nil {
+		t.Fatalf("setting test password: %v", err)
+	}
+}
+
+func TestAuth_PasswordLogin(t *testing.T) {
+	cleanupTables(t)
+
+	userID := createTestUser(t, "9800300001", "Password User")
+	setTestPassword(t, userID, "correct-horse-battery")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/auth/password-login",
+		map[string]string{"phone": "9800300001", "password": "correct-horse-battery"}, "")
+	assertStatus(t, resp, http.StatusOK)
+
+	var body map[string]interface{}
+	parseJSON(t, resp, &body)
+	if body["access_token"] == nil || body["access_token"] == "" {
+		t.Error("expected an access token")
+	}
+}
+
+func TestAuth_PasswordLogin_WrongPassword(t *testing.T) {
+	cleanupTables(t)
+
+	userID := createTestUser(t, "9800300001", "Password User")
+	setTestPassword(t, userID, "correct-horse-battery")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/auth/password-login",
+		map[string]string{"phone": "9800300001", "password": "wrong"}, "")
+	assertStatus(t, resp, http.StatusUnauthorized)
+}
+
+// An unknown number, and a real number with no password, must be
+// indistinguishable from a wrong password — otherwise this endpoint tells an
+// attacker which phone numbers are registered.
+func TestAuth_PasswordLogin_DoesNotRevealAccounts(t *testing.T) {
+	cleanupTables(t)
+
+	createTestUser(t, "9800300002", "No Password User")
+
+	unknown := doRequest(t, http.MethodPost, "/api/v1/auth/password-login",
+		map[string]string{"phone": "9800399999", "password": "whatever"}, "")
+	assertStatus(t, unknown, http.StatusUnauthorized)
+	var unknownBody map[string]interface{}
+	parseJSON(t, unknown, &unknownBody)
+
+	noPassword := doRequest(t, http.MethodPost, "/api/v1/auth/password-login",
+		map[string]string{"phone": "9800300002", "password": "whatever"}, "")
+	assertStatus(t, noPassword, http.StatusUnauthorized)
+	var noPasswordBody map[string]interface{}
+	parseJSON(t, noPassword, &noPasswordBody)
+
+	if unknownBody["error"] != noPasswordBody["error"] {
+		t.Errorf("responses differ and leak account existence: %q vs %q",
+			unknownBody["error"], noPasswordBody["error"])
+	}
+}
+
+func TestAuth_SetPassword_RequiresAuth(t *testing.T) {
+	cleanupTables(t)
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/auth/password",
+		map[string]string{"password": "a-good-long-password"}, "")
+	assertStatus(t, resp, http.StatusUnauthorized)
+}
+
+func TestAuth_SetPassword_ThenLogin(t *testing.T) {
+	cleanupTables(t)
+
+	userID := createTestUser(t, "9800300003", "Setter")
+	token := generateTestToken(userID, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/auth/password",
+		map[string]string{"password": "a-good-long-password"}, token)
+	assertStatus(t, resp, http.StatusOK)
+
+	login := doRequest(t, http.MethodPost, "/api/v1/auth/password-login",
+		map[string]string{"phone": "9800300003", "password": "a-good-long-password"}, "")
+	assertStatus(t, login, http.StatusOK)
+}
+
+func TestAuth_SetPassword_RejectsShort(t *testing.T) {
+	cleanupTables(t)
+
+	userID := createTestUser(t, "9800300004", "Shorty")
+	token := generateTestToken(userID, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/auth/password",
+		map[string]string{"password": "short"}, token)
+	assertStatus(t, resp, http.StatusBadRequest)
 }

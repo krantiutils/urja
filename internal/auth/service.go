@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -351,4 +352,108 @@ func generateTokenID() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+// --- Password login ---
+
+// ErrInvalidCredentials is returned for every failed password login, whatever
+// the underlying cause.
+var ErrInvalidCredentials = errors.New("invalid phone or password")
+
+// minPasswordLength is deliberately a length floor rather than a composition
+// rule. Character-class requirements push people toward predictable
+// substitutions; length is what actually costs an attacker.
+const minPasswordLength = 8
+
+// LoginWithPassword authenticates by phone and password.
+//
+// OTP remains the primary route. This exists because staff and gym admins sign
+// in several times a day and waiting on an SMS each time is real friction.
+//
+// Every failure returns ErrInvalidCredentials: an unknown phone, an account
+// with no password set, and a wrong password are indistinguishable to the
+// caller, so this endpoint cannot be used to enumerate which numbers are
+// registered. The bcrypt comparison runs even when no account was found, so
+// the two paths take comparable time.
+func (s *Service) LoginWithPassword(ctx context.Context, phone, password string) (*VerifyOTPResult, error) {
+	phone = sms.NormalizePhone(phone)
+
+	userID, hash, role, isSuperAdmin, found, err := s.repo.GetPasswordCredentials(ctx, phone)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		// Compare against a throwaway hash so a missing account does not return
+		// measurably faster than a wrong password.
+		_ = bcrypt.CompareHashAndPassword(
+			[]byte("$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"),
+			[]byte(password))
+		return nil, ErrInvalidCredentials
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)); err != nil {
+		s.logger.Warn("failed password login", "phone", phone[:4]+"******")
+		return nil, ErrInvalidCredentials
+	}
+
+	onboardingCompleted, err := s.repo.GetUserOnboardingStatus(ctx, userID)
+	if err != nil {
+		s.logger.Warn("failed to get onboarding status, defaulting to false", "error", err)
+	}
+
+	accessToken, err := s.generateAccessToken(userID, phone, role, isSuperAdmin)
+	if err != nil {
+		return nil, fmt.Errorf("generating access token: %w", err)
+	}
+	refreshToken, tokenID, err := s.generateRefreshToken(userID)
+	if err != nil {
+		return nil, fmt.Errorf("generating refresh token: %w", err)
+	}
+	if err := s.repo.StoreRefreshToken(ctx, userID, tokenID, s.cfg.RefreshTokenExpiry); err != nil {
+		return nil, fmt.Errorf("storing refresh token: %w", err)
+	}
+
+	s.logger.Info("user authenticated by password", "user_id", userID, "phone", phone[:4]+"******")
+	return &VerifyOTPResult{
+		AccessToken:         accessToken,
+		RefreshToken:        refreshToken,
+		IsNewUser:           false,
+		OnboardingCompleted: onboardingCompleted,
+	}, nil
+}
+
+// SetPassword sets or replaces the caller's own password.
+//
+// Requires a valid session, which today means the user proved possession of
+// their phone via OTP. Changing a password therefore always traces back to
+// control of the number, and there is no separate reset flow to attack: a user
+// who forgets their password signs in by OTP and sets a new one.
+func (s *Service) SetPassword(ctx context.Context, userID, password string) error {
+	if len([]rune(password)) < minPasswordLength {
+		return fmt.Errorf("password must be at least %d characters", minPasswordLength)
+	}
+	// bcrypt silently truncates beyond 72 bytes, so reject rather than accept a
+	// password that is not fully checked at login.
+	if len(password) > 72 {
+		return fmt.Errorf("password must be 72 characters or fewer")
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), s.cfg.BcryptCost)
+	if err != nil {
+		return fmt.Errorf("hashing password: %w", err)
+	}
+	if err := s.repo.SetPassword(ctx, userID, string(hash)); err != nil {
+		return err
+	}
+
+	// Other sessions keep working on purpose: this is "set a password", not a
+	// compromise response. LogoutAll already exists for that.
+	s.logger.Info("password set", "user_id", userID)
+	return nil
+}
+
+// HasPassword reports whether the caller has a password set, so the UI can
+// offer "set" or "change" wording.
+func (s *Service) HasPassword(ctx context.Context, userID string) (bool, error) {
+	return s.repo.HasPassword(ctx, userID)
 }

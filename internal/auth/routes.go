@@ -18,6 +18,9 @@ func (h *Handler) RegisterRoutes(r chi.Router, validator middleware.TokenValidat
 			r.Use(authLimiter.Limit())
 			r.Post("/login", h.Login)
 			r.Post("/verify-otp", h.VerifyOTP)
+			// Shares the 5-per-15-minutes limiter with OTP, so password
+			// guessing is throttled on the same budget as OTP requests.
+			r.Post("/password-login", h.PasswordLogin)
 		})
 
 		// Refresh endpoint (no auth required, token is in the body)
@@ -26,6 +29,8 @@ func (h *Handler) RegisterRoutes(r chi.Router, validator middleware.TokenValidat
 		// Authenticated endpoints
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(validator))
+			r.Get("/password", h.PasswordStatus)
+			r.Post("/password", h.SetPassword)
 			r.Post("/logout", h.Logout)
 			r.Post("/logout-all", h.LogoutAll)
 		})

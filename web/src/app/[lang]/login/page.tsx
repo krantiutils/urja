@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { getDictionary } from "@/lib/i18n";
 import { ApiRequestError } from "@/lib/api";
 import type { Locale } from "@/types";
-import { Phone, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
+import { Lock, Phone, ShieldCheck, ArrowRight, Loader2 } from "lucide-react";
 
 const OTP_RESEND_SECONDS = 60;
 
@@ -18,9 +18,10 @@ export default function LoginPage({
   const locale = params.lang as Locale;
   const t = getDictionary(locale);
   const router = useRouter();
-  const { login, verifyOtp, isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { login, verifyOtp, passwordLogin, isAuthenticated, isLoading: authLoading, user } = useAuth();
 
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [step, setStep] = useState<"phone" | "otp" | "password">("phone");
+  const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
@@ -89,6 +90,58 @@ export default function LoginPage({
       }
     },
     [phone, login, t]
+  );
+
+  /** Where a session goes once established, regardless of how it was created. */
+  const routeAfterLogin = useCallback(
+    (result: { onboarding_completed: boolean }) => {
+      const token = localStorage.getItem("access_token");
+      const claims = (() => {
+        try {
+          return token ? JSON.parse(atob(token.split(".")[1])) : null;
+        } catch {
+          return null;
+        }
+      })();
+
+      if (claims?.is_super_admin) {
+        router.replace(`/${locale}/super-admin`);
+        return;
+      }
+      if (!result.onboarding_completed) {
+        router.replace(`/${locale}/onboarding`);
+        return;
+      }
+      router.replace(`/${locale}/${claims?.role === "member" ? "member" : "dashboard"}`);
+    },
+    [router, locale]
+  );
+
+  const handlePasswordLogin = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError("");
+
+      const cleaned = phone.replace(/\s+/g, "");
+      if (!/^((\+?977)?9[6-9]\d{8})$/.test(cleaned)) {
+        setError(t.auth.invalidPhone);
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        routeAfterLogin(await passwordLogin(cleaned, password));
+      } catch (err) {
+        // The API returns one message for every failure so it cannot be used
+        // to discover which numbers are registered; pass it straight through.
+        setError(
+          err instanceof ApiRequestError ? err.message : t.auth.invalidCredentials
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [phone, password, passwordLogin, routeAfterLogin, t]
   );
 
   const handleVerifyOtp = useCallback(
@@ -234,6 +287,93 @@ export default function LoginPage({
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
+              </button>
+
+              {/* Members sign in by code; staff and admins do it several times
+                  a day, so a password is offered as the alternative. */}
+              <button
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setStep("password");
+                }}
+                className="w-full text-center text-sm text-fg-muted hover:text-fg transition-colors pt-1"
+              >
+                {t.auth.usePassword}
+              </button>
+            </form>
+          ) : step === "password" ? (
+            <form onSubmit={handlePasswordLogin} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="phone-pw"
+                  className="block text-xs font-mono tracking-widest text-fg-muted uppercase mb-2"
+                >
+                  {t.auth.phoneLabel}
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
+                  <input
+                    id="phone-pw"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder={t.auth.phonePlaceholder}
+                    className="w-full bg-input-bg border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-fg placeholder:text-gray-500 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors"
+                    autoComplete="username"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-xs font-mono tracking-widest text-fg-muted uppercase mb-2"
+                >
+                  {t.auth.passwordLabel}
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t.auth.passwordPlaceholder}
+                    className="w-full bg-input-bg border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-fg placeholder:text-gray-500 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors"
+                    autoComplete="current-password"
+                  />
+                </div>
+              </div>
+
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !password}
+                className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-bright text-bg-base font-semibold py-2.5 rounded-lg shadow-accent-glow active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    {t.auth.signInWithPassword}
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setPassword("");
+                  setStep("phone");
+                }}
+                className="w-full text-center text-sm text-fg-muted hover:text-fg transition-colors pt-1"
+              >
+                {t.auth.useOtp}
               </button>
             </form>
           ) : (

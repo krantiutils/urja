@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -185,4 +186,87 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		slog.Error("failed to encode JSON response", "error", err)
 	}
+}
+
+// --- Password login ---
+
+type passwordLoginRequest struct {
+	Phone    string `json:"phone"`
+	Password string `json:"password"`
+}
+
+// PasswordLogin handles POST /api/v1/auth/password-login
+func (h *Handler) PasswordLogin(w http.ResponseWriter, r *http.Request) {
+	var req passwordLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+	if req.Phone == "" || req.Password == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "phone and password are required"})
+		return
+	}
+
+	result, err := h.service.LoginWithPassword(r.Context(), req.Phone, req.Password)
+	if err != nil {
+		// One message for every failure — see Service.LoginWithPassword.
+		if errors.Is(err, ErrInvalidCredentials) {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+			return
+		}
+		h.logger.Error("password login failed", "error", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, tokenResponse{
+		AccessToken:         result.AccessToken,
+		RefreshToken:        result.RefreshToken,
+		TokenType:           "Bearer",
+		IsNewUser:           result.IsNewUser,
+		OnboardingCompleted: result.OnboardingCompleted,
+	})
+}
+
+type setPasswordRequest struct {
+	Password string `json:"password"`
+}
+
+// SetPassword handles POST /api/v1/auth/password — sets the caller's password.
+func (h *Handler) SetPassword(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	var req setPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	if err := h.service.SetPassword(r.Context(), userID, req.Password); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "password set"})
+}
+
+// PasswordStatus handles GET /api/v1/auth/password — whether one is set.
+func (h *Handler) PasswordStatus(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	set, err := h.service.HasPassword(r.Context(), userID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]bool{"password_set": set})
 }

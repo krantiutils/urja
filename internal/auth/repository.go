@@ -2,9 +2,11 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
@@ -157,4 +159,54 @@ func (r *Repository) GetUserOnboardingStatus(ctx context.Context, userID string)
 		return false, fmt.Errorf("getting onboarding status: %w", err)
 	}
 	return completed, nil
+}
+
+// --- Password login ---
+
+// GetPasswordCredentials looks up an account's stored password hash by phone.
+// Returns found=false when there is no such account or it has no password set;
+// the caller must treat both identically so a login attempt cannot be used to
+// discover which phone numbers are registered.
+func (r *Repository) GetPasswordCredentials(ctx context.Context, phone string) (userID, hash, role string, isSuperAdmin, found bool, err error) {
+	err = r.db.QueryRow(ctx,
+		`SELECT id, COALESCE(password_hash, ''), is_super_admin
+		 FROM users WHERE phone = $1`, phone,
+	).Scan(&userID, &hash, &isSuperAdmin)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", "", false, false, nil
+	}
+	if err != nil {
+		return "", "", "", false, false, fmt.Errorf("looking up password credentials: %w", err)
+	}
+	if hash == "" {
+		return "", "", "", false, false, nil
+	}
+	// The global role claim is vestigial — per-org roles come from
+	// organization_members — but generateAccessToken still carries one.
+	return userID, hash, "member", isSuperAdmin, true, nil
+}
+
+// SetPassword stores a bcrypt hash for an account.
+func (r *Repository) SetPassword(ctx context.Context, userID, hash string) error {
+	tag, err := r.db.Exec(ctx,
+		`UPDATE users SET password_hash = $2, password_set_at = NOW() WHERE id = $1`,
+		userID, hash)
+	if err != nil {
+		return fmt.Errorf("setting password: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+// HasPassword reports whether an account can sign in with a password.
+func (r *Repository) HasPassword(ctx context.Context, userID string) (bool, error) {
+	var present bool
+	err := r.db.QueryRow(ctx,
+		`SELECT password_hash IS NOT NULL FROM users WHERE id = $1`, userID).Scan(&present)
+	if err != nil {
+		return false, fmt.Errorf("checking password: %w", err)
+	}
+	return present, nil
 }
