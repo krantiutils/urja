@@ -447,6 +447,12 @@ const dictionaries = {
       bought: "Credits added",
       priceNote: "The price is set by Urja, not entered here.",
     },
+    attendanceCalendar: {
+      title: "Your month",
+      checkIns: "check-ins",
+      prev: "Previous month",
+      next: "Next month",
+    },
     leaderboard: {
       title: "Leaderboard",
       subtitle: "How the gym is doing this month.",
@@ -1360,6 +1366,12 @@ const dictionaries = {
       buy: "क्रेडिट किन्नुहोस्",
       bought: "क्रेडिट थपियो",
       priceNote: "मूल्य ऊर्जाले तोक्छ, यहाँ हालिँदैन।",
+    },
+    attendanceCalendar: {
+      title: "तपाईंको महिना",
+      checkIns: "चेक-इन",
+      prev: "अघिल्लो महिना",
+      next: "अर्को महिना",
     },
     leaderboard: {
       title: "लिडरबोर्ड",

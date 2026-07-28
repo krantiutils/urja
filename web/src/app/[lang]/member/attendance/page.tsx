@@ -5,6 +5,7 @@ import { getDictionary } from "@/lib/i18n";
 import { api } from "@/lib/api";
 import type { Locale, MemberAttendanceRecord, MemberStreak } from "@/types";
 import { Loader2, Flame, Trophy, CalendarCheck } from "lucide-react";
+import { AttendanceCalendar } from "@/components/member/AttendanceCalendar";
 
 const methodColors: Record<string, string> = {
   qr: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -60,6 +61,10 @@ export default function MemberAttendancePage({
       <h1 className="text-2xl font-semibold text-fg">
         {t.memberPages.attendance}
       </h1>
+
+      {/* A month at a glance answers "am I actually turning up", which a list
+          of timestamps does not. */}
+      <AttendanceCalendar t={t} locale={locale} />
 
       {/* Streak cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
