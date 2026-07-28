@@ -18,6 +18,7 @@ import (
 	"github.com/urja-gym/urja/internal/attendance"
 	"github.com/urja-gym/urja/internal/auth"
 	"github.com/urja-gym/urja/internal/billing"
+	"github.com/urja-gym/urja/internal/boxing"
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/dues"
 	"github.com/urja-gym/urja/internal/exercise"
@@ -27,8 +28,8 @@ import (
 	"github.com/urja-gym/urja/internal/leaderboard"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/nfc"
-	"github.com/urja-gym/urja/internal/nutrition"
 	"github.com/urja-gym/urja/internal/notice"
+	"github.com/urja-gym/urja/internal/nutrition"
 	"github.com/urja-gym/urja/internal/onboarding"
 	"github.com/urja-gym/urja/internal/org"
 	"github.com/urja-gym/urja/internal/packages"
@@ -222,6 +223,11 @@ func main() {
 	waterService := water.NewService(waterRepo, logger)
 	waterHandler := water.NewHandler(waterService, logger)
 
+	// Boxing profiles (combat-sports member data)
+	boxingRepo := boxing.NewRepository(pool)
+	boxingService := boxing.NewService(boxingRepo, logger)
+	boxingHandler := boxing.NewHandler(boxingService, logger)
+
 	// Tenant sites (public gym websites at <slug>.nepalgym.xyz)
 	siteRepo := site.NewRepository(pool)
 	siteService := site.NewService(siteRepo, logger)
@@ -319,6 +325,7 @@ func main() {
 				nutritionHandler.RegisterSelfRoutes(r)
 				waterHandler.RegisterSelfRoutes(r)
 				attendanceHandler.RegisterSelfRoutes(r)
+				boxingHandler.RegisterSelfRoutes(r)
 				r.Route("/packages", func(r chi.Router) {
 					pkgHandler.RegisterSelfRoutes(r)
 				})
@@ -346,6 +353,7 @@ func main() {
 						memberHandler.RegisterMemberRoutes(r)
 						subscriptionHandler.RegisterMemberRoutes(r)
 						workoutHandler.RegisterMemberRoutes(r)
+						boxingHandler.RegisterMemberRoutes(r)
 					})
 				})
 
