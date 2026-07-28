@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { getDictionary } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { api, ApiRequestError } from "@/lib/api";
-import type { Locale, OrgMember, OrgPackage, CreateMemberRequest } from "@/types";
+import type { Locale, OrgMember, OrgPackage, MemberSubscription, CreateMemberRequest } from "@/types";
 import {
   Users,
   CreditCard,
+  History,
   Plus,
   Search,
   ChevronLeft,
@@ -96,6 +97,14 @@ export default function MembersPage({
   const [sellMethod, setSellMethod] = useState("cash");
   const [sellError, setSellError] = useState<string | null>(null);
   const [sellLoading, setSellLoading] = useState(false);
+
+  // Membership history and renewal. Renewal is how a gym earns recurring
+  // revenue and there was no way to do it outside a direct API call.
+  const [historyFor, setHistoryFor] = useState<OrgMember | null>(null);
+  const [subs, setSubs] = useState<MemberSubscription[]>([]);
+  const [subsLoading, setSubsLoading] = useState(false);
+  const [renewing, setRenewing] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
 
   const orgId = user?.org_id;
@@ -233,6 +242,48 @@ export default function MembersPage({
           (parseFloat(sellPaid) || 0)
       )
     : 0;
+
+  const openHistory = useCallback(
+    async (member: OrgMember) => {
+      setHistoryFor(member);
+      setSubs([]);
+      setHistoryError(null);
+      if (!orgId) return;
+      setSubsLoading(true);
+      try {
+        const res = await api.listMemberSubscriptions(orgId, member.id);
+        setSubs(res.data ?? []);
+      } catch (err) {
+        setHistoryError(err instanceof ApiRequestError ? err.message : t.common.error);
+      } finally {
+        setSubsLoading(false);
+      }
+    },
+    [orgId, t.common.error]
+  );
+
+  const handleRenew = useCallback(
+    async (sub: MemberSubscription) => {
+      if (!orgId || !historyFor) return;
+      setRenewing(sub.id);
+      setHistoryError(null);
+      try {
+        // Renewed unpaid: the balance becomes a due, the same as a new sale.
+        // Taking payment here would mean a second money form in a list row.
+        await api.renewPackage(orgId, historyFor.id, {
+          member_package_id: sub.id,
+          payment_method: "cash",
+          amount_paid: 0,
+        });
+        await openHistory(historyFor);
+      } catch (err) {
+        setHistoryError(err instanceof ApiRequestError ? err.message : t.common.error);
+      } finally {
+        setRenewing(null);
+      }
+    },
+    [orgId, historyFor, openHistory, t.common.error]
+  );
 
   const handleRemove = async (memberId: string) => {
     if (!orgId) return;
@@ -372,6 +423,13 @@ export default function MembersPage({
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => openHistory(member)}
+                          title={t.members.membership}
+                          className="p-1.5 rounded-lg hover:bg-surface text-fg-muted hover:text-fg transition-colors"
+                        >
+                          <History className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => openSell(member)}
                           title={t.members.sellPackage}
@@ -687,6 +745,79 @@ export default function MembersPage({
               {t.members.assignPackage}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Membership history */}
+      {historyFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60"
+            onClick={() => setHistoryFor(null)}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-lg max-h-[80vh] overflow-y-auto bg-bg-elevated border border-white/[0.06] rounded-2xl p-5 shadow-card">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-base font-semibold text-fg">{t.members.membership}</h2>
+              <button
+                type="button"
+                onClick={() => setHistoryFor(null)}
+                className="p-1.5 rounded-lg text-fg-muted hover:bg-surface transition-colors"
+                aria-label={t.common.cancel}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-fg-muted mb-4">{historyFor.name}</p>
+
+            {historyError && (
+              <p className="mb-3 text-sm text-red-400" role="alert">
+                {historyError}
+              </p>
+            )}
+
+            {subsLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-fg-muted" />
+              </div>
+            ) : subs.length === 0 ? (
+              <p className="py-8 text-center text-sm text-fg-muted">{t.members.noHistory}</p>
+            ) : (
+              <div className="divide-y divide-white/[0.06]">
+                {subs.map((sub) => (
+                  <div key={sub.id} className="py-3 flex flex-wrap items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-fg">{sub.package_name}</p>
+                      <p className="text-xs text-fg-muted">
+                        {sub.start_date} → {sub.end_date}
+                        {sub.status === "active" && sub.days_remaining >= 0
+                          ? ` · ${sub.days_remaining}d`
+                          : ""}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase border ${
+                        sub.status === "active"
+                          ? "bg-accent/10 text-accent border-accent/20"
+                          : "bg-white/5 text-fg-muted border-white/[0.06]"
+                      }`}
+                    >
+                      {sub.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRenew(sub)}
+                      disabled={renewing === sub.id}
+                      className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.06] text-xs text-fg hover:bg-surface transition-colors disabled:opacity-50"
+                    >
+                      {renewing === sub.id && <Loader2 className="w-3 h-3 animate-spin" />}
+                      {t.members.renew}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

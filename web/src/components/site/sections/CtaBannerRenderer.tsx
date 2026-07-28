@@ -72,7 +72,11 @@ export default function CtaBannerRenderer({ section, locale }: { section: Sectio
 
   if (variant === "gradient") {
     return (
-      <div className="rounded-[var(--site-radius)] bg-gradient-to-br from-[var(--site-accent)] to-[var(--site-surface)] px-6 py-16">
+      // Negative margins cancel SectionShell's horizontal padding so the
+      // gradient reaches the edges. Rounded and inset, it painted a second
+      // coloured card on top of a section already filled with the accent —
+      // a box inside a box.
+      <div className="-mx-4 sm:-mx-6 bg-gradient-to-br from-[var(--site-accent)] to-[var(--site-surface)] px-6 py-16">
         <div className="flex flex-col items-center gap-4 text-center text-[var(--site-accent-fg)]">
           {title ? (
             <h2 className="text-3xl sm:text-4xl" style={{ fontFamily: "var(--site-font-display)" }}>
