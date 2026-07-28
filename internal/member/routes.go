@@ -20,12 +20,16 @@ func (h *Handler) RegisterSelfRoutes(r chi.Router) {
 // Note: PUT/DELETE for individual members are registered via RegisterMemberRoutes
 // inside the /{memberId} subrouter to avoid chi route shadowing.
 func (h *Handler) RegisterOrgRoutes(r chi.Router) {
-	// Any org member can list members
-	r.Get("/", h.ListByOrg)
-
-	// Staff and admin only
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireOrgRole("staff", "admin"))
+
+		// Listing was previously open to any member of the organization. It
+		// returns every member's name, phone and email, so that let anybody who
+		// joined the gym pull its entire customer list — and it bypassed the
+		// privacy settings members actually set. Members see other members
+		// through the leaderboard, which honours show_phone and
+		// show_on_leaderboard. Every caller in the web app is a staff screen.
+		r.Get("/", h.ListByOrg)
 		r.Post("/", h.CreateOrgMember)
 	})
 }

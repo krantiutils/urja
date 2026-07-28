@@ -41,7 +41,15 @@ func TestQRCode_GenerateJSON(t *testing.T) {
 	}
 }
 
-func TestQRCode_MemberAllowed(t *testing.T) {
+// The QR carries a signed, five-minute check-in token. That rotation is what
+// makes scanning it stand in for being at the gym — but it protects nothing
+// against somebody who can mint a fresh one whenever they like. A member with
+// this endpoint can check in from home indefinitely, and attendance drives
+// streaks, the leaderboard and absentee SMS.
+//
+// This previously asserted the opposite. Nothing in the web app requests the
+// code; it is for a screen at the desk, which is staff.
+func TestQRCode_MemberForbidden(t *testing.T) {
 	cleanupTables(t)
 
 	adminID := createTestSuperAdmin(t, "9801300001", "Admin")
@@ -52,5 +60,5 @@ func TestQRCode_MemberAllowed(t *testing.T) {
 	token := generateTestToken(memberID, "member")
 
 	resp := doRequest(t, http.MethodGet, "/api/v1/orgs/"+orgID+"/qr-code?format=json", nil, token)
-	assertStatus(t, resp, http.StatusOK)
+	assertStatus(t, resp, http.StatusForbidden)
 }

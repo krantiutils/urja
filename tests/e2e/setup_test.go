@@ -27,6 +27,7 @@ import (
 	"github.com/urja-gym/urja/internal/attendance"
 	"github.com/urja-gym/urja/internal/auth"
 	"github.com/urja-gym/urja/internal/billing"
+	"github.com/urja-gym/urja/internal/boxing"
 	"github.com/urja-gym/urja/internal/config"
 	"github.com/urja-gym/urja/internal/dues"
 	"github.com/urja-gym/urja/internal/feedback"
@@ -39,6 +40,7 @@ import (
 	"github.com/urja-gym/urja/internal/org"
 	"github.com/urja-gym/urja/internal/packages"
 	"github.com/urja-gym/urja/internal/qrcode"
+	"github.com/urja-gym/urja/internal/site"
 	"github.com/urja-gym/urja/internal/smsapi"
 	"github.com/urja-gym/urja/internal/staff"
 	"github.com/urja-gym/urja/internal/subscription"
@@ -240,6 +242,14 @@ func TestMain(m *testing.M) {
 	absenteeSvc := absentee.NewService(absenteeRepo, smsClient, testLogger)
 	absenteeHandler := absentee.NewHandler(absenteeSvc, testLogger)
 
+	siteRepo := site.NewRepository(pool)
+	siteService := site.NewService(siteRepo, testLogger)
+	siteHandler := site.NewHandler(siteService, testLogger)
+
+	boxingRepo := boxing.NewRepository(pool)
+	boxingService := boxing.NewService(boxingRepo, testLogger)
+	boxingHandler := boxing.NewHandler(boxingService, testLogger)
+
 	duesRepo := dues.NewRepository(pool)
 	duesSvc := dues.NewService(duesRepo, testLogger)
 	duesHandler := dues.NewHandler(duesSvc, testLogger)
@@ -313,6 +323,7 @@ func TestMain(m *testing.M) {
 
 			r.Route("/members/me", func(r chi.Router) {
 				memberHandler.RegisterSelfRoutes(r)
+				boxingHandler.RegisterSelfRoutes(r)
 				workoutHandler.RegisterSelfRoutes(r)
 				r.Route("/attendance", func(r chi.Router) {
 					attendanceHandler.RegisterSelfRoutes(r)
@@ -341,6 +352,7 @@ func TestMain(m *testing.M) {
 						memberHandler.RegisterMemberRoutes(r)
 						subscriptionHandler.RegisterMemberRoutes(r)
 						workoutHandler.RegisterMemberRoutes(r)
+						boxingHandler.RegisterMemberRoutes(r)
 					})
 				})
 
@@ -350,6 +362,10 @@ func TestMain(m *testing.M) {
 
 				r.Route("/staff", func(r chi.Router) {
 					staffHandler.RegisterOrgRoutes(r)
+				})
+
+				r.Route("/site", func(r chi.Router) {
+					siteHandler.RegisterOrgRoutes(r)
 				})
 
 				r.Route("/dues", func(r chi.Router) {
