@@ -1,25 +1,18 @@
 import type { CSSProperties } from "react";
-import dynamic from "next/dynamic";
 import type { Section } from "@/types/site";
 import type { Locale } from "@/types";
-import { text, str, buttons } from "@/lib/site/content";
+import { text, str, list, itemText, buttons } from "@/lib/site/content";
 import { SiteButton } from "@/components/site/primitives/SiteButton";
 import { SiteImage } from "@/components/site/primitives/SiteImage";
 
 /**
- * hero — centered | split | fullbleed | minimal | gloves
+ * hero — centered | split | fullbleed | minimal | reel
  *
  * The page's primary heading, so the title renders as an <h1> rather than
  * going through SectionHeading (which is for secondary, in-page headings).
  */
 
-// Client-only: the scene touches window and WebGL. It is a small wrapper —
-// three.js itself is imported at runtime inside the component, so no tenant
-// page pays for it until a gloves hero is actually scrolled into view.
-const GloveScene = dynamic(
-  () => import("@/components/site/primitives/GloveScene"),
-  { ssr: false }
-);
+import { HeroReel } from "@/components/site/primitives/HeroReel";
 
 const displayStyle: CSSProperties = {
   fontFamily: "var(--site-font-display)",
@@ -39,6 +32,7 @@ export default function HeroRenderer({ section, locale }: { section: Section; lo
   const title = text(content, "title", locale);
   const subtitle = text(content, "subtitle", locale);
   const image = str(content, "image");
+  const video = str(content, "video");
   const btns = buttons(content, locale);
 
   if (!title && !subtitle && !image && btns.length === 0) return null;
@@ -101,41 +95,86 @@ export default function HeroRenderer({ section, locale }: { section: Section; lo
     );
   }
 
-  if (variant === "gloves") {
-    return (
-      <div className="relative isolate min-h-[70vh] sm:min-h-[80vh] flex items-center justify-center overflow-hidden">
-        {/* Sits behind the text and is purely decorative — the heading, copy and
-            buttons below are the actual content and render with or without it. */}
-        <GloveScene className="absolute inset-0 -z-10 pointer-events-none" />
+  if (variant === "reel") {
+    const eyebrow = text(content, "eyebrow", locale);
+    const facts = list(content, "facts");
 
-        {/* Keeps the copy legible whatever the gloves are doing behind it. */}
+    return (
+      <div className="relative isolate min-h-[88svh] flex flex-col justify-end overflow-hidden">
+        {video ? (
+          <HeroReel
+            src={video}
+            poster={image}
+            className="absolute inset-0 -z-20 h-full w-full object-cover"
+          />
+        ) : image ? (
+          // eslint-disable-next-line @next/next/no-img-element -- tenant-uploaded, arbitrary host
+          <img src={image} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+        ) : null}
+
+        {/* Two layers rather than one flat scrim: a bottom-weighted gradient so
+            the copy sits on near-solid colour, and a light overall wash so the
+            footage never fights the text at the top of the frame. */}
         <div
           className="absolute inset-0 -z-10"
           style={{
             background:
-              "radial-gradient(ellipse at center, color-mix(in srgb, var(--site-bg) 55%, transparent) 0%, var(--site-bg) 78%)",
+              "linear-gradient(to top, var(--site-bg) 4%, color-mix(in srgb, var(--site-bg) 82%, transparent) 34%, color-mix(in srgb, var(--site-bg) 30%, transparent) 100%)",
           }}
           aria-hidden="true"
         />
 
-        <div className="flex flex-col items-center gap-6 max-w-3xl mx-auto text-center px-2">
+        <div className="relative w-full max-w-6xl mx-auto px-5 sm:px-8 pb-12 sm:pb-20">
+          {eyebrow ? (
+            <p className="mb-5 text-[11px] sm:text-xs font-mono uppercase tracking-[0.32em] text-[var(--site-accent)]">
+              {eyebrow}
+            </p>
+          ) : null}
+
           {title ? (
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl" style={displayStyle}>
+            <h1
+              className="max-w-4xl leading-[0.88] text-[clamp(2.75rem,11vw,7.5rem)]"
+              style={displayStyle}
+            >
               {title}
             </h1>
           ) : null}
+
           {subtitle ? (
-            <p className="text-lg sm:text-xl text-[var(--site-fg-muted)] leading-relaxed max-w-2xl">
+            <p className="mt-6 max-w-xl text-base sm:text-lg text-[var(--site-fg-muted)] leading-relaxed">
               {subtitle}
             </p>
           ) : null}
+
           {btns.length > 0 && (
-            <div className="flex flex-wrap gap-4 justify-center">
+            <div className="mt-8 flex flex-wrap gap-3">
               {btns.map((b, i) => (
                 <SiteButton key={i} {...b} />
               ))}
             </div>
           )}
+
+          {facts.length > 0 ? (
+            <dl
+              className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-px overflow-hidden rounded-[var(--site-radius)] border border-[var(--site-border)]"
+              style={{ background: "var(--site-border)" }}
+            >
+              {facts.map((f, i) => (
+                <div
+                  key={i}
+                  className="px-4 py-3.5 backdrop-blur-md"
+                  style={{ background: "color-mix(in srgb, var(--site-bg) 55%, transparent)" }}
+                >
+                  <dt className="text-[10px] font-mono uppercase tracking-[0.18em] text-[var(--site-fg-muted)]">
+                    {itemText(f, "label", locale)}
+                  </dt>
+                  <dd className="mt-1 text-sm sm:text-base font-medium">
+                    {itemText(f, "value", locale)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
         </div>
       </div>
     );
