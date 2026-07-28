@@ -238,9 +238,12 @@ func (r *Repository) ReplaceAllPages(ctx context.Context, orgID string, pages []
 func (r *Repository) GetSettings(ctx context.Context, orgID string) (*Settings, error) {
 	var s Settings
 	err := r.db.QueryRow(ctx,
-		`SELECT organization_id, template, theme, nav, footer, socials, is_live, updated_at
-		 FROM site_settings WHERE organization_id = $1`, orgID,
-	).Scan(&s.OrgID, &s.Template, &s.Theme, &s.Nav, &s.Footer, &s.Socials, &s.IsLive, &s.UpdatedAt)
+		`SELECT ss.organization_id, o.slug, ss.template, ss.theme, ss.nav, ss.socials,
+		        ss.footer, ss.is_live, ss.updated_at
+		 FROM site_settings ss
+		 JOIN organizations o ON o.id = ss.organization_id
+		 WHERE ss.organization_id = $1`, orgID,
+	).Scan(&s.OrgID, &s.Slug, &s.Template, &s.Theme, &s.Nav, &s.Socials, &s.Footer, &s.IsLive, &s.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -265,6 +268,13 @@ func (r *Repository) UpsertSettings(ctx context.Context, orgID string, s *Settin
 		jsonOrEmpty(s.Footer), jsonOrEmpty(s.Socials), s.IsLive,
 	).Scan(&out.OrgID, &out.Template, &out.Theme, &out.Nav, &out.Footer,
 		&out.Socials, &out.IsLive, &out.UpdatedAt)
+	if err == nil {
+		// RETURNING cannot reach the joined organizations row, and a settings
+		// response without the slug leaves the builder unable to tell an owner
+		// where their site is published.
+		err = r.db.QueryRow(ctx, `SELECT slug FROM organizations WHERE id = $1`, orgID).
+			Scan(&out.Slug)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("saving site settings: %w", err)
 	}

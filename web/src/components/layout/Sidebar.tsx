@@ -16,6 +16,8 @@ import {
   Mail,
   MessageCircle,
   NfcIcon,
+  Globe,
+  Inbox,
   Settings,
   ChevronDown,
   Dumbbell,
@@ -60,6 +62,8 @@ function buildNavSections(t: Dictionary, locale: Locale): NavSection[] {
         { label: t.nav.stories, href: `${base}/stories`, icon: <MessageSquare className="w-4 h-4" /> },
         { label: t.nav.sms, href: `${base}/sms`, icon: <Mail className="w-4 h-4" /> },
         { label: t.nav.feedbacks, href: `${base}/feedbacks`, icon: <MessageCircle className="w-4 h-4" /> },
+        { label: t.nav.website, href: `${base}/site`, icon: <Globe className="w-4 h-4" /> },
+        { label: t.nav.enquiries, href: `${base}/site/leads`, icon: <Inbox className="w-4 h-4" /> },
       ],
     },
     {

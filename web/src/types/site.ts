@@ -129,6 +129,8 @@ export type TemplateId =
 
 export interface SiteSettings {
   organization_id: string;
+  /** The gym's subdomain label. Read-only; set when the organization is created. */
+  slug: string;
   template: TemplateId;
   theme: Partial<ThemeTokens>;
   nav: SiteNav;

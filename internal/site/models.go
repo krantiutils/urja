@@ -290,7 +290,11 @@ type PageSummary struct {
 
 // Settings holds a gym's site-wide configuration.
 type Settings struct {
-	OrgID     string          `json:"organization_id"`
+	OrgID string `json:"organization_id"`
+	// Slug is the gym's subdomain label. Read-only and joined from
+	// organizations: the builder has to be able to tell an owner the address
+	// their site is published at.
+	Slug      string          `json:"slug"`
 	Template  string          `json:"template"`
 	Theme     json.RawMessage `json:"theme"`
 	Nav       json.RawMessage `json:"nav"`

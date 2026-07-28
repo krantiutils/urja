@@ -60,6 +60,21 @@ import type {
   WeightTrend,
   CreateCustomFoodInput,
 } from "@/types";
+import type {
+  SiteSettings,
+  SitePage,
+  PageSummary,
+  SiteLead,
+  LeadStatus,
+} from "@/types/site";
+import type {
+  SiteTemplateOption,
+  SitePageInput,
+  BoxingProfileView,
+  BoxingProfileInput,
+  Bout,
+  BoutInput,
+} from "@/types/site-admin";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -1014,6 +1029,126 @@ class ApiClient {
 
   getQrCodeUrl(orgId: string): string {
     return `${this.baseUrl}/api/v1/orgs/${orgId}/qr-code`;
+  }
+
+  // --- Tenant website ---
+
+  async listSiteTemplates(): Promise<{ data: SiteTemplateOption[] }> {
+    return this.request(`/api/v1/sites/templates`);
+  }
+
+  async getSiteSettings(orgId: string): Promise<SiteSettings> {
+    return this.request(`/api/v1/orgs/${orgId}/site/settings`);
+  }
+
+  async updateSiteSettings(
+    orgId: string,
+    data: Partial<
+      Pick<SiteSettings, "template" | "theme" | "nav" | "footer" | "socials" | "is_live">
+    >
+  ): Promise<SiteSettings> {
+    return this.request(`/api/v1/orgs/${orgId}/site/settings`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Replaces every page with the template's. Destructive, so the API requires
+   * `confirm` explicitly rather than inferring intent from the call.
+   */
+  async applySiteTemplate(
+    orgId: string,
+    template: string
+  ): Promise<{ data: PageSummary[] }> {
+    return this.request(`/api/v1/orgs/${orgId}/site/apply-template`, {
+      method: "POST",
+      body: JSON.stringify({ template, confirm: true }),
+    });
+  }
+
+  async listSitePages(orgId: string): Promise<{ data: PageSummary[] }> {
+    return this.request(`/api/v1/orgs/${orgId}/site/pages`);
+  }
+
+  async getSitePage(orgId: string, pageId: string): Promise<SitePage> {
+    return this.request(`/api/v1/orgs/${orgId}/site/pages/${pageId}`);
+  }
+
+  async createSitePage(orgId: string, data: SitePageInput): Promise<SitePage> {
+    return this.request(`/api/v1/orgs/${orgId}/site/pages`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSitePage(
+    orgId: string,
+    pageId: string,
+    data: SitePageInput
+  ): Promise<SitePage> {
+    return this.request(`/api/v1/orgs/${orgId}/site/pages/${pageId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSitePage(orgId: string, pageId: string): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/site/pages/${pageId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async listSiteLeads(
+    orgId: string,
+    params: { status?: string; limit?: number } = {}
+  ): Promise<{ data: SiteLead[] }> {
+    const q = new URLSearchParams();
+    if (params.status) q.set("status", params.status);
+    if (params.limit) q.set("limit", String(params.limit));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/site/leads${qs ? `?${qs}` : ""}`);
+  }
+
+  async updateSiteLead(
+    orgId: string,
+    leadId: string,
+    status: LeadStatus
+  ): Promise<SiteLead> {
+    return this.request(`/api/v1/orgs/${orgId}/site/leads/${leadId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  // --- Boxing ---
+
+  async getMyBoxingProfile(orgId: string): Promise<BoxingProfileView> {
+    return this.request(`/api/v1/members/me/boxing?organization_id=${orgId}`);
+  }
+
+  async updateMyBoxingProfile(
+    orgId: string,
+    data: BoxingProfileInput
+  ): Promise<BoxingProfileView> {
+    return this.request(`/api/v1/members/me/boxing?organization_id=${orgId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async createMyBout(orgId: string, data: BoutInput): Promise<Bout> {
+    return this.request(`/api/v1/members/me/bouts?organization_id=${orgId}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMyBout(orgId: string, boutId: string): Promise<{ message: string }> {
+    return this.request(
+      `/api/v1/members/me/bouts/${boutId}?organization_id=${orgId}`,
+      { method: "DELETE" }
+    );
   }
 }
 
