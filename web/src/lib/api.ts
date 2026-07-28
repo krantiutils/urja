@@ -61,6 +61,8 @@ import type {
   WeightTrend,
   CreateCustomFoodInput,
   Absentee,
+  TrainingGuide,
+  TrainingGuideInput,
   MemberSubscription,
   SubscriptionPayment,
   AssignPackageRequest,
@@ -1075,6 +1077,71 @@ class ApiClient {
     return this.request(`/api/v1/orgs/${orgId}/sms/buy`, {
       method: "POST",
       body: JSON.stringify({ quantity, payment_method: paymentMethod }),
+    });
+  }
+
+  // --- Training guides ---
+
+  /** Published guides for one gym. The gym is required — guides are per-gym content. */
+  async listPublishedGuides(
+    gym: string,
+    params: { category?: string; search?: string; limit?: number } = {}
+  ): Promise<{ data: TrainingGuide[]; total: number }> {
+    const q = new URLSearchParams({ gym });
+    if (params.category) q.set("category", params.category);
+    if (params.search) q.set("search", params.search);
+    if (params.limit) q.set("limit", String(params.limit));
+    return this.request(`/api/v1/training-guides?${q.toString()}`);
+  }
+
+  async getPublishedGuide(id: string): Promise<TrainingGuide> {
+    return this.request(`/api/v1/training-guides/${id}`);
+  }
+
+  async listGuides(
+    orgId: string,
+    params: { category?: string; search?: string; limit?: number } = {}
+  ): Promise<{ data: TrainingGuide[]; total: number }> {
+    const q = new URLSearchParams();
+    if (params.category) q.set("category", params.category);
+    if (params.search) q.set("search", params.search);
+    if (params.limit) q.set("limit", String(params.limit));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/training-guides${qs ? `?${qs}` : ""}`);
+  }
+
+  async createGuide(orgId: string, data: TrainingGuideInput): Promise<TrainingGuide> {
+    return this.request(`/api/v1/orgs/${orgId}/training-guides`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateGuide(
+    orgId: string,
+    id: string,
+    data: TrainingGuideInput
+  ): Promise<TrainingGuide> {
+    return this.request(`/api/v1/orgs/${orgId}/training-guides/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async publishGuide(
+    orgId: string,
+    id: string,
+    isPublished: boolean
+  ): Promise<TrainingGuide> {
+    return this.request(`/api/v1/orgs/${orgId}/training-guides/${id}/publish`, {
+      method: "PATCH",
+      body: JSON.stringify({ is_published: isPublished }),
+    });
+  }
+
+  async deleteGuide(orgId: string, id: string): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/training-guides/${id}`, {
+      method: "DELETE",
     });
   }
 

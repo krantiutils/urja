@@ -37,6 +37,7 @@ function buildNavItems(t: Dictionary, locale: Locale): NavItem[] {
     { label: t.memberNav.myPrograms, href: `${base}/programs`, icon: <ClipboardList className="w-4 h-4" /> },
     { label: t.memberNav.myProgress, href: `${base}/progress`, icon: <TrendingUp className="w-4 h-4" /> },
     { label: t.memberNav.myBoxing, href: `${base}/boxing`, icon: <Swords className="w-4 h-4" /> },
+    { label: t.memberNav.myGuides, href: `${base}/guides`, icon: <BookOpen className="w-4 h-4" /> },
   ];
 }
 

@@ -36,6 +36,8 @@ export interface User {
    * what decides whether somebody runs a gym or trains at one.
    */
   org_role?: string;
+  /** The gym's subdomain label, for fetching per-gym content by slug. */
+  org_slug?: string;
   user_type?: UserType;
   onboarding_completed?: boolean;
   is_super_admin?: boolean;
@@ -261,6 +263,7 @@ export interface PrivacySettings {
 
 export interface OrgMembership {
   org_id: string;
+  org_slug: string;
   org_name: string;
   role: string;
   status: string;
@@ -901,4 +904,29 @@ export interface Absentee {
   phone: string;
   absent_days: number;
   joined_date: string;
+}
+
+
+/** A training guide a gym writes for its members. Mirrors internal/guide. */
+export interface TrainingGuide {
+  id: string;
+  title: string;
+  title_ne?: string;
+  content: string;
+  content_ne?: string;
+  category?: string;
+  cover_image_url?: string;
+  author_id?: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TrainingGuideInput {
+  title: string;
+  title_ne?: string;
+  content: string;
+  content_ne?: string;
+  category?: string;
+  cover_image_url?: string;
 }

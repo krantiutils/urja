@@ -92,11 +92,19 @@ func (r *Repository) GetPublishedByID(ctx context.Context, guideID string) (*Tra
 	return &g, nil
 }
 
-// ListPublished retrieves published training guides with optional category filter, search, and pagination.
-func (r *Repository) ListPublished(ctx context.Context, category, search string, limit, offset int) ([]TrainingGuide, int, error) {
-	conditions := []string{"is_published = true"}
-	args := []interface{}{}
-	argIdx := 1
+// ListPublished retrieves one gym's published training guides.
+//
+// The organization filter is not optional. Guides are content a gym writes for
+// its own members, and without it this endpoint served every gym's guides to
+// anybody who asked — the same cross-tenant leak the public package listing
+// had.
+func (r *Repository) ListPublished(ctx context.Context, orgSlug, category, search string, limit, offset int) ([]TrainingGuide, int, error) {
+	conditions := []string{
+		"is_published = true",
+		"organization_id = (SELECT id FROM organizations WHERE slug = $1 AND is_active = true)",
+	}
+	args := []interface{}{orgSlug}
+	argIdx := 2
 
 	if category != "" {
 		conditions = append(conditions, fmt.Sprintf("category = $%d", argIdx))

@@ -61,6 +61,7 @@ function buildNavSections(t: Dictionary, locale: Locale): NavSection[] {
     {
       label: t.nav.engageMembers,
       items: [
+        { label: t.nav.guides, href: `${base}/guides`, icon: <BookOpen className="w-4 h-4" /> },
         { label: t.nav.stories, href: `${base}/stories`, icon: <MessageSquare className="w-4 h-4" /> },
         { label: t.nav.sms, href: `${base}/sms`, icon: <Mail className="w-4 h-4" /> },
         { label: t.nav.feedbacks, href: `${base}/feedbacks`, icon: <MessageCircle className="w-4 h-4" /> },

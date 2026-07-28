@@ -14,7 +14,7 @@ func TestGuide_ListPublished(t *testing.T) {
 	createTestGuide(t, orgID, adminID, "Draft Guide", "Hidden content", "cardio", false)
 
 	// Public endpoint - no auth required
-	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides", nil, "")
+	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides?gym=guide-gym", nil, "")
 	assertStatus(t, resp, http.StatusOK)
 
 	var body map[string]interface{}
@@ -37,7 +37,7 @@ func TestGuide_ListPublished_CategoryFilter(t *testing.T) {
 	createTestGuide(t, orgID, adminID, "Strength Guide", "Content", "strength", true)
 	createTestGuide(t, orgID, adminID, "Cardio Guide", "Content", "cardio", true)
 
-	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides?category=strength", nil, "")
+	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides?gym=guide-gym&category=strength", nil, "")
 	assertStatus(t, resp, http.StatusOK)
 
 	var body map[string]interface{}
@@ -56,7 +56,7 @@ func TestGuide_ListPublished_Search(t *testing.T) {
 	createTestGuide(t, orgID, adminID, "Yoga Basics", "Flexibility content", "flexibility", true)
 	createTestGuide(t, orgID, adminID, "Running Tips", "Cardio content", "cardio", true)
 
-	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides?search=yoga", nil, "")
+	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides?gym=guide-gym&search=yoga", nil, "")
 	assertStatus(t, resp, http.StatusOK)
 
 	var body map[string]interface{}
@@ -243,4 +243,37 @@ func TestGuide_AdminListAll(t *testing.T) {
 	if len(data) != 2 {
 		t.Errorf("expected 2 guides (published + draft), got %d", len(data))
 	}
+}
+
+// Guides are content a gym writes for its own members. The public listing
+// filtered only on is_published, so it served every gym's guides to anybody —
+// the same cross-tenant leak the public package listing had.
+func TestGuide_ListPublished_ScopedToOneGym(t *testing.T) {
+	cleanupTables(t)
+
+	adminID := createTestSuperAdmin(t, "9800800001", "Admin")
+	mineID := createTestOrg(t, adminID, "Mine Gym")
+	theirsID := createTestOrg(t, adminID, "Theirs Gym")
+	createTestGuide(t, mineID, adminID, "Mine Only", "Content", "strength", true)
+	createTestGuide(t, theirsID, adminID, "Theirs Only", "Content", "strength", true)
+
+	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides?gym=mine-gym", nil, "")
+	assertStatus(t, resp, http.StatusOK)
+
+	var body map[string]interface{}
+	parseJSON(t, resp, &body)
+	data := body["data"].([]interface{})
+	if len(data) != 1 {
+		t.Fatalf("expected only Mine Gym's guide, got %d", len(data))
+	}
+	if title := data[0].(map[string]interface{})["title"]; title != "Mine Only" {
+		t.Errorf("expected \"Mine Only\", got %v", title)
+	}
+}
+
+func TestGuide_ListPublished_RequiresGym(t *testing.T) {
+	cleanupTables(t)
+
+	resp := doRequest(t, http.MethodGet, "/api/v1/training-guides", nil, "")
+	assertStatus(t, resp, http.StatusBadRequest)
 }

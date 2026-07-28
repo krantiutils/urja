@@ -28,7 +28,10 @@ type PrivacySettings struct {
 
 // OrgMembership represents a user's membership in a single organization.
 type OrgMembership struct {
-	OrgID    string    `json:"org_id"`
+	OrgID string `json:"org_id"`
+	// OrgSlug is the gym's subdomain label. The member app needs it to fetch
+	// per-gym content such as training guides, which are addressed by slug.
+	OrgSlug  string    `json:"org_slug"`
 	OrgName  string    `json:"org_name"`
 	Role     string    `json:"role"`
 	Status   string    `json:"status"`
@@ -123,7 +126,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*Member, error) {
 // GetOrgMemberships retrieves all organizations a user belongs to.
 func (r *Repository) GetOrgMemberships(ctx context.Context, userID string) ([]OrgMembership, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT om.organization_id, o.name, om.role, om.status, om.joined_at
+		`SELECT om.organization_id, o.slug, o.name, om.role, om.status, om.joined_at
 		 FROM organization_members om
 		 JOIN organizations o ON o.id = om.organization_id
 		 WHERE om.user_id = $1 AND om.status = 'active'
@@ -138,7 +141,7 @@ func (r *Repository) GetOrgMemberships(ctx context.Context, userID string) ([]Or
 	var memberships []OrgMembership
 	for rows.Next() {
 		var om OrgMembership
-		if err := rows.Scan(&om.OrgID, &om.OrgName, &om.Role, &om.Status, &om.JoinedAt); err != nil {
+		if err := rows.Scan(&om.OrgID, &om.OrgSlug, &om.OrgName, &om.Role, &om.Status, &om.JoinedAt); err != nil {
 			return nil, fmt.Errorf("scanning org membership: %w", err)
 		}
 		memberships = append(memberships, om)

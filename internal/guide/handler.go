@@ -2,9 +2,11 @@ package guide
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/urja-gym/urja/pkg/middleware"
@@ -50,7 +52,12 @@ func (h *Handler) ListPublished(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 
-	guides, total, err := h.service.ListPublished(r.Context(), category, search, limit, offset)
+	gym := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("gym")))
+	guides, total, err := h.service.ListPublished(r.Context(), gym, category, search, limit, offset)
+	if errors.Is(err, ErrGymRequired) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "gym is required"})
+		return
+	}
 	if err != nil {
 		h.logger.Error("failed to list published training guides", "error", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})

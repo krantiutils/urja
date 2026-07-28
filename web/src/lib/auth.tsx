@@ -100,6 +100,7 @@ async function resolveOrgDetails(user: User): Promise<User> {
       const primary = ranked.find((o) => o.org_id === user.org_id) ?? ranked[0];
       resolved.org_id = user.org_id || primary.org_id;
       resolved.org_name = primary.org_name;
+      resolved.org_slug = primary.org_slug;
       resolved.org_role = (orgs.find((o) => o.org_id === resolved.org_id) ?? primary).role;
     }
     return resolved;

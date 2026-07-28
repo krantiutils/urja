@@ -2,6 +2,7 @@ package guide
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -65,14 +66,21 @@ func (s *Service) GetPublishedByID(ctx context.Context, guideID string) (*Traini
 }
 
 // ListPublished retrieves published training guides with optional filters.
-func (s *Service) ListPublished(ctx context.Context, category, search string, limit, offset int) ([]TrainingGuide, int, error) {
+// ErrOrgRequired is returned when a public listing does not name a gym.
+var ErrGymRequired = errors.New("gym is required")
+
+func (s *Service) ListPublished(ctx context.Context, orgSlug, category, search string, limit, offset int) ([]TrainingGuide, int, error) {
+	if orgSlug == "" {
+		return nil, 0, ErrGymRequired
+	}
+
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
 	if offset < 0 {
 		offset = 0
 	}
-	return s.repo.ListPublished(ctx, strings.TrimSpace(strings.ToLower(category)), strings.TrimSpace(search), limit, offset)
+	return s.repo.ListPublished(ctx, orgSlug, strings.TrimSpace(strings.ToLower(category)), strings.TrimSpace(search), limit, offset)
 }
 
 // ListAll retrieves all training guides (admin view).
