@@ -13,6 +13,7 @@ import type {
   PrivacySettingsUpdate,
 } from "@/types";
 import {
+  Lock,
   Settings,
   Building2,
   Phone,
@@ -84,6 +85,15 @@ export default function SettingsPage({
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
+
+  // Password. Login by password shipped without any way to set one, so the
+  // only route in was an API call.
+  const [passwordSet, setPasswordSet] = useState<boolean | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Privacy save
   const [privacySaving, setPrivacySaving] = useState(false);
@@ -236,6 +246,39 @@ export default function SettingsPage({
   };
 
   // --- Save privacy ---
+  useEffect(() => {
+    api
+      .passwordStatus()
+      .then((r) => setPasswordSet(r.password_set))
+      .catch(() => setPasswordSet(null));
+  }, []);
+
+  const handleSavePassword = async () => {
+    setPasswordError(null);
+    if (newPassword.length < 8) {
+      setPasswordError(t.settings.passwordTooShort);
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError(t.settings.passwordMismatch);
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      await api.setPassword(newPassword);
+      setPasswordSet(true);
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordSaved(true);
+      setTimeout(() => setPasswordSaved(false), 3000);
+    } catch (err) {
+      setPasswordError(err instanceof ApiRequestError ? err.message : t.common.error);
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
   const handleSavePrivacy = async () => {
     setPrivacySaving(true);
     setPrivacySaved(false);
@@ -467,6 +510,74 @@ export default function SettingsPage({
             {profileSaveError && (
               <span className="text-sm text-red-400">{profileSaveError}</span>
             )}
+          </div>
+
+          {/* Password */}
+          <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl shadow-card overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/[0.06]">
+              <h2 className="text-base font-semibold text-fg flex items-center gap-2">
+                <Lock className="w-4 h-4 text-fg-muted" />
+                {t.settings.password}
+              </h2>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-fg-muted mb-1">{t.settings.passwordIntro}</p>
+              {passwordSet !== null && (
+                <p className="text-xs text-fg-muted mb-4">
+                  {passwordSet ? t.settings.passwordIsSet : t.settings.passwordNotSet}
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="new-password" className="block text-xs text-fg-muted mb-1.5">
+                    {t.settings.newPassword}
+                  </label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirm-password" className="block text-xs text-fg-muted mb-1.5">
+                    {t.settings.confirmPassword}
+                  </label>
+                  <input
+                    id="confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+                  />
+                </div>
+              </div>
+
+              {passwordError && (
+                <p className="mt-3 text-sm text-red-400" role="alert">
+                  {passwordError}
+                </p>
+              )}
+
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSavePassword}
+                  disabled={passwordSaving || !newPassword}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent text-bg-base text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {passwordSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {t.settings.savePassword}
+                </button>
+                {passwordSaved && (
+                  <span className="text-sm text-accent">{t.settings.passwordSaved}</span>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Privacy Settings */}

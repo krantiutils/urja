@@ -18,6 +18,7 @@ import {
   NfcIcon,
   Globe,
   Inbox,
+  UserX,
   Settings,
   ChevronDown,
   Dumbbell,
@@ -54,6 +55,7 @@ function buildNavSections(t: Dictionary, locale: Locale): NavSection[] {
       items: [
         { label: t.nav.staff, href: `${base}/staff`, icon: <UserCog className="w-4 h-4" /> },
         { label: t.nav.accounts, href: `${base}/accounts`, icon: <BookOpen className="w-4 h-4" /> },
+        { label: t.nav.absentees, href: `${base}/absentees`, icon: <UserX className="w-4 h-4" /> },
       ],
     },
     {

@@ -2,13 +2,14 @@ package smsapi
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
 func TestBuyCredits_InvalidQuantity(t *testing.T) {
 	s := NewService(nil, nil, testLogger())
 
-	_, err := s.BuyCredits(context.Background(), "org-1", 0, 1.5, 150, "cash", "user-1")
+	_, err := s.BuyCredits(context.Background(), "org-1", 0, "cash", "user-1")
 	if err == nil {
 		t.Fatal("expected error for zero quantity")
 	}
@@ -17,34 +18,25 @@ func TestBuyCredits_InvalidQuantity(t *testing.T) {
 	}
 }
 
-func TestBuyCredits_InvalidRate(t *testing.T) {
+// The rate is no longer a parameter — the server prices the purchase — so what
+// is worth asserting is that an absurd quantity is refused rather than silently
+// billed.
+func TestBuyCredits_QuantityCeiling(t *testing.T) {
 	s := NewService(nil, nil, testLogger())
 
-	_, err := s.BuyCredits(context.Background(), "org-1", 100, 0, 0, "cash", "user-1")
+	_, err := s.BuyCredits(context.Background(), "org-1", maxCreditsPerPurchase+1, "cash", "user-1")
 	if err == nil {
-		t.Fatal("expected error for zero rate")
+		t.Fatal("expected error for an excessive quantity")
 	}
-	if err.Error() != "rate must be positive" {
-		t.Errorf("error = %q, want %q", err.Error(), "rate must be positive")
-	}
-}
-
-func TestBuyCredits_InvalidAmount(t *testing.T) {
-	s := NewService(nil, nil, testLogger())
-
-	_, err := s.BuyCredits(context.Background(), "org-1", 100, 1.5, 0, "cash", "user-1")
-	if err == nil {
-		t.Fatal("expected error for zero amount")
-	}
-	if err.Error() != "amount must be positive" {
-		t.Errorf("error = %q, want %q", err.Error(), "amount must be positive")
+	if !strings.Contains(err.Error(), "or fewer") {
+		t.Errorf("error = %q, want a quantity ceiling message", err.Error())
 	}
 }
 
 func TestBuyCredits_InvalidPaymentMethod(t *testing.T) {
 	s := NewService(nil, nil, testLogger())
 
-	_, err := s.BuyCredits(context.Background(), "org-1", 100, 1.5, 150, "bitcoin", "user-1")
+	_, err := s.BuyCredits(context.Background(), "org-1", 100, "bitcoin", "user-1")
 	if err == nil {
 		t.Fatal("expected error for invalid payment method")
 	}

@@ -60,6 +60,7 @@ import type {
   DailyDashboard,
   WeightTrend,
   CreateCustomFoodInput,
+  Absentee,
   MemberSubscription,
   SubscriptionPayment,
   AssignPackageRequest,
@@ -1063,6 +1064,37 @@ class ApiClient {
 
   getQrCodeUrl(orgId: string): string {
     return `${this.baseUrl}/api/v1/orgs/${orgId}/qr-code`;
+  }
+
+  /** Tops up SMS credits. The server prices the purchase; only the count is ours to choose. */
+  async buySmsCredits(
+    orgId: string,
+    quantity: number,
+    paymentMethod: string
+  ): Promise<{ quantity: number; amount: number; rate: number }> {
+    return this.request(`/api/v1/orgs/${orgId}/sms/buy`, {
+      method: "POST",
+      body: JSON.stringify({ quantity, payment_method: paymentMethod }),
+    });
+  }
+
+  // --- Absentees (members who have stopped coming) ---
+
+  async listAbsentees(
+    orgId: string,
+    params: { days?: number; limit?: number } = {}
+  ): Promise<{ data: Absentee[] }> {
+    const q = new URLSearchParams();
+    if (params.days) q.set("days", String(params.days));
+    if (params.limit) q.set("limit", String(params.limit));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/absentees${qs ? `?${qs}` : ""}`);
+  }
+
+  async notifyAbsentee(orgId: string, memberId: string): Promise<{ message: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/absentees/${memberId}/notify`, {
+      method: "POST",
+    });
   }
 
   // --- Memberships (selling a package to a member) ---

@@ -55,7 +55,9 @@ func (r *Repository) List(ctx context.Context, orgID string, minDays, limit, off
 	}
 	defer rows.Close()
 
-	var absentees []Absentee
+	// Non-nil so an empty result serializes as [] rather than null: clients
+	// iterate this directly.
+	absentees := []Absentee{}
 	for rows.Next() {
 		var a Absentee
 		if err := rows.Scan(&a.UserID, &a.Name, &a.AvatarURL, &a.Phone,

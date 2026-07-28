@@ -891,3 +891,14 @@ export interface AssignPackageRequest {
   discount?: number;
   payment_reference?: string;
 }
+
+
+/** A member who has stopped turning up. Mirrors internal/absentee. */
+export interface Absentee {
+  user_id: string;
+  name: string;
+  avatar_url?: string;
+  phone: string;
+  absent_days: number;
+  joined_date: string;
+}

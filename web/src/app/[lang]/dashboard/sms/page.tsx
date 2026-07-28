@@ -58,6 +58,14 @@ export default function SmsPage({
   const orgId = user?.org_id;
 
   const [balance, setBalance] = useState<SmsBalance | null>(null);
+
+  // Topping up. The balance was displayed with no way to add to it, so a gym
+  // that ran out had no route back inside the product.
+  const [showTopUp, setShowTopUp] = useState(false);
+  const [topUpQty, setTopUpQty] = useState("500");
+  const [topUpMethod, setTopUpMethod] = useState("cash");
+  const [topUpBusy, setTopUpBusy] = useState(false);
+  const [topUpError, setTopUpError] = useState<string | null>(null);
   const [purchases, setPurchases] = useState<SmsPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -244,6 +252,16 @@ export default function SmsPage({
               <p className="text-xs text-fg-muted font-mono uppercase tracking-widest mt-1">
                 {t.sms.remaining}
               </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setTopUpError(null);
+                  setShowTopUp(true);
+                }}
+                className="mt-3 text-xs text-accent hover:underline"
+              >
+                {t.smsTopUp.title}
+              </button>
             </div>
 
             {/* Total Purchased */}
@@ -556,6 +574,88 @@ export default function SmsPage({
             </div>
           </div>
         </>
+      )}
+
+      {showTopUp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60"
+            onClick={() => setShowTopUp(false)}
+            aria-hidden="true"
+          />
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!orgId) return;
+              setTopUpBusy(true);
+              setTopUpError(null);
+              try {
+                await api.buySmsCredits(orgId, parseInt(topUpQty, 10) || 0, topUpMethod);
+                setShowTopUp(false);
+                await fetchData();
+              } catch (err) {
+                setTopUpError(err instanceof ApiRequestError ? err.message : t.common.error);
+              } finally {
+                setTopUpBusy(false);
+              }
+            }}
+            className="relative w-full max-w-sm bg-bg-elevated border border-white/[0.06] rounded-2xl p-5 shadow-card"
+          >
+            <h2 className="text-base font-semibold text-fg mb-4">{t.smsTopUp.title}</h2>
+
+            {topUpError && (
+              <p className="mb-3 text-sm text-red-400" role="alert">
+                {topUpError}
+              </p>
+            )}
+
+            <label htmlFor="topup-qty" className="block text-xs text-fg-muted mb-1.5">
+              {t.smsTopUp.quantity}
+            </label>
+            <input
+              id="topup-qty"
+              type="number"
+              min="1"
+              value={topUpQty}
+              onChange={(e) => setTopUpQty(e.target.value)}
+              className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+            />
+
+            <label htmlFor="topup-method" className="block text-xs text-fg-muted mb-1.5 mt-3">
+              {t.smsTopUp.method}
+            </label>
+            <select
+              id="topup-method"
+              value={topUpMethod}
+              onChange={(e) => setTopUpMethod(e.target.value)}
+              className="w-full px-3 py-2.5 bg-input-bg border border-white/[0.06] rounded-xl text-sm text-fg focus:outline-none focus:border-accent/50"
+            >
+              <option value="cash">{t.dues.cash}</option>
+              <option value="khalti">Khalti</option>
+              <option value="bank_transfer">{t.dues.bank}</option>
+            </select>
+
+            <p className="mt-2 text-xs text-fg-muted">{t.smsTopUp.priceNote}</p>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="submit"
+                disabled={topUpBusy || !topUpQty}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-bg-base text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {topUpBusy && <Loader2 className="w-4 h-4 animate-spin" />}
+                {t.smsTopUp.buy}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTopUp(false)}
+                className="px-4 py-2.5 rounded-xl border border-white/[0.06] text-sm text-fg-muted hover:bg-surface transition-colors"
+              >
+                {t.common.cancel}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );

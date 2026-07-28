@@ -1,6 +1,9 @@
 package smsapi
 
 import (
+	"math"
+	"os"
+	"strconv"
 	"context"
 	"fmt"
 	"log/slog"
@@ -10,15 +13,30 @@ import (
 )
 
 // Service handles SMS business logic.
+// Server-owned pricing. A gym chooses how many credits to buy; what they cost
+// is not the caller's to state.
+const (
+	defaultCreditRate     = 1.50 // NPR per SMS
+	maxCreditsPerPurchase = 100000
+)
+
 type Service struct {
-	repo      *Repository
-	smsClient *sms.Client
-	logger    *slog.Logger
+	repo       *Repository
+	smsClient  *sms.Client
+	logger     *slog.Logger
+	creditRate float64
 }
 
 // NewService creates a new SMS API service.
 func NewService(repo *Repository, smsClient *sms.Client, logger *slog.Logger) *Service {
-	return &Service{repo: repo, smsClient: smsClient, logger: logger}
+	rate := defaultCreditRate
+	// Overridable for a gym on different terms, but still never by the client.
+	if v := os.Getenv("SMS_CREDIT_RATE"); v != "" {
+		if parsed, err := strconv.ParseFloat(v, 64); err == nil && parsed > 0 {
+			rate = parsed
+		}
+	}
+	return &Service{repo: repo, smsClient: smsClient, logger: logger, creditRate: rate}
 }
 
 // GetBalance retrieves SMS balance and stats.
@@ -27,16 +45,23 @@ func (s *Service) GetBalance(ctx context.Context, orgID string) (*Balance, error
 }
 
 // BuyCredits purchases SMS credits for an org.
-func (s *Service) BuyCredits(ctx context.Context, orgID string, quantity int, rate, amount float64, paymentMethod, purchasedBy string) (*Purchase, error) {
+// BuyCredits records a purchase of SMS credits.
+//
+// The price is decided here, not by the caller. This previously took the rate
+// and the total from the request body and stored both, so anybody who could
+// reach the endpoint could award themselves ten thousand credits for one rupee
+// and leave a matching entry in the books. Quantity is the only thing the
+// caller gets to choose.
+func (s *Service) BuyCredits(ctx context.Context, orgID string, quantity int, paymentMethod, purchasedBy string) (*Purchase, error) {
 	if quantity <= 0 {
 		return nil, fmt.Errorf("quantity must be positive")
 	}
-	if rate <= 0 {
-		return nil, fmt.Errorf("rate must be positive")
+	if quantity > maxCreditsPerPurchase {
+		return nil, fmt.Errorf("quantity must be %d or fewer", maxCreditsPerPurchase)
 	}
-	if amount <= 0 {
-		return nil, fmt.Errorf("amount must be positive")
-	}
+
+	rate := s.creditRate
+	amount := math.Round(float64(quantity)*rate*100) / 100
 
 	validMethods := map[string]bool{"khalti": true, "cash": true, "manual": true, "bank_transfer": true}
 	if !validMethods[paymentMethod] {
@@ -55,6 +80,9 @@ func (s *Service) BuyCredits(ctx context.Context, orgID string, quantity int, ra
 	)
 	return p, nil
 }
+
+// CreditRate is the price the gym pays per SMS.
+func (s *Service) CreditRate() float64 { return s.creditRate }
 
 // SendSMS sends SMS to specified members or all members in the org.
 func (s *Service) SendSMS(ctx context.Context, orgID, message, sentBy string, memberIDs []string) (*Campaign, error) {

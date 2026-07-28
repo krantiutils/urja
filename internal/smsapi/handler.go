@@ -20,11 +20,12 @@ func NewHandler(service *Service, logger *slog.Logger) *Handler {
 	return &Handler{service: service, logger: logger}
 }
 
+// Rate and amount are deliberately absent: the server prices the purchase.
+// Accepting them from the caller is how ten thousand credits could be bought
+// for a recorded one rupee.
 type buyRequest struct {
-	Quantity      int     `json:"quantity"`
-	Rate          float64 `json:"rate"`
-	Amount        float64 `json:"amount"`
-	PaymentMethod string  `json:"payment_method"`
+	Quantity      int    `json:"quantity"`
+	PaymentMethod string `json:"payment_method"`
 }
 
 type sendRequest struct {
@@ -70,7 +71,7 @@ func (h *Handler) Buy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	purchase, err := h.service.BuyCredits(r.Context(), orgID, req.Quantity, req.Rate, req.Amount, req.PaymentMethod, userID)
+	purchase, err := h.service.BuyCredits(r.Context(), orgID, req.Quantity, req.PaymentMethod, userID)
 	if err != nil {
 		h.logger.Error("failed to buy SMS credits", "error", err, "org_id", orgID)
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
