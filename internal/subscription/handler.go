@@ -97,6 +97,13 @@ func (h *Handler) ListExpired(w http.ResponseWriter, r *http.Request) {
 
 // AssignPackage handles POST /api/v1/orgs/{orgId}/members/{memberId}/packages/assign
 func (h *Handler) AssignPackage(w http.ResponseWriter, r *http.Request) {
+	// Recorded on the ledger entry as who took the money.
+	entryByUserID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
 	orgID, ok := middleware.OrgIDFromContext(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
@@ -114,7 +121,7 @@ func (h *Handler) AssignPackage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sub, pmt, err := h.service.AssignPackage(r.Context(), orgID, memberID, req)
+	sub, pmt, err := h.service.AssignPackage(r.Context(), orgID, memberID, entryByUserID, req)
 	if err != nil {
 		h.handleServiceError(w, err, "assign package", orgID, memberID)
 		return
@@ -128,6 +135,13 @@ func (h *Handler) AssignPackage(w http.ResponseWriter, r *http.Request) {
 
 // RenewPackage handles POST /api/v1/orgs/{orgId}/members/{memberId}/packages/renew
 func (h *Handler) RenewPackage(w http.ResponseWriter, r *http.Request) {
+	// Recorded on the ledger entry as who took the money.
+	entryByUserID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
 	orgID, ok := middleware.OrgIDFromContext(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
@@ -145,7 +159,7 @@ func (h *Handler) RenewPackage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sub, pmt, err := h.service.RenewPackage(r.Context(), orgID, memberID, req)
+	sub, pmt, err := h.service.RenewPackage(r.Context(), orgID, memberID, entryByUserID, req)
 	if err != nil {
 		h.handleServiceError(w, err, "renew package", orgID, memberID)
 		return
@@ -159,6 +173,13 @@ func (h *Handler) RenewPackage(w http.ResponseWriter, r *http.Request) {
 
 // ExtendPackage handles POST /api/v1/orgs/{orgId}/members/{memberId}/packages/extend
 func (h *Handler) ExtendPackage(w http.ResponseWriter, r *http.Request) {
+	// Recorded on the ledger entry as who took the money.
+	entryByUserID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
 	orgID, ok := middleware.OrgIDFromContext(r.Context())
 	if !ok {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
@@ -176,7 +197,7 @@ func (h *Handler) ExtendPackage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sub, pmt, err := h.service.ExtendPackage(r.Context(), orgID, memberID, req)
+	sub, pmt, err := h.service.ExtendPackage(r.Context(), orgID, memberID, entryByUserID, req)
 	if err != nil {
 		h.handleServiceError(w, err, "extend package", orgID, memberID)
 		return

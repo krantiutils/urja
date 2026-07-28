@@ -189,7 +189,7 @@ type memberPackageRow struct {
 
 // AssignPackage creates a new member_package and a corresponding payment record.
 // Runs within a transaction.
-func (r *Repository) AssignPackage(ctx context.Context, orgID, memberID string, req AssignRequest, pkg *Package) (*MemberSubscription, *Payment, error) {
+func (r *Repository) AssignPackage(ctx context.Context, orgID, memberID string, req AssignRequest, pkg *Package, entryByUserID string) (*MemberSubscription, *Payment, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("begin transaction: %w", err)
@@ -233,6 +233,11 @@ func (r *Repository) AssignPackage(ctx context.Context, orgID, memberID string, 
 	).Scan(&pmt.ID, &pmt.MemberPackageID, &pmt.Particular, &pmt.TotalAmount, &pmt.Discount, &pmt.PaidAmount, &pmt.Due, &pmt.PaymentMethod, &pmt.PaymentReference, &pmt.PaymentDate)
 	if err != nil {
 		return nil, nil, fmt.Errorf("inserting payment: %w", err)
+	}
+
+	if err := recordPackageIncome(ctx, tx, orgID, particular, req.AmountPaid,
+		req.PaymentMethod, req.PaymentReference, entryByUserID); err != nil {
+		return nil, nil, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -291,7 +296,7 @@ func (r *Repository) GetMemberPackage(ctx context.Context, orgID, memberPackageI
 }
 
 // RenewPackage expires the old subscription and creates a new one with a payment.
-func (r *Repository) RenewPackage(ctx context.Context, orgID, memberID string, oldMP *memberPackageRow, pkg *Package, req RenewRequest) (*MemberSubscription, *Payment, error) {
+func (r *Repository) RenewPackage(ctx context.Context, orgID, memberID string, oldMP *memberPackageRow, pkg *Package, req RenewRequest, entryByUserID string) (*MemberSubscription, *Payment, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("begin transaction: %w", err)
@@ -342,6 +347,11 @@ func (r *Repository) RenewPackage(ctx context.Context, orgID, memberID string, o
 		return nil, nil, fmt.Errorf("inserting renewal payment: %w", err)
 	}
 
+	if err := recordPackageIncome(ctx, tx, orgID, particular, req.AmountPaid,
+		req.PaymentMethod, req.PaymentReference, entryByUserID); err != nil {
+		return nil, nil, err
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, nil, fmt.Errorf("commit transaction: %w", err)
 	}
@@ -368,7 +378,7 @@ func (r *Repository) RenewPackage(ctx context.Context, orgID, memberID string, o
 }
 
 // ExtendPackage adds extra days to an existing subscription and records a payment.
-func (r *Repository) ExtendPackage(ctx context.Context, orgID, memberID string, oldMP *memberPackageRow, pkg *Package, req ExtendRequest) (*MemberSubscription, *Payment, error) {
+func (r *Repository) ExtendPackage(ctx context.Context, orgID, memberID string, oldMP *memberPackageRow, pkg *Package, req ExtendRequest, entryByUserID string) (*MemberSubscription, *Payment, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("begin transaction: %w", err)
@@ -402,6 +412,11 @@ func (r *Repository) ExtendPackage(ctx context.Context, orgID, memberID string, 
 	).Scan(&pmt.ID, &pmt.MemberPackageID, &pmt.Particular, &pmt.TotalAmount, &pmt.Discount, &pmt.PaidAmount, &pmt.Due, &pmt.PaymentMethod, &pmt.PaymentReference, &pmt.PaymentDate)
 	if err != nil {
 		return nil, nil, fmt.Errorf("inserting extension payment: %w", err)
+	}
+
+	if err := recordPackageIncome(ctx, tx, orgID, particular, req.AmountPaid,
+		req.PaymentMethod, req.PaymentReference, entryByUserID); err != nil {
+		return nil, nil, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -548,7 +563,6 @@ func nilIfEmpty(s string) *string {
 	return &s
 }
 
-
 // RaiseDueForBalance records the unpaid remainder of a package as a due.
 //
 // Assigning a package takes an amount_paid, and gyms routinely take part of it
@@ -574,4 +588,36 @@ func (r *Repository) RaiseDueForBalance(ctx context.Context, orgID, memberID str
 		return "", fmt.Errorf("raising due for package balance: %w", err)
 	}
 	return dueID, nil
+}
+
+func defaultIfEmpty(s, fallback string) string {
+	if s == "" {
+		return fallback
+	}
+	return s
+}
+
+// recordPackageIncome posts money taken for a package to the ledger.
+//
+// Package payments were written to `payments` but never to `transactions`,
+// which is what the accounts screen sums — so a gym's reported income showed
+// dues collections only and missed most of its revenue. This runs inside the
+// caller's transaction: a payment recorded against a member but absent from the
+// books is exactly the bug being fixed, so the two must not be able to diverge.
+func recordPackageIncome(ctx context.Context, tx pgx.Tx, orgID, description string,
+	amount float64, method, reference, entryByUserID string) error {
+	if amount <= 0 {
+		return nil
+	}
+	_, err := tx.Exec(ctx,
+		`INSERT INTO transactions
+		        (organization_id, category, description, transaction_date,
+		         transaction_type, amount, payment_type, reference, entry_by)
+		 VALUES ($1, 'Subscription', $2, CURRENT_DATE, 'income', $3, $4, $5, $6)`,
+		orgID, description, amount, defaultIfEmpty(method, "cash"),
+		nilIfEmpty(reference), entryByUserID)
+	if err != nil {
+		return fmt.Errorf("recording income for package payment: %w", err)
+	}
+	return nil
 }

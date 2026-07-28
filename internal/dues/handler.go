@@ -75,10 +75,12 @@ func (h *Handler) Pay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.DueID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "due_id is required"})
-		return
-	}
+	// The due is identified by the path. The handler previously read it only
+	// from the body while the route declared it in the path, so every payment
+	// recorded from the dashboard failed with "due_id is required" — the one
+	// action that page exists for. chi will not route without the segment, so
+	// no body fallback is needed.
+	dueID := chi.URLParam(r, "dueId")
 
 	if req.Amount <= 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "amount must be positive"})
@@ -90,9 +92,9 @@ func (h *Handler) Pay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rec, err := h.service.Pay(r.Context(), orgID, req.DueID, userID, req.Amount, req.PaymentMethod, req.PaymentReference)
+	rec, err := h.service.Pay(r.Context(), orgID, dueID, userID, req.Amount, req.PaymentMethod, req.PaymentReference)
 	if err != nil {
-		h.logger.Error("payment failed", "error", err, "org_id", orgID, "due_id", req.DueID)
+		h.logger.Error("payment failed", "error", err, "org_id", orgID, "due_id", dueID)
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}

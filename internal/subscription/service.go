@@ -63,7 +63,7 @@ func (s *Service) ListExpired(ctx context.Context, orgID string, limit, offset i
 }
 
 // AssignPackage assigns a package to a member with payment recording.
-func (s *Service) AssignPackage(ctx context.Context, orgID, memberID string, req AssignRequest) (*MemberSubscription, *Payment, error) {
+func (s *Service) AssignPackage(ctx context.Context, orgID, memberID, entryByUserID string, req AssignRequest) (*MemberSubscription, *Payment, error) {
 	if err := s.validateAssignRequest(req); err != nil {
 		return nil, nil, err
 	}
@@ -85,7 +85,7 @@ func (s *Service) AssignPackage(ctx context.Context, orgID, memberID string, req
 		return nil, nil, fmt.Errorf("%w: registration is disabled for this package", ErrInvalidPackage)
 	}
 
-	sub, pmt, err := s.repo.AssignPackage(ctx, orgID, memberID, req, pkg)
+	sub, pmt, err := s.repo.AssignPackage(ctx, orgID, memberID, req, pkg, entryByUserID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("assigning package: %w", err)
 	}
@@ -126,7 +126,7 @@ func packageBalance(pkg *Package, req AssignRequest) float64 {
 }
 
 // RenewPackage renews an existing subscription.
-func (s *Service) RenewPackage(ctx context.Context, orgID, memberID string, req RenewRequest) (*MemberSubscription, *Payment, error) {
+func (s *Service) RenewPackage(ctx context.Context, orgID, memberID, entryByUserID string, req RenewRequest) (*MemberSubscription, *Payment, error) {
 	if err := s.validateRenewRequest(req); err != nil {
 		return nil, nil, err
 	}
@@ -148,7 +148,7 @@ func (s *Service) RenewPackage(ctx context.Context, orgID, memberID string, req 
 		return nil, nil, err
 	}
 
-	sub, pmt, err := s.repo.RenewPackage(ctx, orgID, memberID, oldMP, pkg, req)
+	sub, pmt, err := s.repo.RenewPackage(ctx, orgID, memberID, oldMP, pkg, req, entryByUserID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("renewing package: %w", err)
 	}
@@ -164,7 +164,7 @@ func (s *Service) RenewPackage(ctx context.Context, orgID, memberID string, req 
 }
 
 // ExtendPackage extends an existing active subscription.
-func (s *Service) ExtendPackage(ctx context.Context, orgID, memberID string, req ExtendRequest) (*MemberSubscription, *Payment, error) {
+func (s *Service) ExtendPackage(ctx context.Context, orgID, memberID, entryByUserID string, req ExtendRequest) (*MemberSubscription, *Payment, error) {
 	if err := s.validateExtendRequest(req); err != nil {
 		return nil, nil, err
 	}
@@ -189,7 +189,7 @@ func (s *Service) ExtendPackage(ctx context.Context, orgID, memberID string, req
 		return nil, nil, fmt.Errorf("%w: subscription is not active or has expired", ErrInvalidRequest)
 	}
 
-	sub, pmt, err := s.repo.ExtendPackage(ctx, orgID, memberID, oldMP, pkg, req)
+	sub, pmt, err := s.repo.ExtendPackage(ctx, orgID, memberID, oldMP, pkg, req, entryByUserID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("extending package: %w", err)
 	}

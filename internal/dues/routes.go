@@ -12,7 +12,9 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 	r.Get("/", h.List)
 	r.Post("/", h.Create)
-	r.Post("/{memberId}/pay", h.Pay)
+	// The path carries a due id, not a member id — it was named
+	// {memberId} while the handler ignored it entirely.
+	r.Post("/{dueId}/pay", h.Pay)
 
 	// Block access is admin-only
 	r.Group(func(r chi.Router) {
