@@ -25,6 +25,7 @@ function vimeoEmbed(url: string): string | null {
 export default function MediaRenderer({ section, locale }: { section: Section; locale: Locale }) {
   const { content, variant } = section;
   const url = str(content, "url");
+  const poster = str(content, "poster");
   const caption = text(content, "caption", locale);
   const alt = text(content, "alt", locale) || caption;
 
@@ -50,7 +51,17 @@ export default function MediaRenderer({ section, locale }: { section: Section; l
           </div>
         ) : (
           // eslint-disable-next-line jsx-a11y/media-has-caption -- captions aren't part of the source content model
-          <video controls className="w-full rounded-[var(--site-radius)]" aria-label={caption || alt || "Video"}>
+          // preload="metadata" so a phone on mobile data does not pull the whole
+          // clip before anyone presses play; the poster carries the first
+          // impression. max-h keeps a 9:16 reel from swallowing a desktop page.
+          <video
+            controls
+            playsInline
+            preload="metadata"
+            poster={poster || undefined}
+            className="mx-auto max-h-[70vh] w-auto max-w-full rounded-[var(--site-radius)]"
+            aria-label={caption || alt || "Video"}
+          >
             <source src={url} />
           </video>
         )}
