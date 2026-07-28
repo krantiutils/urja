@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getDictionary } from "@/lib/i18n";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { useAuth, isOperator } from "@/lib/auth";
 import type { Locale, UserType, OnboardingInput, NutritionGoal } from "@/types";
 import {
   Loader2,
@@ -88,7 +88,7 @@ export default function OnboardingPage({
   const t = getDictionary(locale);
   const ob = t.onboarding;
   const router = useRouter();
-  const { isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading, user } = useAuth();
 
   // Form state
   const [form, setForm] = useState<OnboardingState>({
@@ -102,6 +102,16 @@ export default function OnboardingPage({
     gender: "",
     activity_level: "moderate",
   });
+
+  // Somebody who runs a gym has no business being asked which gym they would
+  // like to join. Reachable directly by URL, or by an operator whose
+  // onboarding_completed was never set, so it is guarded here too rather than
+  // only at the login redirect.
+  useEffect(() => {
+    if (!authLoading && isOperator(user)) {
+      router.replace(`/${locale}/dashboard`);
+    }
+  }, [authLoading, user, router, locale]);
 
   // Step management
   const [step, setStep] = useState(1);

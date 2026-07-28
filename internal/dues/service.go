@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 )
 
 // Service handles dues business logic.
@@ -90,4 +91,29 @@ func (s *Service) BlockAccess(ctx context.Context, orgID, memberID string) (int6
 	)
 
 	return count, nil
+}
+
+// Create records a new amount owed by a member.
+func (s *Service) Create(ctx context.Context, orgID string, in CreateInput) (*Due, error) {
+	if in.UserID == "" {
+		return nil, fmt.Errorf("member is required")
+	}
+	if in.Amount <= 0 {
+		return nil, fmt.Errorf("amount must be greater than 0")
+	}
+	if _, err := time.Parse("2006-01-02", in.DueDate); err != nil {
+		return nil, fmt.Errorf("due_date must be YYYY-MM-DD")
+	}
+	if len(in.Description) > 500 {
+		return nil, fmt.Errorf("description is too long")
+	}
+
+	due, err := s.repo.Create(ctx, orgID, in)
+	if err != nil {
+		return nil, err
+	}
+
+	s.logger.Info("due recorded", "due_id", due.ID, "org_id", orgID,
+		"user_id", in.UserID, "amount", in.Amount)
+	return due, nil
 }

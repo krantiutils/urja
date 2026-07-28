@@ -2,6 +2,7 @@ package dues
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -9,6 +10,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// ErrMemberNotInOrg is returned when a due is raised against somebody who is
+// not an active member of that organization.
+var ErrMemberNotInOrg = errors.New("member not found in this organization")
 
 // Due represents an outstanding payment owed by a member.
 type Due struct {
@@ -253,4 +258,44 @@ func nilIfEmpty(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// CreateInput is a new amount owed by a member.
+type CreateInput struct {
+	UserID      string
+	Amount      float64
+	DueDate     string
+	Description string
+}
+
+// Create records that a member owes money.
+//
+// Until this existed the dues table could be listed, paid and used to block
+// access, but nothing in the product ever wrote to it — the only INSERT lived
+// in a test helper. A gym had no way to record that somebody owed them.
+func (r *Repository) Create(ctx context.Context, orgID string, in CreateInput) (*Due, error) {
+	var d Due
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO dues (organization_id, user_id, amount, due_date, description, status)
+		 SELECT $1, $2, $3, $4::date, $5, 'pending'
+		 -- Scoped by membership, so staff cannot raise a due against somebody
+		 -- who trains at a different gym.
+		 WHERE EXISTS (
+		   SELECT 1 FROM organization_members om
+		   WHERE om.organization_id = $1 AND om.user_id = $2 AND om.status = 'active'
+		 )
+		 RETURNING id, organization_id, user_id, amount, due_date::text,
+		           COALESCE(description, ''), status, created_at`,
+		orgID, in.UserID, in.Amount, in.DueDate, nilIfEmpty(in.Description),
+	).Scan(&d.ID, &d.OrgID, &d.UserID, &d.Amount, &d.DueDate,
+		&d.Description, &d.Status, &d.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrMemberNotInOrg
+	}
+	if err != nil {
+		return nil, fmt.Errorf("creating due: %w", err)
+	}
+
+	// Filled in by the caller's list view; not worth a second query here.
+	return &d, nil
 }

@@ -19,8 +19,8 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (phone: string) => Promise<void>;
-  verifyOtp: (phone: string, otp: string) => Promise<{ is_new_user: boolean; onboarding_completed: boolean }>;
-  passwordLogin: (phone: string, password: string) => Promise<{ is_new_user: boolean; onboarding_completed: boolean }>;
+  verifyOtp: (phone: string, otp: string) => Promise<LoginResult>;
+  passwordLogin: (phone: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
 }
 
@@ -56,6 +56,30 @@ function getUserFromToken(token: string): User | null {
   };
 }
 
+/** Orders roles by how much of the product they operate rather than consume. */
+function operatorRank(role: string | undefined): number {
+  if (role === "admin") return 3;
+  if (role === "staff") return 2;
+  if (role === "member") return 1;
+  return 0;
+}
+
+/**
+ * Whether this account runs a gym rather than trains at one. Drives both where
+ * login lands and whether member onboarding applies.
+ */
+export interface LoginResult {
+  is_new_user: boolean;
+  onboarding_completed: boolean;
+  /** Resolved against real memberships, so callers can route on org_role. */
+  user: User | null;
+}
+
+export function isOperator(user: User | null): boolean {
+  if (!user) return false;
+  return Boolean(user.is_super_admin) || operatorRank(user.org_role) >= 2;
+}
+
 async function resolveOrgDetails(user: User): Promise<User> {
   try {
     const profile = await api.getMyProfile();
@@ -64,10 +88,19 @@ async function resolveOrgDetails(user: User): Promise<User> {
       ...user,
       user_type: profile.user_type as UserType | undefined,
       onboarding_completed: profile.onboarding_completed,
+      profile_loaded: true,
     };
     if (orgs.length > 0) {
-      resolved.org_id = user.org_id || orgs[0].org_id;
-      resolved.org_name = orgs[0].org_name;
+      // Prefer an org the user actually operates: somebody who is an admin of
+      // one gym and a member of another should land in the dashboard, not be
+      // treated as a member because that membership happened to sort first.
+      const ranked = [...orgs].sort(
+        (a, b) => operatorRank(b.role) - operatorRank(a.role)
+      );
+      const primary = ranked.find((o) => o.org_id === user.org_id) ?? ranked[0];
+      resolved.org_id = user.org_id || primary.org_id;
+      resolved.org_name = primary.org_name;
+      resolved.org_role = (orgs.find((o) => o.org_id === resolved.org_id) ?? primary).role;
     }
     return resolved;
   } catch {
@@ -175,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const user = getUserFromToken(tokens.access_token);
     if (!user) {
       setState({ user: null, isLoading: false, isAuthenticated: false });
-      return { is_new_user: false, onboarding_completed: false };
+      return { is_new_user: false, onboarding_completed: false, user: null };
     }
     // Enrich user with onboarding status from token response
     const enrichedUser: User = {
@@ -187,6 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {
       is_new_user: tokens.is_new_user,
       onboarding_completed: tokens.onboarding_completed,
+      user: resolved,
     };
   }, []);
 

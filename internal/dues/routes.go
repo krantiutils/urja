@@ -11,6 +11,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Use(middleware.RequireOrgRole("admin", "staff"))
 
 	r.Get("/", h.List)
+	r.Post("/", h.Create)
 	r.Post("/{memberId}/pay", h.Pay)
 
 	// Block access is admin-only

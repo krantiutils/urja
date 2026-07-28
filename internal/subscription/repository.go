@@ -547,3 +547,31 @@ func nilIfEmpty(s string) *string {
 	}
 	return &s
 }
+
+
+// RaiseDueForBalance records the unpaid remainder of a package as a due.
+//
+// Assigning a package takes an amount_paid, and gyms routinely take part of it
+// up front. Before this the shortfall went nowhere: the subscription recorded
+// what was paid, and the amount still owed existed only in somebody's head.
+//
+// Written here rather than by the dues package to avoid a cycle, and scoped by
+// active membership for the same reason dues.Create is.
+func (r *Repository) RaiseDueForBalance(ctx context.Context, orgID, memberID string, balance float64, packageName, dueDate string) (string, error) {
+	var dueID string
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO dues (organization_id, user_id, amount, due_date, description, status)
+		 SELECT $1, $2, $3, $4::date, $5, 'pending'
+		 WHERE EXISTS (
+		   SELECT 1 FROM organization_members om
+		   WHERE om.organization_id = $1 AND om.user_id = $2 AND om.status = 'active'
+		 )
+		 RETURNING id`,
+		orgID, memberID, balance, dueDate,
+		fmt.Sprintf("Balance for %s", packageName),
+	).Scan(&dueID)
+	if err != nil {
+		return "", fmt.Errorf("raising due for package balance: %w", err)
+	}
+	return dueID, nil
+}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"time"
 )
 
@@ -89,6 +90,23 @@ func (s *Service) AssignPackage(ctx context.Context, orgID, memberID string, req
 		return nil, nil, fmt.Errorf("assigning package: %w", err)
 	}
 
+	// Anything not paid up front is money the gym is owed, so record it where
+	// the gym actually looks for that: due payments. Without this the shortfall
+	// was simply lost.
+	if balance := packageBalance(pkg, req); balance > 0 {
+		dueID, err := s.repo.RaiseDueForBalance(
+			ctx, orgID, memberID, balance, pkg.Name, sub.EndDate)
+		if err != nil {
+			// The subscription is already committed and the member has access;
+			// failing the whole assignment over the bookkeeping would be worse.
+			s.logger.Error("failed to raise due for package balance",
+				"error", err, "org_id", orgID, "member_id", memberID, "balance", balance)
+		} else {
+			s.logger.Info("due raised for package balance",
+				"due_id", dueID, "member_id", memberID, "balance", balance)
+		}
+	}
+
 	s.logger.Info("package assigned",
 		"org_id", orgID,
 		"member_id", memberID,
@@ -97,6 +115,14 @@ func (s *Service) AssignPackage(ctx context.Context, orgID, memberID string, req
 	)
 
 	return sub, pmt, nil
+}
+
+// packageBalance is what remains owed after the up-front payment and any
+// discount. Rounded to paisa so floating-point noise does not raise a due for
+// a fraction of a rupee.
+func packageBalance(pkg *Package, req AssignRequest) float64 {
+	balance := pkg.Price - req.Discount - req.AmountPaid
+	return math.Round(balance*100) / 100
 }
 
 // RenewPackage renews an existing subscription.

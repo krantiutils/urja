@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { useAuth, isOperator, type LoginResult } from "@/lib/auth";
 import { getDictionary } from "@/lib/i18n";
 import { ApiRequestError } from "@/lib/api";
 import type { Locale } from "@/types";
@@ -92,27 +92,36 @@ export default function LoginPage({
     [phone, login, t]
   );
 
-  /** Where a session goes once established, regardless of how it was created. */
+  /**
+   * Where a session goes once established, regardless of how it was created.
+   *
+   * Routing is decided by the caller's real organization role, not by the JWT
+   * "role" claim — that claim is literally "member" for every account, so
+   * trusting it sent gym owners to the member app and pushed them through an
+   * onboarding flow that asks which gym they would like to join.
+   */
   const routeAfterLogin = useCallback(
-    (result: { onboarding_completed: boolean }) => {
-      const token = localStorage.getItem("access_token");
-      const claims = (() => {
-        try {
-          return token ? JSON.parse(atob(token.split(".")[1])) : null;
-        } catch {
-          return null;
-        }
-      })();
+    (result: LoginResult) => {
+      const account = result.user;
 
-      if (claims?.is_super_admin) {
+      if (account?.is_super_admin) {
         router.replace(`/${locale}/super-admin`);
         return;
       }
+
+      // Onboarding collects a training goal and a gym to join. Neither means
+      // anything to somebody who runs the gym, so operators skip it.
+      if (isOperator(account)) {
+        router.replace(`/${locale}/dashboard`);
+        return;
+      }
+
       if (!result.onboarding_completed) {
         router.replace(`/${locale}/onboarding`);
         return;
       }
-      router.replace(`/${locale}/${claims?.role === "member" ? "member" : "dashboard"}`);
+
+      router.replace(`/${locale}/member`);
     },
     [router, locale]
   );
@@ -157,33 +166,7 @@ export default function LoginPage({
       setIsSubmitting(true);
       try {
         const cleaned = phone.replace(/\s+/g, "");
-        const result = await verifyOtp(cleaned, otp);
-        // Check super admin first
-        const token = localStorage.getItem("access_token");
-        if (token) {
-          try {
-            const payload = JSON.parse(atob(token.split(".")[1]));
-            if (payload.is_super_admin) {
-              router.replace(`/${locale}/super-admin`);
-              return;
-            }
-          } catch {}
-        }
-        // New users or users who haven't completed onboarding → onboarding page
-        if (!result.onboarding_completed) {
-          router.replace(`/${locale}/onboarding`);
-          return;
-        }
-        if (token) {
-          try {
-            const payload = JSON.parse(atob(token.split(".")[1]));
-            if (payload.role === "member") {
-              router.replace(`/${locale}/member`);
-              return;
-            }
-          } catch {}
-        }
-        router.replace(`/${locale}/dashboard`);
+        routeAfterLogin(await verifyOtp(cleaned, otp));
       } catch (err) {
         if (err instanceof ApiRequestError) {
           setError(err.message);
@@ -194,7 +177,7 @@ export default function LoginPage({
         setIsSubmitting(false);
       }
     },
-    [otp, phone, verifyOtp, router, locale, t]
+    [otp, phone, verifyOtp, routeAfterLogin, t]
   );
 
   const handleResendOtp = useCallback(async () => {

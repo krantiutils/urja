@@ -24,12 +24,27 @@ export type UserType = "gym_member" | "fitness_tracker" | "calorie_tracker";
 export interface User {
   id: string;
   phone: string;
+  /**
+   * The global claim carried in the JWT. Vestigial: it is literally "member"
+   * for every account. Real authority is per-organization — use `org_role`.
+   */
   role: string;
   org_id?: string;
   org_name?: string;
+  /**
+   * The caller's role in `org_id`, read from their real memberships. This is
+   * what decides whether somebody runs a gym or trains at one.
+   */
+  org_role?: string;
   user_type?: UserType;
   onboarding_completed?: boolean;
   is_super_admin?: boolean;
+  /**
+   * True once memberships have actually been fetched. Distinguishes "this
+   * account is not an operator" from "we do not know yet", which matters
+   * because a failed profile request must not eject a genuine admin.
+   */
+  profile_loaded?: boolean;
 }
 
 export interface ApiError {

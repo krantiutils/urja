@@ -21,7 +21,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <AuthGuard locale={locale}>
+    <AuthGuard locale={locale} requireOperator>
       <div className="min-h-screen bg-bg-base">
         <Sidebar
           t={t}

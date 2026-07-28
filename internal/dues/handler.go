@@ -2,6 +2,7 @@ package dues
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -132,4 +133,41 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		slog.Error("failed to encode JSON response", "error", err)
 	}
+}
+
+type createDueRequest struct {
+	UserID      string  `json:"user_id"`
+	Amount      float64 `json:"amount"`
+	DueDate     string  `json:"due_date"`
+	Description string  `json:"description"`
+}
+
+// Create handles POST /api/v1/orgs/{orgId}/dues — records money owed.
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+
+	var req createDueRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	due, err := h.service.Create(r.Context(), orgID, CreateInput{
+		UserID: req.UserID, Amount: req.Amount,
+		DueDate: req.DueDate, Description: req.Description,
+	})
+	if err != nil {
+		if errors.Is(err, ErrMemberNotInOrg) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, due)
 }
