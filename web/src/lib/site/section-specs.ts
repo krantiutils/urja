@@ -38,7 +38,8 @@ const contained: SectionStyle = {
 
 export const SECTION_SPECS: Record<SectionType, SectionSpec> = {
   hero: {
-    variants: ["centered", "split", "fullbleed", "minimal"],
+    // "gloves" renders a WebGL scene behind the text; see GloveScene.
+    variants: ["centered", "split", "fullbleed", "minimal", "gloves"],
     label: "Hero",
     labelNe: "मुख्य ब्यानर",
     category: "header",

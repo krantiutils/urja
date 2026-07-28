@@ -47,7 +47,7 @@ type SectionSpec struct {
 // compares the two — if you add a type here, add it there.
 var SectionSpecs = map[string]SectionSpec{
 	"hero": {
-		Variants: []string{"centered", "split", "fullbleed", "minimal"},
+		Variants: []string{"centered", "split", "fullbleed", "minimal", "gloves"},
 		Label:    "Hero", LabelNe: "मुख्य ब्यानर", Category: "header",
 	},
 	"stats_bar": {
