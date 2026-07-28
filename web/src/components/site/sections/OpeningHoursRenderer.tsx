@@ -1,19 +1,30 @@
 import type { Section } from "@/types/site";
 import type { Locale } from "@/types";
-import { list, itemText, str, text } from "@/lib/site/content";
+import { list, itemText, text } from "@/lib/site/content";
 import { SectionHeading } from "@/components/site/primitives/SectionShell";
 
 /**
  * opening_hours — table | list | compact
+ *
+ * Hours are read bilingually rather than as a plain string: "Closed" is a word,
+ * not a time, and a gym that shuts on Saturday needs to say so in both
+ * languages.
  */
 export default function OpeningHoursRenderer({ section, locale }: { section: Section; locale: Locale }) {
   const { content, variant } = section;
   const title = text(content, "title", locale);
   const days = list(content, "days");
+  const note = text(content, "note", locale);
 
-  if (days.length === 0 && !title) return null;
+  if (days.length === 0 && !title && !note) return null;
 
   const align = section.style?.align ?? "left";
+
+  // Sessions within the opening window are the thing members actually plan
+  // around, so a note has to survive to the page.
+  const footnote = note ? (
+    <p className="mt-4 text-sm text-[var(--site-fg-muted)] leading-relaxed">{note}</p>
+  ) : null;
 
   if (variant === "table") {
     return (
@@ -37,12 +48,13 @@ export default function OpeningHoursRenderer({ section, locale }: { section: Sec
                   <th scope="row" className="py-3 pr-4 font-normal text-[var(--site-fg-muted)]">
                     {itemText(d, "day", locale)}
                   </th>
-                  <td className="py-3">{str(d, "hours")}</td>
+                  <td className="py-3">{itemText(d, "hours", locale)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {footnote}
       </>
     );
   }
@@ -55,10 +67,11 @@ export default function OpeningHoursRenderer({ section, locale }: { section: Sec
           {days.map((d, i) => (
             <div key={i} className="contents">
               <dt className="text-[var(--site-fg-muted)]">{itemText(d, "day", locale)}</dt>
-              <dd>{str(d, "hours")}</dd>
+              <dd>{itemText(d, "hours", locale)}</dd>
             </div>
           ))}
         </dl>
+        {footnote}
       </>
     );
   }
@@ -71,10 +84,11 @@ export default function OpeningHoursRenderer({ section, locale }: { section: Sec
         {days.map((d, i) => (
           <li key={i} className="flex items-center justify-between py-3">
             <span className="font-medium">{itemText(d, "day", locale)}</span>
-            <span className="text-[var(--site-fg-muted)]">{str(d, "hours")}</span>
+            <span className="text-[var(--site-fg-muted)]">{itemText(d, "hours", locale)}</span>
           </li>
         ))}
       </ul>
+      {footnote}
     </>
   );
 }
