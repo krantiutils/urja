@@ -58,17 +58,17 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 }
 
 // ListPublic returns all active packages across all organizations.
-func (r *Repository) ListPublic(ctx context.Context, limit, offset int) ([]Package, error) {
+func (r *Repository) ListPublic(ctx context.Context, orgSlug string, limit, offset int) ([]Package, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT p.id, p.organization_id, p.name, p.name_ne, p.description, p.description_ne,
 		        p.duration_days, p.price, p.currency, p.max_members, p.features,
 		        p.is_active, p.created_at, p.updated_at
 		 FROM packages p
 		 JOIN organizations o ON o.id = p.organization_id AND o.is_active = true
-		 WHERE p.is_active = true
-		 ORDER BY p.created_at DESC
-		 LIMIT $1 OFFSET $2`,
-		limit, offset,
+		 WHERE p.is_active = true AND o.slug = $1
+		 ORDER BY p.price ASC, p.created_at DESC
+		 LIMIT $2 OFFSET $3`,
+		orgSlug, limit, offset,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("querying public packages: %w", err)
@@ -325,7 +325,9 @@ func (r *Repository) HasActiveSub(ctx context.Context, userID, packageID string)
 }
 
 func scanPackages(rows pgx.Rows) ([]Package, error) {
-	var pkgs []Package
+	// Non-nil so an empty result serializes as [] rather than null: clients
+	// iterate `data` directly, and null is not iterable.
+	pkgs := []Package{}
 	for rows.Next() {
 		var p Package
 		if err := rows.Scan(

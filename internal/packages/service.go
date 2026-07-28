@@ -3,6 +3,7 @@ package packages
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -11,6 +12,10 @@ import (
 
 	"github.com/urja-gym/urja/pkg/khalti"
 )
+
+// ErrOrgRequired is returned when a public listing is requested without naming
+// a gym.
+var ErrOrgRequired = errors.New("gym is required")
 
 // Service handles package business logic.
 type Service struct {
@@ -24,10 +29,17 @@ func NewService(repo *Repository, khaltiClient *khalti.Client, logger *slog.Logg
 	return &Service{repo: repo, khalti: khaltiClient, logger: logger}
 }
 
-// ListPublic returns active packages visible to all users.
-func (s *Service) ListPublic(ctx context.Context, limit, offset int) ([]Package, error) {
+// ListPublic returns one gym's active packages.
+//
+// The gym is mandatory. Pricing is public but it is public *per gym*: an
+// unscoped listing returned every organization's packages to anyone, which both
+// leaked competitors' price lists and put the wrong prices on a tenant site.
+func (s *Service) ListPublic(ctx context.Context, orgSlug string, limit, offset int) ([]Package, error) {
+	if orgSlug == "" {
+		return nil, ErrOrgRequired
+	}
 	limit, offset = normalizePagination(limit, offset)
-	return s.repo.ListPublic(ctx, limit, offset)
+	return s.repo.ListPublic(ctx, orgSlug, limit, offset)
 }
 
 // ListByOrg returns all packages for an organization (admin view, includes inactive).

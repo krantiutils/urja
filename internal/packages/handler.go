@@ -2,9 +2,11 @@ package packages
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/urja-gym/urja/pkg/middleware"
@@ -21,12 +23,18 @@ func NewHandler(service *Service, logger *slog.Logger) *Handler {
 	return &Handler{service: service, logger: logger}
 }
 
-// ListPublic handles GET /api/v1/packages — public listing of active packages.
+// ListPublic handles GET /api/v1/packages?gym={slug} — one gym's public price
+// list. The gym is required; see Service.ListPublic.
 func (h *Handler) ListPublic(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	orgSlug := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("gym")))
 
-	pkgs, err := h.service.ListPublic(r.Context(), limit, offset)
+	pkgs, err := h.service.ListPublic(r.Context(), orgSlug, limit, offset)
+	if errors.Is(err, ErrOrgRequired) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "gym is required"})
+		return
+	}
 	if err != nil {
 		h.logger.Error("failed to list public packages", "error", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})

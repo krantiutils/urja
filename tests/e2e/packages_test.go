@@ -13,14 +13,68 @@ func TestPackages_ListPublic(t *testing.T) {
 	createTestPackage(t, orgID, "Basic Plan", 30, 2000)
 	createTestPackage(t, orgID, "Premium Plan", 90, 5000)
 
-	resp := doRequest(t, http.MethodGet, "/api/v1/packages", nil, "")
+	resp := doRequest(t, http.MethodGet, "/api/v1/packages?gym=pkg-gym", nil, "")
 	assertStatus(t, resp, http.StatusOK)
 
 	var body map[string]interface{}
 	parseJSON(t, resp, &body)
 	data := body["data"].([]interface{})
-	if len(data) < 2 {
-		t.Errorf("expected at least 2 packages, got %d", len(data))
+	if len(data) != 2 {
+		t.Errorf("expected 2 packages, got %d", len(data))
+	}
+}
+
+// A public price list is public per gym. Before this was scoped, the endpoint
+// returned every organization's packages to anyone who asked, so a tenant site
+// could show a rival gym's prices.
+func TestPackages_ListPublic_ScopedToOneGym(t *testing.T) {
+	cleanupTables(t)
+
+	adminID := createTestSuperAdmin(t, "9800200001", "Admin")
+	mineID := createTestOrg(t, adminID, "Mine Gym")
+	theirsID := createTestOrg(t, adminID, "Theirs Gym")
+	createTestPackage(t, mineID, "Mine Only", 30, 2000)
+	createTestPackage(t, theirsID, "Theirs Only", 30, 9000)
+
+	resp := doRequest(t, http.MethodGet, "/api/v1/packages?gym=mine-gym", nil, "")
+	assertStatus(t, resp, http.StatusOK)
+
+	var body map[string]interface{}
+	parseJSON(t, resp, &body)
+	data := body["data"].([]interface{})
+	if len(data) != 1 {
+		t.Fatalf("expected only Mine Gym's package, got %d", len(data))
+	}
+	if name := data[0].(map[string]interface{})["name"]; name != "Mine Only" {
+		t.Errorf("expected \"Mine Only\", got %v", name)
+	}
+}
+
+func TestPackages_ListPublic_RequiresGym(t *testing.T) {
+	cleanupTables(t)
+
+	adminID := createTestSuperAdmin(t, "9800200001", "Admin")
+	orgID := createTestOrg(t, adminID, "Pkg Gym")
+	createTestPackage(t, orgID, "Basic Plan", 30, 2000)
+
+	resp := doRequest(t, http.MethodGet, "/api/v1/packages", nil, "")
+	assertStatus(t, resp, http.StatusBadRequest)
+}
+
+func TestPackages_ListPublic_UnknownGymIsEmpty(t *testing.T) {
+	cleanupTables(t)
+
+	adminID := createTestSuperAdmin(t, "9800200001", "Admin")
+	orgID := createTestOrg(t, adminID, "Pkg Gym")
+	createTestPackage(t, orgID, "Basic Plan", 30, 2000)
+
+	resp := doRequest(t, http.MethodGet, "/api/v1/packages?gym=no-such-gym", nil, "")
+	assertStatus(t, resp, http.StatusOK)
+
+	var body map[string]interface{}
+	parseJSON(t, resp, &body)
+	if data := body["data"].([]interface{}); len(data) != 0 {
+		t.Errorf("expected no packages for an unknown gym, got %d", len(data))
 	}
 }
 
