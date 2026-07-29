@@ -12,6 +12,7 @@ const dictionaries = {
       retry: "Retry",
       save: "Save",
       cancel: "Cancel",
+      confirm: "Confirm",
       delete: "Delete",
       search: "Search...",
       noResults: "No results found",
@@ -487,6 +488,7 @@ const dictionaries = {
       title: "Bills",
       subtitle: "PAN tax invoices issued to customers.",
       newBill: "New bill",
+      issueBill: "Issue bill",
       empty: "No bills yet.",
       number: "Bill no.",
       customer: "Customer",
@@ -529,6 +531,8 @@ const dictionaries = {
       reviseExplainCredit:
         "This bill has already been printed, so it must be corrected with a credit note.",
       panDigits: "PAN must be exactly 9 digits",
+      numberPreview: "Next bill number (preview)",
+      numberPreviewHint: "A preview only — this number is not reserved until you issue the bill.",
     },
     absentees: {
       title: "Who has stopped coming",
@@ -985,6 +989,7 @@ const dictionaries = {
       retry: "पुनः प्रयास",
       save: "सेभ गर्नुहोस्",
       cancel: "रद्द गर्नुहोस्",
+      confirm: "पुष्टि गर्नुहोस्",
       delete: "मेट्नुहोस्",
       search: "खोज्नुहोस्...",
       noResults: "कुनै नतिजा भेटिएन",
@@ -1460,6 +1465,7 @@ const dictionaries = {
       title: "बिलहरू",
       subtitle: "ग्राहकलाई जारी गरिएका प्यान कर बिजक।",
       newBill: "नयाँ बिल",
+      issueBill: "बिल जारी गर्नुहोस्",
       empty: "अहिलेसम्म कुनै बिल छैन।",
       number: "बिल नं.",
       customer: "ग्राहक",
@@ -1502,6 +1508,8 @@ const dictionaries = {
       reviseExplainCredit:
         "यो बिल प्रिन्ट भइसकेको छ, त्यसैले क्रेडिट नोटबाट मात्र सच्याउन मिल्छ।",
       panDigits: "प्यान ठ्याक्कै ९ अंकको हुनुपर्छ",
+      numberPreview: "अर्को बिल नम्बर (पूर्वावलोकन)",
+      numberPreviewHint: "यो केवल पूर्वावलोकन हो — बिल जारी नगरेसम्म यो नम्बर सुरक्षित हुँदैन।",
     },
     absentees: {
       title: "आउन छाडेकाहरू",

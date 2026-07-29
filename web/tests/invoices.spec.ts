@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
-import { injectAdminAuth } from "./helpers";
+import { injectAdminAuth, injectAuth } from "./helpers";
 
 const ORG = {
   id: "org-001",
@@ -105,5 +105,139 @@ test.describe("Tax settings", () => {
     await expect(page.getByLabel(/registered address/i)).toHaveValue(
       "Existing Address, Kathmandu"
     );
+  });
+});
+
+function baseInvoice(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "inv-001",
+    organization_id: "org-001",
+    fiscal_year: "2082-83",
+    sequence: 1,
+    invoice_number: "2082-83/000001",
+    doc_type: "invoice",
+    seller_name: "Test Gym",
+    seller_pan: "601234567",
+    seller_vat_registered: false,
+    customer_name: "Ram Bahadur",
+    issued_date: "2025-07-20",
+    issued_date_bs: "2082-04-04",
+    subtotal: 3000,
+    discount: 0,
+    taxable_amount: 3000,
+    vat_rate: 0,
+    vat_amount: 0,
+    total: 3000,
+    amount_in_words: "Three thousand rupees only",
+    status: "issued",
+    issued_by: "test-user-001",
+    print_count: 0,
+    created_at: "2025-07-20T04:00:00Z",
+    items: [
+      {
+        line_no: 1,
+        description: "Monthly Boxing",
+        quantity: 1,
+        unit_price: 3000,
+        amount: 3000,
+      },
+    ],
+    ...overrides,
+  };
+}
+
+function mockInvoiceAPI(page: Page) {
+  let invoice = baseInvoice();
+  return page.route("**/api/v1/orgs/*/invoices**", (route: Route) => {
+    const url = new URL(route.request().url());
+    const method = route.request().method();
+
+    if (url.pathname.endsWith("/next-number")) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ invoice_number: "2082-83/000001" }),
+      });
+    }
+
+    if (url.pathname.endsWith("/cancel")) {
+      const { reason } = route.request().postDataJSON();
+      if (invoice.status === "cancelled") {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "already cancelled", code: "already_cancelled" }),
+        });
+      }
+      invoice = baseInvoice({ status: "cancelled", cancellation_reason: reason });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(invoice),
+      });
+    }
+
+    if (method === "POST" && url.pathname.endsWith("/invoices")) {
+      const body = route.request().postDataJSON();
+      invoice = baseInvoice({ customer_name: body.customer_name });
+      return route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify(invoice),
+      });
+    }
+
+    if (method === "GET" && url.pathname.endsWith("/invoices")) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [invoice], total: 1 }),
+      });
+    }
+
+    // GET one
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(invoice),
+    });
+  });
+}
+
+test.describe("Bills", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/en/login");
+    await injectAuth(page);
+    await mockInvoiceAPI(page);
+  });
+
+  test("issuing a bill lands on its document", async ({ page }) => {
+    await page.goto("/en/dashboard/invoices/new");
+
+    await page.getByLabel(/customer name/i).fill("Ram Bahadur");
+    await page.getByLabel(/description/i).first().fill("Monthly Boxing");
+    await page.getByLabel(/rate/i).first().fill("3000");
+    await page.getByRole("button", { name: /issue/i }).click();
+
+    await expect(page).toHaveURL(/\/dashboard\/invoices\/inv-001/);
+    await expect(page.getByText("Ram Bahadur")).toBeVisible();
+    await expect(page.getByText("2082-83/000001")).toBeVisible();
+  });
+
+  test("a cancelled bill is marked and offers no second cancel", async ({ page }) => {
+    await page.goto("/en/dashboard/invoices/inv-001");
+
+    await page.getByRole("button", { name: /cancel bill/i }).click();
+    await page.getByLabel(/why is this being cancelled/i).fill("wrong customer");
+    await page.getByRole("button", { name: /confirm/i }).click();
+
+    await expect(page.getByText(/cancelled/i).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /cancel bill/i })).toHaveCount(0);
+  });
+
+  test("the list shows the bill number and customer", async ({ page }) => {
+    await page.goto("/en/dashboard/invoices");
+    await expect(page.getByText("2082-83/000001")).toBeVisible();
+    await expect(page.getByText("Ram Bahadur")).toBeVisible();
   });
 });
