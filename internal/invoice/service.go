@@ -192,6 +192,32 @@ func (s *Service) CreditNote(ctx context.Context, orgID, parentID, issuedBy stri
 	return note, nil
 }
 
+// RecordPrint logs that a bill was printed and returns the copy label.
+func (s *Service) RecordPrint(ctx context.Context, orgID, id, printedBy string) (*Invoice, string, error) {
+	inv, label, err := s.repo.RecordPrint(ctx, orgID, id, printedBy)
+	if err != nil {
+		return nil, "", err
+	}
+	s.logger.Info("invoice printed",
+		"invoice_number", inv.InvoiceNumber, "org_id", orgID,
+		"printed_by", printedBy, "label", label)
+	return inv, label, nil
+}
+
+// NextNumber previews the next bill's number without consuming it.
+func (s *Service) NextNumber(ctx context.Context, orgID string) (string, error) {
+	bs, err := nepalidate.Today()
+	if err != nil {
+		return "", fmt.Errorf("determining Nepali date: %w", err)
+	}
+	fy := bs.FiscalYear()
+	seq, err := s.repo.PeekNextSequence(ctx, orgID, fy)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s/%06d", fy, seq), nil
+}
+
 // Get reads one invoice, scoped to the org.
 func (s *Service) Get(ctx context.Context, orgID, id string) (*Invoice, error) {
 	return s.repo.Get(ctx, orgID, id)

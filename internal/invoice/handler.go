@@ -198,10 +198,36 @@ func (h *Handler) CreditNote(w http.ResponseWriter, r *http.Request) {
 
 // Print handles POST /api/v1/orgs/{orgId}/invoices/{invoiceId}/print
 func (h *Handler) Print(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "not implemented"})
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	inv, label, err := h.service.RecordPrint(r.Context(), orgID, chi.URLParam(r, "invoiceId"), userID)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"invoice": inv, "copy_label": label})
 }
 
 // NextNumber handles GET /api/v1/orgs/{orgId}/invoices/next-number
 func (h *Handler) NextNumber(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "not implemented"})
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+	number, err := h.service.NextNumber(r.Context(), orgID)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"invoice_number": number})
 }

@@ -542,6 +542,60 @@ func defaultTo(s, fallback string) string {
 	return s
 }
 
+// RecordPrint logs a print and returns the label the document should carry.
+func (r *Repository) RecordPrint(ctx context.Context, orgID, id, printedBy string) (*Invoice, string, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, "", fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	inv, err := getInTx(ctx, tx, orgID, id)
+	if err != nil {
+		return nil, "", err
+	}
+
+	label := "original"
+	if inv.PrintCount > 0 {
+		label = "copy"
+	}
+
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO invoice_prints (invoice_id, printed_by, copy_label) VALUES ($1, $2, $3)`,
+		id, printedBy, label); err != nil {
+		return nil, "", fmt.Errorf("logging print: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE invoices SET print_count = print_count + 1 WHERE id = $1`, id); err != nil {
+		return nil, "", fmt.Errorf("incrementing print count: %w", err)
+	}
+
+	updated, err := getInTx(ctx, tx, orgID, id)
+	if err != nil {
+		return nil, "", err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, "", fmt.Errorf("committing print: %w", err)
+	}
+	return updated, label, nil
+}
+
+// PeekNextSequence reports the number the next bill will take without
+// reserving it. A read, never a write — previewing must not consume.
+func (r *Repository) PeekNextSequence(ctx context.Context, orgID, fiscalYear string) (int, error) {
+	var seq int
+	err := r.db.QueryRow(ctx,
+		`SELECT next_sequence FROM invoice_counters
+		  WHERE organization_id = $1 AND fiscal_year = $2`, orgID, fiscalYear).Scan(&seq)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 1, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("reading next invoice number: %w", err)
+	}
+	return seq, nil
+}
+
 // List returns invoices for an org, newest first.
 func (r *Repository) List(ctx context.Context, f ListFilter) ([]Invoice, int, error) {
 	conds := []string{"organization_id = $1"}
