@@ -25,6 +25,7 @@ import (
 	"github.com/urja-gym/urja/internal/feedback"
 	"github.com/urja-gym/urja/internal/guide"
 	"github.com/urja-gym/urja/internal/health"
+	"github.com/urja-gym/urja/internal/invoice"
 	"github.com/urja-gym/urja/internal/leaderboard"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/nfc"
@@ -159,6 +160,11 @@ func main() {
 	duesRepo := dues.NewRepository(pool)
 	duesService := dues.NewService(duesRepo, logger)
 	duesHandler := dues.NewHandler(duesService, logger)
+
+	// Invoice (PAN tax billing)
+	invoiceRepo := invoice.NewRepository(pool)
+	invoiceSvc := invoice.NewService(invoiceRepo, logger)
+	invoiceHandler := invoice.NewHandler(invoiceSvc, logger)
 
 	// Accounts
 	accountsRepo := accounts.NewRepository(pool)
@@ -360,6 +366,10 @@ func main() {
 
 				r.Route("/dues", func(r chi.Router) {
 					duesHandler.RegisterRoutes(r)
+				})
+
+				r.Route("/invoices", func(r chi.Router) {
+					invoiceHandler.RegisterRoutes(r)
 				})
 
 				r.Route("/accounts", func(r chi.Router) {

@@ -33,6 +33,7 @@ import (
 	"github.com/urja-gym/urja/internal/feedback"
 	"github.com/urja-gym/urja/internal/guide"
 	"github.com/urja-gym/urja/internal/health"
+	"github.com/urja-gym/urja/internal/invoice"
 	"github.com/urja-gym/urja/internal/leaderboard"
 	"github.com/urja-gym/urja/internal/member"
 	"github.com/urja-gym/urja/internal/nfc"
@@ -254,6 +255,10 @@ func TestMain(m *testing.M) {
 	duesSvc := dues.NewService(duesRepo, testLogger)
 	duesHandler := dues.NewHandler(duesSvc, testLogger)
 
+	invoiceRepo := invoice.NewRepository(pool)
+	invoiceSvc := invoice.NewService(invoiceRepo, testLogger)
+	invoiceHandler := invoice.NewHandler(invoiceSvc, testLogger)
+
 	accountsRepo := accounts.NewRepository(pool)
 	accountsSvc := accounts.NewService(accountsRepo, testLogger)
 	accountsHandler := accounts.NewHandler(accountsSvc, testLogger)
@@ -370,6 +375,10 @@ func TestMain(m *testing.M) {
 
 				r.Route("/dues", func(r chi.Router) {
 					duesHandler.RegisterRoutes(r)
+				})
+
+				r.Route("/invoices", func(r chi.Router) {
+					invoiceHandler.RegisterRoutes(r)
 				})
 
 				r.Route("/accounts", func(r chi.Router) {
