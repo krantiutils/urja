@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"context"
 	"net/http"
 	"testing"
 )
@@ -88,4 +89,37 @@ func TestInvoiceCancel_IsNotRepeatable(t *testing.T) {
 
 	resp = doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices/"+inv.ID+"/cancel", body, token)
 	assertStatus(t, resp, http.StatusConflict)
+}
+
+// Cancelling through another org's path must 404, not 403 — a 403 would
+// confirm the invoice exists in a gym the caller has no business seeing —
+// and it must not actually cancel the invoice.
+func TestInvoiceCancel_CrossTenantDoesNotCancel(t *testing.T) {
+	cleanupTables(t)
+	adminA := createTestUser(t, "9800000404", "Admin A")
+	adminB := createTestUser(t, "9800000405", "Admin B")
+	orgA := createTestOrg(t, adminA, "Tenant A Cancel")
+	orgB := createTestOrg(t, adminB, "Tenant B Cancel")
+	setPAN(t, orgB, "601234567")
+	tokenA := generateTestToken(adminA, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgB+"/invoices",
+		issueBody("Ram", 1, 1000), generateTestToken(adminB, "member"))
+	assertStatus(t, resp, http.StatusCreated)
+	var invB struct{ ID string }
+	parseJSON(t, resp, &invB)
+
+	resp = doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgA+"/invoices/"+invB.ID+"/cancel",
+		map[string]any{"reason": "not yours"}, tokenA)
+	assertStatus(t, resp, http.StatusNotFound)
+
+	var status string
+	err := testPool.QueryRow(context.Background(),
+		`SELECT status FROM invoices WHERE id = $1`, invB.ID).Scan(&status)
+	if err != nil {
+		t.Fatalf("reading invoice status: %v", err)
+	}
+	if status != "issued" {
+		t.Errorf("status = %q, want issued — org A must not have cancelled org B's invoice", status)
+	}
 }

@@ -171,7 +171,29 @@ func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
 
 // CreditNote handles POST /api/v1/orgs/{orgId}/invoices/{invoiceId}/credit-note
 func (h *Handler) CreditNote(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "not implemented"})
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	var in CreditInput
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	note, err := h.service.CreditNote(r.Context(), orgID, chi.URLParam(r, "invoiceId"), userID, in)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, note)
 }
 
 // Print handles POST /api/v1/orgs/{orgId}/invoices/{invoiceId}/print

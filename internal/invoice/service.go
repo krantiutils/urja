@@ -137,6 +137,61 @@ func (s *Service) Cancel(ctx context.Context, orgID, id, cancelledBy, reason str
 	return inv, nil
 }
 
+// CreditNote reverses part or all of an issued bill. Unlike cancelling, this
+// writes a reversing row to the ledger: the money genuinely goes back.
+func (s *Service) CreditNote(ctx context.Context, orgID, parentID, issuedBy string, in CreditInput) (*Invoice, error) {
+	if strings.TrimSpace(in.Reason) == "" {
+		return nil, ErrReasonRequired
+	}
+
+	parent, err := s.repo.Get(ctx, orgID, parentID)
+	if err != nil {
+		return nil, err
+	}
+
+	issue := IssueInput{
+		CustomerUserID:  parent.CustomerUserID,
+		CustomerName:    parent.CustomerName,
+		CustomerPAN:     parent.CustomerPAN,
+		CustomerAddress: parent.CustomerAddress,
+		CustomerPhone:   parent.CustomerPhone,
+		PaymentMethod:   parent.PaymentMethod,
+		Items:           in.Items,
+	}
+	subtotal, taxable, err := validateIssue(issue)
+	if err != nil {
+		return nil, err
+	}
+
+	bs, err := nepalidate.Today()
+	if err != nil {
+		return nil, fmt.Errorf("determining Nepali date: %w", err)
+	}
+	loc, _ := time.LoadLocation("Asia/Kathmandu")
+
+	note, err := s.repo.CreditNote(ctx, issueParams{
+		OrgID:         orgID,
+		FiscalYear:    bs.FiscalYear(),
+		DocType:       "credit_note",
+		IssuedDate:    time.Now().In(loc).Format("2006-01-02"),
+		IssuedDateBS:  bs.String(),
+		Subtotal:      subtotal,
+		TaxableAmount: taxable,
+		Total:         taxable,
+		AmountInWords: moneywords.Rupees(taxable),
+		IssuedBy:      issuedBy,
+		In:            issue,
+	}, parentID)
+	if err != nil {
+		return nil, err
+	}
+
+	s.logger.Info("credit note raised",
+		"credit_note", note.InvoiceNumber, "against", parent.InvoiceNumber,
+		"org_id", orgID, "amount", note.Total, "reason", in.Reason)
+	return note, nil
+}
+
 // Get reads one invoice, scoped to the org.
 func (s *Service) Get(ctx context.Context, orgID, id string) (*Invoice, error) {
 	return s.repo.Get(ctx, orgID, id)

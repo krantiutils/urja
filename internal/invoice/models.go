@@ -112,6 +112,12 @@ type IssueInput struct {
 	Items           []ItemInput `json:"items"`
 }
 
+// CreditInput is a request to credit part or all of an invoice.
+type CreditInput struct {
+	Reason string      `json:"reason"`
+	Items  []ItemInput `json:"items"`
+}
+
 // ListFilter narrows a list query.
 type ListFilter struct {
 	OrgID      string

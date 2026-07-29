@@ -386,6 +386,90 @@ func (r *Repository) Cancel(ctx context.Context, orgID, id, cancelledBy, reason 
 	return r.Get(ctx, orgID, id)
 }
 
+// creditedSoFar totals the credit notes already raised against an invoice.
+func creditedSoFar(ctx context.Context, tx pgx.Tx, parentID string) (float64, error) {
+	var sum float64
+	err := tx.QueryRow(ctx,
+		`SELECT COALESCE(SUM(total), 0) FROM invoices
+		  WHERE credit_note_for = $1 AND status = 'issued'`, parentID).Scan(&sum)
+	if err != nil {
+		return 0, fmt.Errorf("totalling existing credit notes: %w", err)
+	}
+	return sum, nil
+}
+
+// CreditNote raises a credit note against parentID and writes the reversing
+// ledger row, both inside one transaction.
+func (r *Repository) CreditNote(ctx context.Context, p issueParams, parentID string) (*Invoice, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	parent, err := getInTx(ctx, tx, p.OrgID, parentID)
+	if err != nil {
+		return nil, err
+	}
+	if parent.Status == "cancelled" {
+		return nil, ErrInvoiceCancelled
+	}
+	if parent.DocType != "invoice" {
+		return nil, ErrInvalidParent
+	}
+
+	already, err := creditedSoFar(ctx, tx, parentID)
+	if err != nil {
+		return nil, err
+	}
+	if round2(already+p.Total) > parent.Total {
+		return nil, ErrCreditTooLarge
+	}
+
+	seller, err := r.loadSeller(ctx, tx, p.OrgID)
+	if err != nil {
+		return nil, err
+	}
+
+	p.CreditNoteFor = parentID
+	id, number, _, err := insertDocument(ctx, tx, p, seller)
+	if err != nil {
+		return nil, err
+	}
+
+	// A refund is a real movement of money, so it reverses in the ledger
+	// regardless of who wrote the original income row.
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO transactions (organization_id, category, description, transaction_date,
+		                           transaction_type, amount, payment_type, reference, entry_by)
+		 VALUES ($1, 'refund', $2, CURRENT_DATE, 'expense', $3, $4, $5, $6)`,
+		p.OrgID,
+		"Credit note "+number+" against "+parent.InvoiceNumber,
+		p.Total,
+		defaultTo(parent.PaymentMethod, "cash"),
+		number,
+		p.IssuedBy,
+	); err != nil {
+		return nil, fmt.Errorf("writing refund ledger row: %w", err)
+	}
+
+	note, err := getInTx(ctx, tx, p.OrgID, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing credit note: %w", err)
+	}
+	return note, nil
+}
+
+func defaultTo(s, fallback string) string {
+	if s == "" {
+		return fallback
+	}
+	return s
+}
+
 // List returns invoices for an org, newest first.
 func (r *Repository) List(ctx context.Context, f ListFilter) ([]Invoice, int, error) {
 	conds := []string{"organization_id = $1"}
