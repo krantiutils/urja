@@ -543,6 +543,15 @@ func defaultTo(s, fallback string) string {
 }
 
 // RecordPrint logs a print and returns the label the document should carry.
+//
+// The label is derived from the UPDATE's own RETURNING value, not from a
+// prior SELECT. A plain read-then-compare-then-write here would let two
+// concurrent prints both observe print_count = 0 and both log themselves as
+// "original" — the count would still land on 2 (Postgres serializes the
+// UPDATE itself), but the audit trail would then claim two originals of one
+// document. Deriving the label from the row lock the UPDATE already takes
+// closes that race: the second transaction blocks until the first commits,
+// then computes its label from the true post-increment count.
 func (r *Repository) RecordPrint(ctx context.Context, orgID, id, printedBy string) (*Invoice, string, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -550,13 +559,21 @@ func (r *Repository) RecordPrint(ctx context.Context, orgID, id, printedBy strin
 	}
 	defer tx.Rollback(ctx)
 
-	inv, err := getInTx(ctx, tx, orgID, id)
+	var newCount int
+	err = tx.QueryRow(ctx,
+		`UPDATE invoices SET print_count = print_count + 1
+		  WHERE id = $1 AND organization_id = $2
+		  RETURNING print_count`,
+		id, orgID).Scan(&newCount)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, "", ErrNotFound
+	}
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("incrementing print count: %w", err)
 	}
 
 	label := "original"
-	if inv.PrintCount > 0 {
+	if newCount > 1 {
 		label = "copy"
 	}
 
@@ -564,10 +581,6 @@ func (r *Repository) RecordPrint(ctx context.Context, orgID, id, printedBy strin
 		`INSERT INTO invoice_prints (invoice_id, printed_by, copy_label) VALUES ($1, $2, $3)`,
 		id, printedBy, label); err != nil {
 		return nil, "", fmt.Errorf("logging print: %w", err)
-	}
-	if _, err := tx.Exec(ctx,
-		`UPDATE invoices SET print_count = print_count + 1 WHERE id = $1`, id); err != nil {
-		return nil, "", fmt.Errorf("incrementing print count: %w", err)
 	}
 
 	updated, err := getInTx(ctx, tx, orgID, id)

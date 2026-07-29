@@ -180,4 +180,43 @@ func TestInvoicePrint_ConcurrentPrintsNoLostUpdate(t *testing.T) {
 	if logged != n {
 		t.Errorf("invoice_prints rows = %d, want %d — a concurrent print was lost", logged, n)
 	}
+
+	// Row count and print_count alone don't catch a mislabelled audit trail:
+	// a naive implementation that derives the label from a pre-lock read can
+	// land on print_count == 2 with BOTH rows saying "original". Read the
+	// labels back and require exactly one of each.
+	rows, err := testPool.Query(context.Background(),
+		`SELECT copy_label FROM invoice_prints WHERE invoice_id = $1 ORDER BY printed_at`, inv.ID)
+	if err != nil {
+		t.Fatalf("reading copy_label rows: %v", err)
+	}
+	defer rows.Close()
+	var labels []string
+	for rows.Next() {
+		var label string
+		if err := rows.Scan(&label); err != nil {
+			t.Fatalf("scanning copy_label: %v", err)
+		}
+		labels = append(labels, label)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterating copy_label rows: %v", err)
+	}
+
+	originals, copies := 0, 0
+	for _, l := range labels {
+		switch l {
+		case "original":
+			originals++
+		case "copy":
+			copies++
+		default:
+			t.Errorf("unexpected copy_label %q", l)
+		}
+	}
+	if originals != 1 || copies != 1 {
+		t.Errorf("labels = %v, want exactly one original and one copy — "+
+			"a lost lock let two concurrent prints both claim to be the original",
+			labels)
+	}
 }
