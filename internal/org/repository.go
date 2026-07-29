@@ -73,6 +73,21 @@ type UpdateOrgInput struct {
 	TaxAddress    *string
 }
 
+// orgPublicColumns backs the anonymous gym directory (GetByID/List, mounted
+// by RegisterPublicRoutes with no auth). It must never include pan_number,
+// tax_legal_name or tax_address — those are tax identifiers an org admin
+// manages via the authenticated PUT /api/v1/orgs/{orgId}, not public data.
+const orgPublicColumns = `id, name, COALESCE(name_ne, ''), slug,
+	COALESCE(description, ''), COALESCE(description_ne, ''),
+	COALESCE(logo_url, ''), COALESCE(address, ''), COALESCE(address_ne, ''),
+	COALESCE(phone, ''), COALESCE(email, ''),
+	latitude, longitude,
+	timezone, settings, is_active, created_at, updated_at`
+
+// orgSelectColumns additionally includes the gym's tax identity. Use only for
+// authenticated, admin-facing reads (Create/Update responses) — never wire
+// this into a route reachable without an org-admin session, per
+// orgPublicColumns above.
 const orgSelectColumns = `id, name, COALESCE(name_ne, ''), slug,
 	COALESCE(description, ''), COALESCE(description_ne, ''),
 	COALESCE(logo_url, ''), COALESCE(address, ''), COALESCE(address_ne, ''),
@@ -89,6 +104,25 @@ type Repository struct {
 // NewRepository creates a new org repository.
 func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
+}
+
+// scanOrgPublic scans the orgPublicColumns projection: no tax identity
+// fields, so PANNumber/TaxLegalName/TaxAddress stay at their zero value ("")
+// and are omitted from the JSON response by their omitempty tags.
+func scanOrgPublic(scanner interface{ Scan(dest ...any) error }) (*Organization, error) {
+	var o Organization
+	err := scanner.Scan(
+		&o.ID, &o.Name, &o.NameNe, &o.Slug,
+		&o.Description, &o.DescriptionNe,
+		&o.LogoURL, &o.Address, &o.AddressNe,
+		&o.Phone, &o.Email,
+		&o.Latitude, &o.Longitude,
+		&o.Timezone, &o.Settings, &o.IsActive, &o.CreatedAt, &o.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &o, nil
 }
 
 func scanOrg(scanner interface{ Scan(dest ...any) error }) (*Organization, error) {
@@ -108,22 +142,25 @@ func scanOrg(scanner interface{ Scan(dest ...any) error }) (*Organization, error
 	return &o, nil
 }
 
-// GetByID retrieves an organization by ID.
+// GetByID retrieves an organization by ID for the public gym directory.
+// Deliberately uses orgPublicColumns, not orgSelectColumns: this backs an
+// unauthenticated route, and the org's tax identity must not leak there.
 func (r *Repository) GetByID(ctx context.Context, id string) (*Organization, error) {
 	row := r.db.QueryRow(ctx,
-		`SELECT `+orgSelectColumns+` FROM organizations WHERE id = $1`, id,
+		`SELECT `+orgPublicColumns+` FROM organizations WHERE id = $1`, id,
 	)
-	o, err := scanOrg(row)
+	o, err := scanOrgPublic(row)
 	if err != nil {
 		return nil, fmt.Errorf("organization not found: %w", err)
 	}
 	return o, nil
 }
 
-// List retrieves active organizations (public listing).
+// List retrieves active organizations (public listing). Deliberately uses
+// orgPublicColumns — see GetByID.
 func (r *Repository) List(ctx context.Context, limit, offset int) ([]Organization, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT `+orgSelectColumns+` FROM organizations WHERE is_active = true ORDER BY name LIMIT $1 OFFSET $2`,
+		`SELECT `+orgPublicColumns+` FROM organizations WHERE is_active = true ORDER BY name LIMIT $1 OFFSET $2`,
 		limit, offset,
 	)
 	if err != nil {
@@ -133,7 +170,7 @@ func (r *Repository) List(ctx context.Context, limit, offset int) ([]Organizatio
 
 	var orgs []Organization
 	for rows.Next() {
-		o, err := scanOrg(rows)
+		o, err := scanOrgPublic(rows)
 		if err != nil {
 			return nil, fmt.Errorf("scanning organization: %w", err)
 		}
@@ -181,9 +218,21 @@ func (r *Repository) Update(ctx context.Context, id string, in *UpdateOrgInput) 
 			latitude      = COALESCE($11, latitude),
 			longitude     = COALESCE($12, longitude),
 			settings      = COALESCE($13, settings),
-			pan_number     = COALESCE($14, pan_number),
-			tax_legal_name = COALESCE($15, tax_legal_name),
-			tax_address    = COALESCE($16, tax_address)
+			-- pan_number/tax_legal_name/tax_address: a field absent from the
+			-- request (SQL NULL param) must leave the column unchanged, while a
+			-- field explicitly sent as "" must clear it to SQL NULL. Plain
+			-- COALESCE($n, column) can't distinguish those, since a missing
+			-- request field and "please blank this out" are both carried as
+			-- NULL at the parameter level. Resolving COALESCE first (nil param
+			-- -> fall back to the existing value; non-nil param, including "" ->
+			-- use it) and then NULLIF-ing that *result* against '' turns any
+			-- surviving '' — which can only be the "" the caller explicitly
+			-- sent, never a stored value, because this statement is the only
+			-- writer of these three columns and every write already passes
+			-- through this same NULLIF — into SQL NULL.
+			pan_number     = NULLIF(COALESCE($14, pan_number), ''),
+			tax_legal_name = NULLIF(COALESCE($15, tax_legal_name), ''),
+			tax_address    = NULLIF(COALESCE($16, tax_address), '')
 		 WHERE id = $1
 		 RETURNING `+orgSelectColumns,
 		id,

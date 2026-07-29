@@ -2,11 +2,13 @@ package org
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 
@@ -18,6 +20,18 @@ import (
 // so a malformed PAN comes back as a clean 400 instead of an opaque pgx
 // constraint-violation error.
 var panNumberRe = regexp.MustCompile(`^[0-9]{9}$`)
+
+const (
+	// maxTaxLegalNameLen matches the tax_legal_name VARCHAR(255) column;
+	// checked here too so an oversized value 400s instead of 500ing at the
+	// database, the same reasoning as panNumberRe above.
+	maxTaxLegalNameLen = 255
+	// maxTaxAddressLen: tax_address is TEXT (no DB-side bound), but a
+	// registered address pasted into a settings form beyond this length is a
+	// sign of misuse rather than a real address, so it's still rejected with
+	// a clear 400.
+	maxTaxAddressLen = 500
+)
 
 // Handler handles HTTP requests for organization endpoints.
 type Handler struct {
@@ -167,6 +181,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// An empty string for any of the three tax fields means "clear it" — the
+	// repository turns that into SQL NULL rather than the literal empty
+	// string (see the Update query) — so blank is exempted from format/length
+	// validation here rather than rejected.
 	if req.PANNumber != nil && *req.PANNumber != "" {
 		if !panNumberRe.MatchString(*req.PANNumber) {
 			writeJSON(w, http.StatusBadRequest,
@@ -174,12 +192,17 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// An empty string means "leave PAN unchanged", not "clear it to empty":
-	// the repository's COALESCE($n, column) pattern only knows nil-means-
-	// unchanged, and an empty string would otherwise be written through and
-	// trip the database's digit-format CHECK constraint.
-	if req.PANNumber != nil && *req.PANNumber == "" {
-		req.PANNumber = nil
+	if req.TaxLegalName != nil && utf8.RuneCountInString(*req.TaxLegalName) > maxTaxLegalNameLen {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": fmt.Sprintf("tax_legal_name must be at most %d characters", maxTaxLegalNameLen),
+		})
+		return
+	}
+	if req.TaxAddress != nil && utf8.RuneCountInString(*req.TaxAddress) > maxTaxAddressLen {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": fmt.Sprintf("tax_address must be at most %d characters", maxTaxAddressLen),
+		})
+		return
 	}
 
 	in := &UpdateOrgInput{
