@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -99,6 +100,60 @@ func allocateSequence(ctx context.Context, tx pgx.Tx, orgID, fiscalYear string) 
 	return seq, nil
 }
 
+// verifyOrgReferences checks that every client-supplied foreign key on the
+// request actually belongs to orgID before anything is written.
+//
+// FK constraints alone only prove the row exists somewhere — not that it
+// belongs to the org making the request. That gap matters more here than on
+// most tables: idx_invoices_one_per_transaction is a *global* unique index,
+// not scoped per org, so billing against another org's transaction_id would
+// silently consume that org's one-bill slot for a payment it never actually
+// billed. Run inside the same transaction as the insert (see Issue) so there
+// is no time-of-check/time-of-use gap between this check and the write.
+func verifyOrgReferences(ctx context.Context, tx pgx.Tx, orgID string, in IssueInput) error {
+	if in.TransactionID != "" {
+		var ok bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM transactions WHERE id = $1 AND organization_id = $2)`,
+			in.TransactionID, orgID,
+		).Scan(&ok); err != nil {
+			return fmt.Errorf("checking transaction ownership: %w", err)
+		}
+		if !ok {
+			return ErrTransactionNotInOrg
+		}
+	}
+
+	if in.MemberPackageID != "" {
+		var ok bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM member_packages WHERE id = $1 AND organization_id = $2)`,
+			in.MemberPackageID, orgID,
+		).Scan(&ok); err != nil {
+			return fmt.Errorf("checking member package ownership: %w", err)
+		}
+		if !ok {
+			return ErrMemberPackageNotInOrg
+		}
+	}
+
+	if in.CustomerUserID != "" {
+		var ok bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM organization_members
+			   WHERE user_id = $1 AND organization_id = $2 AND status = 'active')`,
+			in.CustomerUserID, orgID,
+		).Scan(&ok); err != nil {
+			return fmt.Errorf("checking customer membership: %w", err)
+		}
+		if !ok {
+			return ErrCustomerNotInOrg
+		}
+	}
+
+	return nil
+}
+
 // issueParams carries everything the service computed for a new document.
 type issueParams struct {
 	OrgID         string
@@ -153,8 +208,13 @@ func insertDocument(ctx context.Context, tx pgx.Tx, p issueParams, seller seller
 	).Scan(&id)
 	if err != nil {
 		// The partial unique index on transaction_id is what stops the same
-		// payment being billed twice.
-		if strings.Contains(err.Error(), "idx_invoices_one_per_transaction") {
+		// payment being billed twice. Match on the structured constraint
+		// name, not err.Error() — PgError's Error() format ("Severity:
+		// Message (SQLSTATE Code)") doesn't guarantee the constraint name
+		// appears in the message text; a Postgres wording change or an
+		// index rename would silently degrade this 409 into a generic 400.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.ConstraintName == "idx_invoices_one_per_transaction" {
 			return "", "", 0, ErrAlreadyBilled
 		}
 		return "", "", 0, fmt.Errorf("inserting invoice: %w", err)
@@ -184,6 +244,10 @@ func (r *Repository) Issue(ctx context.Context, p issueParams) (*Invoice, error)
 
 	seller, err := r.loadSeller(ctx, tx, p.OrgID)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := verifyOrgReferences(ctx, tx, p.OrgID, p.In); err != nil {
 		return nil, err
 	}
 

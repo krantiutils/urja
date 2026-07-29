@@ -19,6 +19,15 @@ var (
 	ErrInvoiceCancelled = errors.New("cannot credit a cancelled invoice")
 	ErrInvalidParent    = errors.New("a credit note cannot reference another credit note")
 	ErrCreditTooLarge   = errors.New("credit exceeds the uncredited balance of the invoice")
+
+	// These three guard against a client-supplied foreign key that resolves
+	// in the database but belongs to a different org. Without this check, a
+	// cross-org transaction_id would not just misattribute a bill — because
+	// idx_invoices_one_per_transaction is a global unique index, it would
+	// permanently consume another org's one-bill slot for that transaction.
+	ErrTransactionNotInOrg   = errors.New("transaction not found in this organization")
+	ErrMemberPackageNotInOrg = errors.New("member package not found in this organization")
+	ErrCustomerNotInOrg      = errors.New("customer is not an active member of this organization")
 )
 
 // Item is one line on a bill.

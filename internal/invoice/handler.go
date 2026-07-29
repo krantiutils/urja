@@ -53,6 +53,14 @@ func writeErr(w http.ResponseWriter, err error) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error(), "code": "invalid_parent"})
 	case errors.Is(err, ErrReasonRequired):
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error(), "code": "reason_required"})
+	// 404, not 403: a 403 would confirm the referenced row exists in
+	// another org, which is exactly the cross-tenant leak this closes.
+	case errors.Is(err, ErrTransactionNotInOrg):
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error(), "code": "transaction_not_found"})
+	case errors.Is(err, ErrMemberPackageNotInOrg):
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error(), "code": "member_package_not_found"})
+	case errors.Is(err, ErrCustomerNotInOrg):
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error(), "code": "customer_not_found"})
 	default:
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}

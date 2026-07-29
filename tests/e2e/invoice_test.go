@@ -18,6 +18,24 @@ func setPAN(t *testing.T, orgID, pan string) {
 	}
 }
 
+// insertTestTransaction inserts a transaction row directly, bypassing the
+// dues/khalti flows that normally create one, so a specific org can be
+// pinned to it for the cross-tenant ownership tests below.
+func insertTestTransaction(t *testing.T, orgID, enteredBy string) string {
+	t.Helper()
+	var id string
+	err := testPool.QueryRow(context.Background(),
+		`INSERT INTO transactions (organization_id, category, description, transaction_date,
+		    transaction_type, amount, payment_type, entry_by)
+		 VALUES ($1, 'Subscription', 'test', CURRENT_DATE, 'income', 1000, 'cash', $2)
+		 RETURNING id`, orgID, enteredBy,
+	).Scan(&id)
+	if err != nil {
+		t.Fatalf("insertTestTransaction: %v", err)
+	}
+	return id
+}
+
 func issueBody(customer string, qty, price float64) map[string]any {
 	return map[string]any{
 		"customer_name":  customer,
@@ -188,4 +206,112 @@ func TestInvoice_MemberCannotIssue(t *testing.T) {
 		t.Errorf("status = %d, want 403 — billing is staff and admin only", resp.StatusCode)
 	}
 	resp.Body.Close()
+}
+
+// idx_invoices_one_per_transaction is global, not scoped per org, so billing
+// against another org's transaction_id would not just misattribute a bill —
+// it would permanently consume that org's one-bill slot for a payment it
+// never actually billed. This is the regression test for that ownership
+// check, kept in the committed suite rather than thrown away after a
+// one-off manual verification.
+func TestInvoice_RejectsCrossTenantTransactionID(t *testing.T) {
+	cleanupTables(t)
+	adminA := createTestUser(t, "9800000308", "Admin A")
+	adminB := createTestUser(t, "9800000309", "Admin B")
+	orgA := createTestOrg(t, adminA, "Tenant A Billing")
+	orgB := createTestOrg(t, adminB, "Tenant B Billing")
+	setPAN(t, orgA, "601234567")
+	tokenA := generateTestToken(adminA, "member")
+
+	txnB := insertTestTransaction(t, orgB, adminB)
+
+	body := issueBody("Ram", 1, 1000)
+	body["transaction_id"] = txnB
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgA+"/invoices", body, tokenA)
+	assertStatus(t, resp, http.StatusNotFound)
+
+	var respBody struct{ Code string }
+	parseJSON(t, resp, &respBody)
+	if respBody.Code != "transaction_not_found" {
+		t.Errorf("code = %q, want %q", respBody.Code, "transaction_not_found")
+	}
+}
+
+func TestInvoice_RejectsCrossTenantMemberPackageID(t *testing.T) {
+	cleanupTables(t)
+	adminA := createTestUser(t, "9800000310", "Admin A")
+	adminB := createTestUser(t, "9800000311", "Admin B")
+	memberB := createTestUser(t, "9800000312", "Member B")
+	orgA := createTestOrg(t, adminA, "Tenant A Billing 2")
+	orgB := createTestOrg(t, adminB, "Tenant B Billing 2")
+	createTestOrgMember(t, memberB, orgB, "member")
+	setPAN(t, orgA, "601234567")
+	tokenA := generateTestToken(adminA, "member")
+
+	pkgB := createTestPackage(t, orgB, "Boxing Monthly", 30, 1500)
+	memberPkgB := assignTestPackage(t, memberB, pkgB, orgB)
+
+	body := issueBody("Ram", 1, 1000)
+	body["member_package_id"] = memberPkgB
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgA+"/invoices", body, tokenA)
+	assertStatus(t, resp, http.StatusNotFound)
+
+	var respBody struct{ Code string }
+	parseJSON(t, resp, &respBody)
+	if respBody.Code != "member_package_not_found" {
+		t.Errorf("code = %q, want %q", respBody.Code, "member_package_not_found")
+	}
+}
+
+func TestInvoice_RejectsNonMemberCustomer(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000313", "Admin")
+	outsider := createTestUser(t, "9800000314", "Outsider")
+	orgID := createTestOrg(t, admin, "Tenant A Billing 3")
+	setPAN(t, orgID, "601234567")
+	token := generateTestToken(admin, "member")
+
+	body := issueBody("Ram", 1, 1000)
+	body["customer_user_id"] = outsider
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices", body, token)
+	assertStatus(t, resp, http.StatusNotFound)
+
+	var respBody struct{ Code string }
+	parseJSON(t, resp, &respBody)
+	if respBody.Code != "customer_not_found" {
+		t.Errorf("code = %q, want %q", respBody.Code, "customer_not_found")
+	}
+}
+
+// The other core guarantee alongside gapless numbering: a payment can be
+// billed once. Billing the same transaction_id twice must 409, not silently
+// succeed and not degrade to a generic 400 if the detection ever regresses.
+func TestInvoice_AlreadyBilled(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000315", "Admin")
+	orgID := createTestOrg(t, admin, "Tenant Already Billed")
+	setPAN(t, orgID, "601234567")
+	token := generateTestToken(admin, "member")
+
+	txnID := insertTestTransaction(t, orgID, admin)
+
+	body := issueBody("Ram", 1, 1000)
+	body["transaction_id"] = txnID
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices", body, token)
+	assertStatus(t, resp, http.StatusCreated)
+	var first struct{ ID string }
+	parseJSON(t, resp, &first)
+
+	resp = doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices", body, token)
+	assertStatus(t, resp, http.StatusConflict)
+
+	var respBody struct{ Code string }
+	parseJSON(t, resp, &respBody)
+	if respBody.Code != "already_billed" {
+		t.Fatalf("code = %q, want already_billed", respBody.Code)
+	}
 }
