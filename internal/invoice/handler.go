@@ -57,6 +57,12 @@ func writeErr(w http.ResponseWriter, err error) {
 	// another org, which is exactly the cross-tenant leak this closes.
 	case errors.Is(err, ErrTransactionNotInOrg):
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error(), "code": "transaction_not_found"})
+	// 400, not 404: unlike the cross-tenant case above, the row genuinely
+	// belongs to this org — the caller just may not link it, because another
+	// invoice already owns it. A distinct code lets the UI explain why,
+	// rather than presenting it as a lookup failure.
+	case errors.Is(err, ErrTransactionAlreadyOwned):
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error(), "code": "transaction_already_owned"})
 	case errors.Is(err, ErrMemberPackageNotInOrg):
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error(), "code": "member_package_not_found"})
 	case errors.Is(err, ErrCustomerNotInOrg):

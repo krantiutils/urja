@@ -101,7 +101,8 @@ func allocateSequence(ctx context.Context, tx pgx.Tx, orgID, fiscalYear string) 
 }
 
 // verifyOrgReferences checks that every client-supplied foreign key on the
-// request actually belongs to orgID before anything is written.
+// request actually belongs to orgID, and that a supplied transaction_id is
+// still eligible to be linked, before anything is written.
 //
 // FK constraints alone only prove the row exists somewhere — not that it
 // belongs to the org making the request. That gap matters more here than on
@@ -121,6 +122,27 @@ func verifyOrgReferences(ctx context.Context, tx pgx.Tx, orgID string, in IssueI
 		}
 		if !ok {
 			return ErrTransactionNotInOrg
+		}
+
+		// owns_transaction ties a transaction's fate to its owning invoice
+		// permanently, not just while that invoice is issued: cancelling the
+		// invoice reverses the money but does not release the row, because
+		// idx_invoices_one_per_transaction only stops a second *issued*
+		// invoice from linking it — a cancelled owner doesn't count there,
+		// which would otherwise let a new bill quote the same transaction_id,
+		// come back with owns_transaction = false, and leave the ledger
+		// under-reporting the sale it's supposedly billing. A package-flow
+		// transaction (never owned by any invoice) is unaffected and stays
+		// relinkable across cancel-and-reissue, as it must.
+		var owned bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM invoices WHERE transaction_id = $1 AND owns_transaction = true)`,
+			in.TransactionID,
+		).Scan(&owned); err != nil {
+			return fmt.Errorf("checking transaction ownership by another invoice: %w", err)
+		}
+		if owned {
+			return ErrTransactionAlreadyOwned
 		}
 	}
 

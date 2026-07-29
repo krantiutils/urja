@@ -28,6 +28,17 @@ var (
 	ErrTransactionNotInOrg   = errors.New("transaction not found in this organization")
 	ErrMemberPackageNotInOrg = errors.New("member package not found in this organization")
 	ErrCustomerNotInOrg      = errors.New("customer is not an active member of this organization")
+
+	// ErrTransactionAlreadyOwned guards the mirror image of the bug task 8b
+	// fixed: an invoice that created its own income row owns that transaction
+	// for the rest of that row's life, cancelled or not. Without this check, a
+	// cancelled from-scratch bill's reversed transaction_id could be quoted by
+	// a brand-new bill — idx_invoices_one_per_transaction only blocks a second
+	// *issued* invoice on the same row, so the cancelled one doesn't count —
+	// producing a live invoice with owns_transaction = false and no income of
+	// its own, while the ledger already nets that money to zero. 400, not 404:
+	// the row genuinely belongs to this org, the caller just may not link it.
+	ErrTransactionAlreadyOwned = errors.New("this transaction already belongs to another invoice and cannot be linked")
 )
 
 // Item is one line on a bill.

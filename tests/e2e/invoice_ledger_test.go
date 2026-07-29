@@ -252,3 +252,131 @@ func TestInvoiceLedger_ImmutabilityTriggerProtectsOwnsTransaction(t *testing.T) 
 		t.Fatal("expected the immutability trigger to reject an owns_transaction change, got nil")
 	}
 }
+
+// The mirror image of the bug this task fixed: cancelling a from-scratch
+// bill reverses its income but does not — cannot, the transaction_id column
+// is immutable — release the transaction_id row it created.
+// idx_invoices_one_per_transaction only blocks a second *issued* invoice from
+// linking that row, so without this check a brand-new bill could quote the
+// same transaction_id, come back with owns_transaction = false, and leave
+// the ledger net at zero while the new bill counts as 1000 of live sales.
+func TestInvoiceLedger_CannotRelinkAReversedTransaction(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000707", "Admin")
+	orgID := createTestOrg(t, admin, "No Relink Reversed Gym")
+	setPAN(t, orgID, "601234567")
+	token := generateTestToken(admin, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices",
+		issueBody("Ram", 1, 1000), token)
+	assertStatus(t, resp, http.StatusCreated)
+	var a struct {
+		ID            string `json:"id"`
+		TransactionID string `json:"transaction_id"`
+	}
+	parseJSON(t, resp, &a)
+
+	resp = doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices/"+a.ID+"/cancel",
+		map[string]any{"reason": "wrong customer"}, token)
+	assertStatus(t, resp, http.StatusOK)
+
+	body := issueBody("Shyam", 1, 1000)
+	body["transaction_id"] = a.TransactionID
+	resp = doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices", body, token)
+	assertStatus(t, resp, http.StatusBadRequest)
+
+	var respBody struct{ Code string }
+	parseJSON(t, resp, &respBody)
+	if respBody.Code != "transaction_already_owned" {
+		t.Errorf("code = %q, want transaction_already_owned", respBody.Code)
+	}
+
+	var count int
+	if err := testPool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM invoices WHERE transaction_id = $1`, a.TransactionID,
+	).Scan(&count); err != nil {
+		t.Fatalf("counting invoices against the transaction: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("invoices linking the reversed transaction = %d, want exactly 1 (the cancelled original)", count)
+	}
+}
+
+// The must-keep-working case: a package-flow transaction is legitimately
+// reusable across cancel-and-reissue — it is never owned by any invoice, so
+// the new ownership check must leave this path alone.
+func TestInvoiceLedger_PackageFlowTransactionStaysRelinkableAfterCancel(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000708", "Admin")
+	orgID := createTestOrg(t, admin, "Package Relink Gym")
+	setPAN(t, orgID, "601234567")
+	token := generateTestToken(admin, "member")
+
+	txnID := insertTestTransaction(t, orgID, admin)
+
+	body := issueBody("Ram", 1, 1000)
+	body["transaction_id"] = txnID
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices", body, token)
+	assertStatus(t, resp, http.StatusCreated)
+	var a struct{ ID string }
+	parseJSON(t, resp, &a)
+
+	resp = doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices/"+a.ID+"/cancel",
+		map[string]any{"reason": "wrong customer"}, token)
+	assertStatus(t, resp, http.StatusOK)
+
+	body2 := issueBody("Shyam", 1, 1000)
+	body2["transaction_id"] = txnID
+	resp = doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices", body2, token)
+	assertStatus(t, resp, http.StatusCreated)
+
+	var b struct {
+		TransactionID string `json:"transaction_id"`
+	}
+	parseJSON(t, resp, &b)
+	if b.TransactionID != txnID {
+		t.Errorf("transaction_id = %q, want the reused %q", b.TransactionID, txnID)
+	}
+
+	var ownsTransaction bool
+	if err := testPool.QueryRow(context.Background(),
+		`SELECT owns_transaction FROM invoices WHERE transaction_id = $1 AND status = 'issued'`, txnID,
+	).Scan(&ownsTransaction); err != nil {
+		t.Fatalf("reading owns_transaction: %v", err)
+	}
+	if ownsTransaction {
+		t.Error("owns_transaction = true, want false — this bill only linked a package sale's row")
+	}
+}
+
+// Before this fix, quoting an owned transaction while its owning invoice was
+// still issued was already rejected — but only because
+// idx_invoices_one_per_transaction collided, surfacing as already_billed.
+// verifyOrgReferences must now catch it earlier and return the clearer code.
+func TestInvoiceLedger_OwnedTransactionCannotBeLinkedWhileIssued(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000709", "Admin")
+	orgID := createTestOrg(t, admin, "Owned While Issued Gym")
+	setPAN(t, orgID, "601234567")
+	token := generateTestToken(admin, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices",
+		issueBody("Ram", 1, 1000), token)
+	assertStatus(t, resp, http.StatusCreated)
+	var a struct {
+		TransactionID string `json:"transaction_id"`
+	}
+	parseJSON(t, resp, &a)
+
+	body := issueBody("Shyam", 1, 1000)
+	body["transaction_id"] = a.TransactionID
+	resp = doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices", body, token)
+	assertStatus(t, resp, http.StatusBadRequest)
+
+	var respBody struct{ Code string }
+	parseJSON(t, resp, &respBody)
+	if respBody.Code != "transaction_already_owned" {
+		t.Errorf("code = %q, want transaction_already_owned (not already_billed — "+
+			"the ownership check must catch this before the unique index does)", respBody.Code)
+	}
+}
