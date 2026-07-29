@@ -229,3 +229,45 @@ func TestOrgSettings_GetAuthenticated_CrossTenant404(t *testing.T) {
 	resp := doRequest(t, http.MethodGet, "/api/v1/orgs/"+orgA, nil, tokenB)
 	assertStatus(t, resp, http.StatusNotFound)
 }
+
+// TestOrgSettings_GetAuthenticated_SuperAdminNoMembership is fix-round-3
+// finding 1: a genuine platform super_admin has no organization_members row
+// for a gym they didn't found — nothing seeds one, not Repository.Create, not
+// any trigger — so this is the normal case for a super_admin browsing a gym's
+// settings, not an edge case. GetAuthenticated must check IsSuperAdmin
+// independently of GetOrgRole; checking it only as a fallback reached after a
+// membership row already exists (the order Update uses, safe there only
+// because OrgScope requires membership before Update ever runs) would 404 a
+// real super_admin on the one route that was deliberately moved outside
+// OrgScope so a super_admin could reach it.
+func TestOrgSettings_GetAuthenticated_SuperAdminNoMembership(t *testing.T) {
+	cleanupTables(t)
+	owner := createTestUser(t, "9800000209", "Owner")
+	orgID := createTestOrg(t, owner, "Platform-Viewed Gym")
+	ownerToken := generateTestToken(owner, "member")
+
+	putResp := doRequest(t, http.MethodPut, "/api/v1/orgs/"+orgID, map[string]any{
+		"pan_number":     "602222222",
+		"tax_legal_name": "Platform-Viewed Gym Pvt Ltd",
+		"tax_address":    "Boudha, Kathmandu",
+	}, ownerToken)
+	assertStatus(t, putResp, http.StatusOK)
+	putResp.Body.Close()
+
+	// No createTestOrg/createTestOrgMember call for this user against orgID —
+	// deliberately no organization_members row at all, matching a real
+	// super_admin who never joined this gym.
+	superAdmin := createTestSuperAdmin(t, "9800000210", "Platform Admin")
+	superToken := generateTestToken(superAdmin, "member")
+
+	getResp := doRequest(t, http.MethodGet, "/api/v1/orgs/"+orgID, nil, superToken)
+	assertStatus(t, getResp, http.StatusOK)
+
+	var got struct {
+		PANNumber string `json:"pan_number"`
+	}
+	parseJSON(t, getResp, &got)
+	if got.PANNumber != "602222222" {
+		t.Errorf("pan_number = %q, want %q", got.PANNumber, "602222222")
+	}
+}

@@ -86,22 +86,34 @@ func (s *Service) Create(ctx context.Context, userID string, in *CreateOrgInput)
 // Gated the same way Update is gated: role must be admin, or the caller must
 // be a super_admin. See ErrNotFound for why a failed check surfaces as
 // "not found" rather than "forbidden".
+//
+// The super_admin check runs first and independently of membership — nothing
+// seeds an organization_members row for a super_admin, so a plain
+// GetOrgRole-then-fallback (the order Update uses) would 404 a real
+// super_admin before ever consulting IsSuperAdmin: this route sits outside
+// OrgScope specifically so a super_admin can reach it, so that path must work.
 func (s *Service) GetAuthenticated(ctx context.Context, userID, orgID string) (*Organization, error) {
-	role, err := s.repo.GetOrgRole(ctx, userID, orgID)
-	if err != nil {
-		return nil, ErrNotFound
+	if isSA, err := s.repo.IsSuperAdmin(ctx, userID); err == nil && isSA {
+		return s.repo.GetFullByID(ctx, orgID)
 	}
-	if role != "admin" {
-		isSA, saErr := s.repo.IsSuperAdmin(ctx, userID)
-		if saErr != nil || !isSA {
-			return nil, ErrNotFound
-		}
+
+	role, err := s.repo.GetOrgRole(ctx, userID, orgID)
+	if err != nil || role != "admin" {
+		return nil, ErrNotFound
 	}
 
 	return s.repo.GetFullByID(ctx, orgID)
 }
 
 // Update updates an existing organization. Caller must be an admin of the org.
+//
+// Unlike GetAuthenticated above, this checks membership before falling back
+// to IsSuperAdmin — which means a super_admin with no organization_members
+// row for orgID is rejected here too, same bug, just currently unreachable:
+// this route sits inside OrgScope (cmd/api/main.go), which already requires
+// membership before this method ever runs, so a bare super_admin never
+// reaches Update today. If Update is ever moved outside OrgScope the way
+// GetAuthenticated was, it needs the same independent-super_admin-check fix.
 func (s *Service) Update(ctx context.Context, userID, orgID string, in *UpdateOrgInput) (*Organization, error) {
 	role, err := s.repo.GetOrgRole(ctx, userID, orgID)
 	if err != nil {

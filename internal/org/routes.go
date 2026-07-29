@@ -12,19 +12,13 @@ func (h *Handler) RegisterPublicRoutes(r chi.Router) {
 	r.Get("/{id}", h.Get)
 }
 
-// RegisterAdminRoutes mounts authenticated org management routes.
-// POST /api/v1/orgs            → Create (super_admin)
-// GET  /api/v1/orgs/{orgId}    → GetAuthenticated (org admin, or super_admin)
-// PUT  /api/v1/orgs/{orgId}    → Update (org admin, or super_admin)
-//
-// Not currently wired by cmd/api/main.go, which registers these same handlers
-// inline instead (see the "/orgs/{orgId}" route there) so it can apply
-// OrgScope only around Update and not around GetAuthenticated, which does its
-// own authorization. Kept here as the canonical shape of the group.
-func (h *Handler) RegisterAdminRoutes(r chi.Router) {
-	r.Post("/", h.Create)
-	r.Route("/{orgId}", func(r chi.Router) {
-		r.Get("/", h.GetAuthenticated)
-		r.Put("/", h.Update)
-	})
-}
+// The authenticated org routes (POST /api/v1/orgs, GET/PUT
+// /api/v1/orgs/{orgId}) are registered inline in cmd/api/main.go — and
+// mirrored in tests/e2e/setup_test.go — rather than through a helper here.
+// A prior RegisterAdminRoutes existed for that purpose but was never called
+// by either router, and it did not apply OrgScope to Put: a second,
+// hand-maintained copy of the route tree that looked authoritative and
+// shipped Update unprotected the moment anyone actually wired it in. Deleted
+// rather than fixed in place; making main.go/setup_test.go call a single
+// shared registration function instead of each inlining their own is a
+// larger refactor for later, not a tail-end fix.
