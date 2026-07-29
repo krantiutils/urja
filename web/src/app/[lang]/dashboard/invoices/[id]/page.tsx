@@ -174,7 +174,12 @@ export default function InvoiceDetailPage({
               <Printer className="w-4 h-4" />
               {t.invoices.print}
             </button>
-            {showBillActions && (
+            {/* Gated on canCancelAndReissue, not just showBillActions: once a
+                bill has been printed the customer may hold it, so outright
+                cancelling it is no longer lawful — only Revise's credit-note
+                path is. This must track the same condition Revise routes on,
+                or the two controls contradict each other. */}
+            {showBillActions && canCancelAndReissue && (
               <button
                 type="button"
                 onClick={() => openCancelModal(false)}

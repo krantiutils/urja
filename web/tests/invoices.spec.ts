@@ -146,8 +146,16 @@ function baseInvoice(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function mockInvoiceAPI(page: Page) {
-  let invoice = baseInvoice();
+function mockInvoiceAPI(
+  page: Page,
+  opts: {
+    // Lets a test start from a bill in a different state (e.g. already
+    // printed) without duplicating the whole route handler.
+    initial?: ReturnType<typeof baseInvoice>;
+    onCreditNote?: (body: Record<string, unknown>) => void;
+  } = {}
+) {
+  let invoice = opts.initial ?? baseInvoice();
   return page.route("**/api/v1/orgs/*/invoices**", (route: Route) => {
     const url = new URL(route.request().url());
     const method = route.request().method();
@@ -174,6 +182,26 @@ function mockInvoiceAPI(page: Page) {
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(invoice),
+      });
+    }
+
+    if (method === "POST" && url.pathname.endsWith("/credit-note")) {
+      const body = route.request().postDataJSON();
+      opts.onCreditNote?.(body);
+      const note = baseInvoice({
+        id: "inv-credit-001",
+        doc_type: "credit_note",
+        credit_note_for: invoice.id,
+        credit_note_for_number: invoice.invoice_number,
+        status: "issued",
+        print_count: 0,
+        total: body.items?.[0]?.unit_price ?? invoice.total,
+      });
+      invoice = note;
+      return route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify(note),
       });
     }
 
@@ -239,5 +267,54 @@ test.describe("Bills", () => {
     await page.goto("/en/dashboard/invoices");
     await expect(page.getByText("2082-83/000001")).toBeVisible();
     await expect(page.getByText("Ram Bahadur")).toBeVisible();
+  });
+
+  // Once a bill has been printed, the customer may already be holding it:
+  // cancelling it outright is no longer lawful, only a credit note is. This
+  // overrides the beforeEach's default mock (Playwright uses the
+  // most-recently-registered matching route), seeding a bill with
+  // print_count: 1 instead of the default 0.
+  test("a printed bill offers no outright cancel; Revise routes to a credit note", async ({ page }) => {
+    await mockInvoiceAPI(page, { initial: baseInvoice({ print_count: 1 }) });
+
+    await page.goto("/en/dashboard/invoices/inv-001");
+
+    // Wait on a positive assertion first — the page starts in a loading
+    // state with zero buttons rendered at all, so asserting the absence of
+    // "Cancel bill" before anything has loaded would trivially pass whether
+    // or not the bug is present. This anchors on content that only appears
+    // once the (print_count: 1) invoice has actually loaded and rendered.
+    await expect(page.getByText(/must be corrected with a credit note/i)).toBeVisible();
+    await expect(page.getByText(/can be cancelled and reissued/i)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /cancel bill/i })).toHaveCount(0);
+
+    await page.getByRole("button", { name: /revise/i }).click();
+    await expect(page.getByLabel(/why is this being credited/i)).toBeVisible();
+    await expect(page.getByLabel(/why is this being cancelled/i)).toHaveCount(0);
+  });
+
+  test("revising a printed bill submits a credit note with the reason and amount", async ({ page }) => {
+    const captured: { body: Record<string, unknown> | null } = { body: null };
+    await mockInvoiceAPI(page, {
+      initial: baseInvoice({ print_count: 1 }),
+      onCreditNote: (body) => {
+        captured.body = body;
+      },
+    });
+
+    await page.goto("/en/dashboard/invoices/inv-001");
+
+    await page.getByRole("button", { name: /revise/i }).click();
+    await page.getByLabel(/why is this being credited/i).fill("wrong amount charged");
+    await page.getByLabel(/amount to credit/i).fill("1500");
+    await page.getByRole("button", { name: /confirm/i }).click();
+
+    await expect(page).toHaveURL(/\/dashboard\/invoices\/inv-credit-001/);
+
+    expect(captured.body).not.toBeNull();
+    expect(captured.body?.reason).toBe("wrong amount charged");
+    expect(Array.isArray(captured.body?.items)).toBe(true);
+    const items = captured.body?.items as Array<Record<string, unknown>>;
+    expect(items[0].unit_price).toBe(1500);
   });
 });
