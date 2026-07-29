@@ -233,6 +233,32 @@ func (r *Repository) ReplaceAllPages(ctx context.Context, orgID string, pages []
 
 // --- Settings ---
 
+// ListLiveSites returns every gym whose site is published, for the apex
+// sitemap index. Scoped to live sites of active gyms: a draft site is not
+// discoverable by guessing its subdomain, and listing it here would undo that.
+func (r *Repository) ListLiveSites(ctx context.Context) ([]LiveSite, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT o.slug, ss.updated_at
+		   FROM site_settings ss
+		   JOIN organizations o ON o.id = ss.organization_id
+		  WHERE ss.is_live = true AND o.is_active = true
+		  ORDER BY o.slug`)
+	if err != nil {
+		return nil, fmt.Errorf("listing live sites: %w", err)
+	}
+	defer rows.Close()
+
+	out := []LiveSite{}
+	for rows.Next() {
+		var s LiveSite
+		if err := rows.Scan(&s.Slug, &s.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scanning live site: %w", err)
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
 // GetSettings retrieves a gym's site settings, returning ErrNotFound if the
 // gym has never configured a site.
 func (r *Repository) GetSettings(ctx context.Context, orgID string) (*Settings, error) {

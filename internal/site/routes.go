@@ -10,6 +10,7 @@ import (
 // These serve the tenant subdomains, so they must never expose draft content:
 // the service reports an unpublished page or a not-live site as not found.
 func (h *Handler) RegisterPublicRoutes(r chi.Router) {
+	r.Get("/", h.ListLiveSites)
 	r.Get("/templates", h.ListTemplates)
 	r.Get("/{slug}", h.GetPublicSite)
 	r.Get("/{slug}/pages/{pageSlug}", h.GetPublicPage)

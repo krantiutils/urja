@@ -109,6 +109,18 @@ func (h *Handler) SubmitLead(w http.ResponseWriter, r *http.Request) {
 
 // ListTemplates handles GET /api/v1/sites/templates — public so the builder's
 // picker can render previews without an extra auth round trip.
+// ListLiveSites handles GET /api/v1/sites — the published gym subdomains, so
+// the apex sitemap index can point crawlers at each one.
+func (h *Handler) ListLiveSites(w http.ResponseWriter, r *http.Request) {
+	sites, err := h.service.ListLiveSites(r.Context())
+	if err != nil {
+		h.logger.Error("failed to list live sites", "error", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"data": sites})
+}
+
 func (h *Handler) ListTemplates(w http.ResponseWriter, r *http.Request) {
 	out := make([]map[string]interface{}, 0, len(Templates))
 	for _, id := range TemplateIDs() {

@@ -293,6 +293,15 @@ type PageSummary struct {
 }
 
 // Settings holds a gym's site-wide configuration.
+// LiveSite is one publicly-published gym site, as listed for the apex sitemap
+// index. Deliberately minimal: this endpoint is unauthenticated and exists so
+// crawlers can discover tenant subdomains, so it carries only what a sitemap
+// needs and nothing that identifies the gym's members or operations.
+type LiveSite struct {
+	Slug      string    `json:"slug"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type Settings struct {
 	OrgID string `json:"organization_id"`
 	// Slug is the gym's subdomain label. Read-only and joined from

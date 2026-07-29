@@ -32,6 +32,11 @@ type PublicSite struct {
 	Pages     []PageSummary   `json:"pages"`
 }
 
+// ListLiveSites returns the published gym subdomains for the sitemap index.
+func (s *Service) ListLiveSites(ctx context.Context) ([]LiveSite, error) {
+	return s.repo.ListLiveSites(ctx)
+}
+
 // GetPublicSite resolves a subdomain slug to a live site. A gym that has not
 // flipped is_live is reported as not found, so an unfinished site never leaks.
 func (s *Service) GetPublicSite(ctx context.Context, slug string) (*PublicSite, error) {
