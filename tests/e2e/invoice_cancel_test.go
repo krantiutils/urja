@@ -123,3 +123,34 @@ func TestInvoiceCancel_CrossTenantDoesNotCancel(t *testing.T) {
 		t.Errorf("status = %q, want issued — org A must not have cancelled org B's invoice", status)
 	}
 }
+
+// Regression guard on the path Cancel's credit-note fix does NOT touch: an
+// invoice writes no income row when issued, so cancelling one must still
+// write nothing to the ledger at all.
+func TestInvoiceCancel_PlainInvoiceWritesNoLedgerRow(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000406", "Admin")
+	orgID := createTestOrg(t, admin, "No Ledger On Cancel Gym")
+	setPAN(t, orgID, "601234567")
+	token := generateTestToken(admin, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices",
+		issueBody("Ram", 1, 1000), token)
+	assertStatus(t, resp, http.StatusCreated)
+	var inv struct{ ID string }
+	parseJSON(t, resp, &inv)
+
+	resp = doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices/"+inv.ID+"/cancel",
+		map[string]any{"reason": "wrong customer"}, token)
+	assertStatus(t, resp, http.StatusOK)
+
+	var count int
+	err := testPool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM transactions WHERE organization_id = $1`, orgID).Scan(&count)
+	if err != nil {
+		t.Fatalf("counting transactions: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("ledger rows after cancelling a plain invoice = %d, want 0", count)
+	}
+}

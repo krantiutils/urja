@@ -362,19 +362,34 @@ func (r *Repository) Get(ctx context.Context, orgID, id string) (*Invoice, error
 
 // Cancel marks an invoice cancelled. The number stays consumed; that is the
 // point of cancelling rather than deleting.
+//
+// The ledger must always equal the sum of non-cancelled documents. An
+// invoice writes no ledger row when issued, so cancelling one correctly
+// writes nothing here — there is nothing to undo. A credit note DID write a
+// refund row at issue, so cancelling one must reverse it in the same
+// transaction: otherwise the refund survives the cancellation, and
+// creditedSoFar (which only counts status='issued' credit notes) silently
+// frees up capacity to credit the parent all over again.
 func (r *Repository) Cancel(ctx context.Context, orgID, id, cancelledBy, reason string) (*Invoice, error) {
-	tag, err := r.db.Exec(ctx,
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var docType, invoiceNumber, paymentMethod string
+	var total float64
+	err = tx.QueryRow(ctx,
 		`UPDATE invoices
 		    SET status = 'cancelled', cancelled_at = NOW(),
 		        cancelled_by = $3, cancellation_reason = $4
-		  WHERE id = $1 AND organization_id = $2 AND status = 'issued'`,
-		id, orgID, cancelledBy, reason)
-	if err != nil {
-		return nil, fmt.Errorf("cancelling invoice: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
+		  WHERE id = $1 AND organization_id = $2 AND status = 'issued'
+		  RETURNING doc_type, invoice_number, total, COALESCE(payment_method, '')`,
+		id, orgID, cancelledBy, reason,
+	).Scan(&docType, &invoiceNumber, &total, &paymentMethod)
+	if errors.Is(err, pgx.ErrNoRows) {
 		// Either it does not exist in this org, or it is already cancelled.
-		existing, getErr := r.Get(ctx, orgID, id)
+		existing, getErr := getInTx(ctx, tx, orgID, id)
 		if getErr != nil {
 			return nil, getErr
 		}
@@ -383,7 +398,34 @@ func (r *Repository) Cancel(ctx context.Context, orgID, id, cancelledBy, reason 
 		}
 		return nil, ErrNotFound
 	}
-	return r.Get(ctx, orgID, id)
+	if err != nil {
+		return nil, fmt.Errorf("cancelling invoice: %w", err)
+	}
+
+	if docType == "credit_note" {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO transactions (organization_id, category, description, transaction_date,
+			                           transaction_type, amount, payment_type, reference, entry_by)
+			 VALUES ($1, 'refund_reversal', $2, CURRENT_DATE, 'income', $3, $4, $5, $6)`,
+			orgID,
+			"Cancelled credit note "+invoiceNumber,
+			total,
+			defaultTo(paymentMethod, "cash"),
+			invoiceNumber,
+			cancelledBy,
+		); err != nil {
+			return nil, fmt.Errorf("writing refund reversal ledger row: %w", err)
+		}
+	}
+
+	inv, err := getInTx(ctx, tx, orgID, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing cancellation: %w", err)
+	}
+	return inv, nil
 }
 
 // creditedSoFar totals the credit notes already raised against an invoice.
@@ -398,6 +440,28 @@ func creditedSoFar(ctx context.Context, tx pgx.Tx, parentID string) (float64, er
 	return sum, nil
 }
 
+// lockParent takes a row lock on the parent invoice before any capacity
+// check runs. Without it, two concurrent credit notes both read the same
+// creditedSoFar under READ COMMITTED, both pass the cap check, and both
+// insert — over-crediting the parent. The lock forces the second transaction
+// to block until the first commits, so it re-reads a current sum. Scoped to
+// orgID so a cross-tenant parent still 404s rather than blocking on a row
+// the caller has no right to see.
+func lockParent(ctx context.Context, tx pgx.Tx, orgID, parentID string) error {
+	var exists bool
+	err := tx.QueryRow(ctx,
+		`SELECT true FROM invoices WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+		parentID, orgID,
+	).Scan(&exists)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("locking parent invoice: %w", err)
+	}
+	return nil
+}
+
 // CreditNote raises a credit note against parentID and writes the reversing
 // ledger row, both inside one transaction.
 func (r *Repository) CreditNote(ctx context.Context, p issueParams, parentID string) (*Invoice, error) {
@@ -406,6 +470,14 @@ func (r *Repository) CreditNote(ctx context.Context, p issueParams, parentID str
 		return nil, fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
+
+	// Lock first, before reading anything: the cap check below is only
+	// correct if no other transaction can concurrently insert a credit note
+	// against this same parent between our read of creditedSoFar and our
+	// insert.
+	if err := lockParent(ctx, tx, p.OrgID, parentID); err != nil {
+		return nil, err
+	}
 
 	parent, err := getInTx(ctx, tx, p.OrgID, parentID)
 	if err != nil {

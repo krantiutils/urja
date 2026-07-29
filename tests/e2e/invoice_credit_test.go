@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"net/http"
+	"sync"
 	"testing"
 )
 
@@ -120,6 +121,158 @@ func TestInvoiceCredit_RefusesCancelledParent(t *testing.T) {
 	resp = doRequest(t, http.MethodPost,
 		"/api/v1/orgs/"+orgID+"/invoices/"+parent.ID+"/credit-note", creditBody(1, 500), token)
 	assertStatus(t, resp, http.StatusConflict)
+}
+
+// The core guarantee behind the cap: two credit notes racing against the
+// same parent must not both pass the check. Parent is 1000, so two
+// simultaneous credits of 600 cannot both fit — modelled on
+// TestInvoice_ConcurrentIssuesAreGapless, which proves the analogous
+// guarantee for the number sequence.
+func TestInvoiceCredit_ConcurrentCreditsDoNotOvercredit(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000506", "Admin")
+	orgID := createTestOrg(t, admin, "Concurrent Credit Gym")
+	setPAN(t, orgID, "601234567")
+	token := generateTestToken(admin, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices",
+		issueBody("Ram", 1, 1000), token)
+	assertStatus(t, resp, http.StatusCreated)
+	var parent struct{ ID string }
+	parseJSON(t, resp, &parent)
+
+	const n = 8
+	statuses := make([]int, n)
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			resp := doRequest(t, http.MethodPost,
+				"/api/v1/orgs/"+orgID+"/invoices/"+parent.ID+"/credit-note",
+				creditBody(1, 600), token)
+			defer resp.Body.Close()
+			statuses[i] = resp.StatusCode
+		}(i)
+	}
+	wg.Wait()
+
+	successes := 0
+	for _, code := range statuses {
+		if code == http.StatusCreated {
+			successes++
+		}
+	}
+	if successes != 1 {
+		t.Errorf("successful credit notes = %d, want exactly 1 (1000 cap, 600 each)", successes)
+	}
+
+	var total float64
+	err := testPool.QueryRow(context.Background(),
+		`SELECT COALESCE(SUM(total), 0) FROM invoices
+		  WHERE credit_note_for = $1 AND status = 'issued'`, parent.ID).Scan(&total)
+	if err != nil {
+		t.Fatalf("summing credit notes: %v", err)
+	}
+	if total > 1000 {
+		t.Errorf("total credited = %.2f, want <= 1000", total)
+	}
+}
+
+// Cancelling a credit note must reverse its refund — otherwise the refund
+// stays on the books while creditedSoFar (which only counts status='issued'
+// notes) forgets it ever happened, silently freeing capacity to credit the
+// same parent again.
+func TestInvoiceCredit_CancellingReversesRefundAndFreesCapacity(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000507", "Admin")
+	orgID := createTestOrg(t, admin, "Cancel Credit Gym")
+	setPAN(t, orgID, "601234567")
+	token := generateTestToken(admin, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices",
+		issueBody("Ram", 1, 1000), token)
+	assertStatus(t, resp, http.StatusCreated)
+	var parent struct{ ID string }
+	parseJSON(t, resp, &parent)
+
+	resp = doRequest(t, http.MethodPost,
+		"/api/v1/orgs/"+orgID+"/invoices/"+parent.ID+"/credit-note", creditBody(1, 1000), token)
+	assertStatus(t, resp, http.StatusCreated)
+	var note struct{ ID string }
+	parseJSON(t, resp, &note)
+
+	resp = doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices/"+note.ID+"/cancel",
+		map[string]any{"reason": "issued by mistake"}, token)
+	assertStatus(t, resp, http.StatusOK)
+
+	// Exactly one reversal row, for the credited amount.
+	var reversals int
+	err := testPool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM transactions
+		  WHERE organization_id = $1 AND transaction_type = 'income'
+		    AND category = 'refund_reversal' AND amount = 1000`, orgID).Scan(&reversals)
+	if err != nil {
+		t.Fatalf("counting reversals: %v", err)
+	}
+	if reversals != 1 {
+		t.Errorf("refund_reversal rows = %d, want exactly 1", reversals)
+	}
+
+	// The net ledger effect of issuing a credit note and then cancelling it
+	// is zero: the refund and its reversal cancel out.
+	var net float64
+	err = testPool.QueryRow(context.Background(),
+		`SELECT COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE -amount END), 0)
+		   FROM transactions WHERE organization_id = $1`, orgID).Scan(&net)
+	if err != nil {
+		t.Fatalf("summing net ledger effect: %v", err)
+	}
+	if net != 0 {
+		t.Errorf("net ledger effect of issue-then-cancel = %.2f, want 0", net)
+	}
+
+	// The cancelled credit note no longer counts against the parent's
+	// capacity, so the full amount can be credited again.
+	resp = doRequest(t, http.MethodPost,
+		"/api/v1/orgs/"+orgID+"/invoices/"+parent.ID+"/credit-note", creditBody(1, 1000), token)
+	assertStatus(t, resp, http.StatusCreated)
+
+	// Two 'refund' expense rows now exist (the cancelled one and the live
+	// one) but only one reversal — so exactly one refund's worth remains net
+	// on the books, not two.
+	var refunds, reversalsAfter int
+	if err := testPool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM transactions
+		  WHERE organization_id = $1 AND transaction_type = 'expense' AND category = 'refund'`,
+		orgID).Scan(&refunds); err != nil {
+		t.Fatalf("counting refunds: %v", err)
+	}
+	if err := testPool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM transactions
+		  WHERE organization_id = $1 AND transaction_type = 'income' AND category = 'refund_reversal'`,
+		orgID).Scan(&reversalsAfter); err != nil {
+		t.Fatalf("counting reversals: %v", err)
+	}
+	if refunds != 2 {
+		t.Errorf("refund expense rows = %d, want 2 (one cancelled, one live)", refunds)
+	}
+	if reversalsAfter != 1 {
+		t.Errorf("refund_reversal rows = %d, want 1 (only the cancelled note was reversed)", reversalsAfter)
+	}
+
+	var netRefund float64
+	err = testPool.QueryRow(context.Background(),
+		`SELECT COALESCE(SUM(CASE WHEN category = 'refund' THEN amount
+		                          WHEN category = 'refund_reversal' THEN -amount
+		                          ELSE 0 END), 0)
+		   FROM transactions WHERE organization_id = $1`, orgID).Scan(&netRefund)
+	if err != nil {
+		t.Fatalf("summing net refund: %v", err)
+	}
+	if netRefund != 1000 {
+		t.Errorf("net refund on the books = %.2f, want 1000 — exactly one live credit note's worth, not two", netRefund)
+	}
 }
 
 // A credit note against another org's invoice must 404 like every other
