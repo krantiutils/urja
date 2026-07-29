@@ -66,6 +66,9 @@ import type {
   MemberSubscription,
   SubscriptionPayment,
   AssignPackageRequest,
+  Invoice,
+  InvoiceItemInput,
+  IssueInvoiceInput,
 } from "@/types";
 import type {
   SiteSettings,
@@ -116,7 +119,7 @@ class ApiClient {
       const body = (await response.json().catch(() => ({
         error: `HTTP ${response.status}`,
       }))) as ApiError;
-      throw new ApiRequestError(body.error, response.status);
+      throw new ApiRequestError(body.error, response.status, body.code);
     }
 
     return response.json() as Promise<T>;
@@ -1145,6 +1148,70 @@ class ApiClient {
     });
   }
 
+  // --- Invoices (PAN tax billing) ---
+
+  async listInvoices(
+    orgId: string,
+    params: {
+      status?: string;
+      fiscal_year?: string;
+      q?: string;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<{ data: Invoice[]; total: number }> {
+    const q = new URLSearchParams();
+    if (params.status) q.set("status", params.status);
+    if (params.fiscal_year) q.set("fiscal_year", params.fiscal_year);
+    if (params.q) q.set("q", params.q);
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return this.request(`/api/v1/orgs/${orgId}/invoices${qs ? `?${qs}` : ""}`);
+  }
+
+  async getInvoice(orgId: string, id: string): Promise<Invoice> {
+    return this.request(`/api/v1/orgs/${orgId}/invoices/${id}`);
+  }
+
+  async issueInvoice(orgId: string, data: IssueInvoiceInput): Promise<Invoice> {
+    return this.request(`/api/v1/orgs/${orgId}/invoices`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async cancelInvoice(orgId: string, id: string, reason: string): Promise<Invoice> {
+    return this.request(`/api/v1/orgs/${orgId}/invoices/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async creditNote(
+    orgId: string,
+    id: string,
+    data: { reason: string; items: InvoiceItemInput[] }
+  ): Promise<Invoice> {
+    return this.request(`/api/v1/orgs/${orgId}/invoices/${id}/credit-note`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async printInvoice(
+    orgId: string,
+    id: string
+  ): Promise<{ invoice: Invoice; copy_label: "original" | "copy" }> {
+    return this.request(`/api/v1/orgs/${orgId}/invoices/${id}/print`, {
+      method: "POST",
+    });
+  }
+
+  async nextInvoiceNumber(orgId: string): Promise<{ invoice_number: string }> {
+    return this.request(`/api/v1/orgs/${orgId}/invoices/next-number`);
+  }
+
   // --- Absentees (members who have stopped coming) ---
 
   async listAbsentees(
@@ -1331,11 +1398,13 @@ class ApiClient {
 
 export class ApiRequestError extends Error {
   status: number;
+  code?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
+    this.code = code;
   }
 }
 

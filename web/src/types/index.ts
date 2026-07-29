@@ -51,6 +51,7 @@ export interface User {
 
 export interface ApiError {
   error: string;
+  code?: string;
 }
 
 export interface DashboardStats {
@@ -526,6 +527,10 @@ export interface Organization {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  pan_number?: string;
+  is_vat_registered?: boolean;
+  tax_legal_name?: string;
+  tax_address?: string;
 }
 
 export interface CreateOrganizationRequest {
@@ -549,6 +554,10 @@ export interface UpdateOrganizationRequest {
   latitude?: number;
   longitude?: number;
   settings?: Record<string, unknown>;
+  pan_number?: string;
+  is_vat_registered?: boolean;
+  tax_legal_name?: string;
+  tax_address?: string;
 }
 
 // --- SMS (from GET /api/v1/orgs/{orgId}/sms) ---
@@ -929,4 +938,80 @@ export interface TrainingGuideInput {
   content_ne?: string;
   category?: string;
   cover_image_url?: string;
+}
+
+/** A line item on a PAN tax invoice. Mirrors internal/invoice. */
+export interface InvoiceItem {
+  line_no: number;
+  description: string;
+  description_ne?: string;
+  quantity: number;
+  unit_price: number;
+  amount: number;
+}
+
+export interface Invoice {
+  id: string;
+  organization_id: string;
+  fiscal_year: string;
+  sequence: number;
+  invoice_number: string;
+  doc_type: "invoice" | "credit_note";
+  credit_note_for?: string;
+
+  seller_name: string;
+  seller_pan: string;
+  seller_address?: string;
+  seller_vat_registered: boolean;
+
+  customer_user_id?: string;
+  customer_name: string;
+  customer_pan?: string;
+  customer_address?: string;
+  customer_phone?: string;
+
+  issued_date: string;
+  issued_date_bs: string;
+
+  subtotal: number;
+  discount: number;
+  taxable_amount: number;
+  vat_rate: number;
+  vat_amount: number;
+  total: number;
+  amount_in_words: string;
+
+  payment_method?: string;
+  status: "issued" | "cancelled";
+  cancelled_at?: string;
+  cancellation_reason?: string;
+
+  transaction_id?: string;
+  member_package_id?: string;
+
+  issued_by: string;
+  print_count: number;
+  created_at: string;
+
+  items?: InvoiceItem[];
+}
+
+export interface InvoiceItemInput {
+  description: string;
+  description_ne?: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface IssueInvoiceInput {
+  customer_user_id?: string;
+  customer_name: string;
+  customer_pan?: string;
+  customer_address?: string;
+  customer_phone?: string;
+  payment_method?: string;
+  transaction_id?: string;
+  member_package_id?: string;
+  discount?: number;
+  items: InvoiceItemInput[];
 }
