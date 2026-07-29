@@ -527,6 +527,7 @@ const dictionaries = {
         "This bill has not been printed, so it can be cancelled and reissued.",
       reviseExplainCredit:
         "This bill has already been printed, so it must be corrected with a credit note.",
+      panDigits: "PAN must be exactly 9 digits",
     },
     absentees: {
       title: "Who has stopped coming",
@@ -592,6 +593,11 @@ const dictionaries = {
       profileSaved: "Profile saved",
       privacySaved: "Privacy settings saved",
       emergencyInfo: "Emergency Contact",
+      taxDetails: "Tax Details",
+      taxDetailsIntro: "A registered PAN is required before you can issue any bill.",
+      panNumber: "PAN Number",
+      taxLegalName: "Registered Legal Name",
+      taxAddress: "Registered Address",
     },
     topbar: {
       orgQr: "QR Code",
@@ -1493,6 +1499,7 @@ const dictionaries = {
         "यो बिल प्रिन्ट भएको छैन, त्यसैले रद्द गरी पुनः जारी गर्न सकिन्छ।",
       reviseExplainCredit:
         "यो बिल प्रिन्ट भइसकेको छ, त्यसैले क्रेडिट नोटबाट मात्र सच्याउन मिल्छ।",
+      panDigits: "प्यान ठ्याक्कै ९ अंकको हुनुपर्छ",
     },
     absentees: {
       title: "आउन छाडेकाहरू",
@@ -1558,6 +1565,11 @@ const dictionaries = {
       profileSaved: "प्रोफाइल सेभ भयो",
       privacySaved: "गोपनीयता सेटिङ्स सेभ भयो",
       emergencyInfo: "आपतकालीन सम्पर्क",
+      taxDetails: "कर विवरण",
+      taxDetailsIntro: "बिल जारी गर्नुअघि दर्ता प्यान आवश्यक छ।",
+      panNumber: "प्यान नम्बर",
+      taxLegalName: "दर्ता कानुनी नाम",
+      taxAddress: "दर्ता ठेगाना",
     },
     topbar: {
       orgQr: "QR कोड",

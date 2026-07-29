@@ -26,6 +26,7 @@ import {
   Heart,
   Eye,
   Calendar,
+  Receipt,
 } from "lucide-react";
 
 export default function SettingsPage({
@@ -59,6 +60,17 @@ export default function SettingsPage({
   const [orgSaving, setOrgSaving] = useState(false);
   const [orgSaved, setOrgSaved] = useState(false);
   const [orgSaveError, setOrgSaveError] = useState<string | null>(null);
+
+  // Tax / PAN form. Without a PAN no bill can be issued, so this is kept
+  // separate from the rest of the org form: a gym can fix just this without
+  // touching its name, address, etc.
+  const [pan, setPan] = useState("");
+  const [taxLegalName, setTaxLegalName] = useState("");
+  const [taxAddress, setTaxAddress] = useState("");
+  const [panError, setPanError] = useState<string | null>(null);
+  const [taxSaving, setTaxSaving] = useState(false);
+  const [taxSaved, setTaxSaved] = useState(false);
+  const [taxSaveError, setTaxSaveError] = useState<string | null>(null);
 
   // --- Profile state ---
   const [, setProfile] = useState<MemberProfile | null>(null);
@@ -120,6 +132,9 @@ export default function SettingsPage({
     setAddressNe(data.address_ne ?? "");
     setLatitude(data.latitude != null ? String(data.latitude) : "");
     setLongitude(data.longitude != null ? String(data.longitude) : "");
+    setPan(data.pan_number ?? "");
+    setTaxLegalName(data.tax_legal_name ?? "");
+    setTaxAddress(data.tax_address ?? "");
   }, []);
 
   const fetchOrg = useCallback(async () => {
@@ -212,6 +227,41 @@ export default function SettingsPage({
       );
     } finally {
       setOrgSaving(false);
+    }
+  };
+
+  // --- Save tax details ---
+  const handleSaveTax = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPanError(null);
+    setTaxSaveError(null);
+
+    // Match the server's own rule exactly: 9 digits, or empty. An empty PAN
+    // is how a gym clears a wrong one — it must not be rejected here.
+    if (pan && !/^\d{9}$/.test(pan)) {
+      setPanError(t.invoices.panDigits);
+      return;
+    }
+
+    if (!orgId) return;
+    setTaxSaving(true);
+    setTaxSaved(false);
+    try {
+      const updated = await api.updateOrg(orgId, {
+        pan_number: pan,
+        tax_legal_name: taxLegalName,
+        tax_address: taxAddress,
+      });
+      setOrg(updated);
+      populateOrg(updated);
+      setTaxSaved(true);
+      setTimeout(() => setTaxSaved(false), 3000);
+    } catch (err) {
+      setTaxSaveError(
+        err instanceof ApiRequestError ? err.message : t.common.error
+      );
+    } finally {
+      setTaxSaving(false);
     }
   };
 
@@ -900,6 +950,87 @@ export default function SettingsPage({
                 </>
               )}
             </div>
+          </div>
+
+          {/* Tax Details Card — no bill can be issued without a PAN here */}
+          <div className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.06] rounded-2xl shadow-card overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/[0.06]">
+              <h2 className="text-base font-semibold text-fg flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-fg-muted" />
+                {t.settings.taxDetails}
+              </h2>
+            </div>
+            <form onSubmit={handleSaveTax} className="p-5 space-y-4">
+              <p className="text-sm text-fg-muted">{t.settings.taxDetailsIntro}</p>
+              <div>
+                <label htmlFor="tax-pan" className={labelClass}>
+                  {t.settings.panNumber}
+                </label>
+                <input
+                  id="tax-pan"
+                  type="text"
+                  inputMode="numeric"
+                  value={pan}
+                  onChange={(e) => setPan(e.target.value)}
+                  placeholder="123456789"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="tax-legal-name" className={labelClass}>
+                  {t.settings.taxLegalName}
+                </label>
+                <input
+                  id="tax-legal-name"
+                  type="text"
+                  value={taxLegalName}
+                  onChange={(e) => setTaxLegalName(e.target.value)}
+                  maxLength={255}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="tax-address" className={labelClass}>
+                  {t.settings.taxAddress}
+                </label>
+                <input
+                  id="tax-address"
+                  type="text"
+                  value={taxAddress}
+                  onChange={(e) => setTaxAddress(e.target.value)}
+                  maxLength={500}
+                  className={inputClass}
+                />
+              </div>
+
+              {panError && (
+                <p className="text-sm text-red-400" role="alert">
+                  {panError}
+                </p>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={taxSaving}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors shadow-accent-glow disabled:opacity-50"
+                >
+                  {taxSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : taxSaved ? (
+                    <Check className="w-4 h-4" />
+                  ) : null}
+                  {taxSaving
+                    ? t.settings.saving
+                    : taxSaved
+                      ? t.settings.saved
+                      : t.settings.saveChanges}
+                </button>
+                {taxSaveError && (
+                  <span className="text-sm text-red-400">{taxSaveError}</span>
+                )}
+              </div>
+            </form>
           </div>
 
           {/* Save Org Button — only for admin/staff */}
