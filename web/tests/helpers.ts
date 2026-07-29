@@ -47,11 +47,35 @@ export async function injectAuth(page: Page): Promise<void> {
 }
 
 /**
- * Like injectAuth, but with role "admin" instead of "super_admin". Needed for
- * screens gated by a client-side check on `user.role === "admin" || "staff"`
- * (e.g. settings' canEditOrg) — that check reads the JWT's role claim
- * directly and does not treat "super_admin" as satisfying it.
+ * Like injectAuth, but resolving to an org ADMIN.
+ *
+ * The JWT's `role` claim is vestigial — the server issues "member" on every
+ * token, including an admin's — so screens gate on `user.org_role`, which the
+ * auth layer resolves by fetching the profile. Injecting a token alone is
+ * therefore not enough: without the profile route mocked, `org_role` stays
+ * undefined and admin-gated UI renders read-only. This mocks both.
  */
 export async function injectAdminAuth(page: Page): Promise<void> {
-  return injectSession(page, "admin");
+  await page.route("**/api/v1/members/me", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: "test-user-001",
+        name: "Test Admin",
+        phone: "9841000000",
+        user_type: "gym_member",
+        onboarding_completed: true,
+        organizations: [
+          {
+            org_id: "org-001",
+            org_name: "Test Gym",
+            org_slug: "test-gym",
+            role: "admin",
+          },
+        ],
+      }),
+    }),
+  );
+  return injectSession(page, "member");
 }

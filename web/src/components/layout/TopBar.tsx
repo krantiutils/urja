@@ -433,7 +433,7 @@ export function TopBar({ t, locale, onMenuToggle }: TopBarProps) {
                   {user?.phone}
                 </p>
                 <p className="text-xs text-fg-muted capitalize">
-                  {user?.role}
+                  {user?.org_role}
                 </p>
               </div>
               <div className="py-1">

@@ -112,7 +112,12 @@ export default function SettingsPage({
   const [privacySaved, setPrivacySaved] = useState(false);
 
   const orgId = user?.org_id;
-  const canEditOrg = user?.role === "admin" || user?.role === "staff";
+  // The JWT `role` claim is vestigial — it is "member" on every token, including
+  // an org admin's, so gating on it made this whole page read-only for everybody.
+  // org_role is the real one, resolved from actual memberships. Admin, not staff:
+  // the API's org update rejects staff with 403, so offering them an editable
+  // form would only produce a failed save.
+  const canEditOrg = user?.org_role === "admin" || Boolean(user?.is_super_admin);
 
   const inputClass =
     "w-full bg-surface border border-white/[0.06] rounded-xl px-4 py-2.5 text-fg text-sm focus:outline-none focus:ring-1 focus:ring-accent/50 transition-colors";
@@ -406,7 +411,7 @@ export default function SettingsPage({
                   {t.settings.role}
                 </span>
                 <span className="text-sm text-fg font-mono capitalize">
-                  {user?.role ?? "\u2014"}
+                  {user?.org_role ?? "\u2014"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
