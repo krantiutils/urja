@@ -131,6 +131,10 @@ func (h *Handler) GetMyLeaderboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.leaderboardService.GetLeaderboard(r.Context(), orgID, period, limit, 0)
+	if errors.Is(err, leaderboard.ErrInvalidPeriod) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
 	if err != nil {
 		h.logger.Error("failed to get leaderboard", "error", err, "org_id", orgID)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})

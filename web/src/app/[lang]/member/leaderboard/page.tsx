@@ -17,14 +17,14 @@ import type { LeaderboardEntry, Locale } from "@/types";
  * left to wonder.
  */
 
-const PERIODS = ["week", "month", "all"] as const;
+const PERIODS = ["weekly", "monthly", "alltime"] as const;
 
 export default function LeaderboardPage({ params }: { params: { lang: string } }) {
   const locale = params.lang as Locale;
   const t = getDictionary(locale);
   const { user } = useAuth();
 
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]>("month");
+  const [period, setPeriod] = useState<(typeof PERIODS)[number]>("monthly");
   const [rankings, setRankings] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,11 @@ export default function LeaderboardPage({ params }: { params: { lang: string } }
     fetchBoard();
   }, [fetchBoard]);
 
-  const label = { week: t.leaderboard.thisWeek, month: t.leaderboard.thisMonth, all: t.leaderboard.allTime };
+  const label = {
+    weekly: t.leaderboard.thisWeek,
+    monthly: t.leaderboard.thisMonth,
+    alltime: t.leaderboard.allTime,
+  };
   const onBoard = rankings.some((r) => r.member_id === user?.id);
 
   return (

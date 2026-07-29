@@ -2,6 +2,7 @@ package leaderboard
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -37,6 +38,10 @@ func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	result, err := h.service.GetLeaderboard(r.Context(), orgID, period, limit, offset)
+	if errors.Is(err, ErrInvalidPeriod) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
 	if err != nil {
 		h.logger.Error("failed to get leaderboard",
 			"error", err, "org_id", orgID, "period", period)

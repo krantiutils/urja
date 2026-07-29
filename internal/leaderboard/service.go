@@ -2,6 +2,7 @@ package leaderboard
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 )
@@ -22,6 +23,11 @@ type Service struct {
 func NewService(repo *Repository, logger *slog.Logger) *Service {
 	return &Service{repo: repo, logger: logger}
 }
+
+// ErrInvalidPeriod is returned for a period outside the accepted vocabulary.
+// Callers map it to 400: it is the caller's mistake, not a server fault, and
+// returning 500 made a simple typo in a query string look like an outage.
+var ErrInvalidPeriod = errors.New("invalid period")
 
 // GetLeaderboard retrieves the leaderboard for an organization by period.
 // Valid periods: "weekly", "monthly", "alltime".
@@ -44,7 +50,7 @@ func (s *Service) GetLeaderboard(ctx context.Context, orgID, period string, limi
 	case "alltime":
 		rankings, err = s.repo.GetAllTimeRanking(ctx, orgID, limit, offset)
 	default:
-		return nil, fmt.Errorf("invalid period %q: must be weekly, monthly, or alltime", period)
+		return nil, fmt.Errorf("%w: %q must be weekly, monthly, or alltime", ErrInvalidPeriod, period)
 	}
 
 	if err != nil {
