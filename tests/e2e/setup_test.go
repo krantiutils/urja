@@ -693,6 +693,7 @@ func initSMSCredits(t *testing.T, orgID string, balance int) {
 func cleanupTables(t *testing.T) {
 	t.Helper()
 	tables := []string{
+		"invoice_prints", "invoice_items", "invoices", "invoice_counters",
 		"progress_photos", "health_metrics",
 		"activity_logs", "nfc_devices", "nfc_cards",
 		"sms_campaigns", "sms_purchases", "sms_credits",
