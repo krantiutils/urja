@@ -124,10 +124,14 @@ func TestInvoiceCancel_CrossTenantDoesNotCancel(t *testing.T) {
 	}
 }
 
-// Regression guard on the path Cancel's credit-note fix does NOT touch: an
-// invoice writes no income row when issued, so cancelling one must still
-// write nothing to the ledger at all.
-func TestInvoiceCancel_PlainInvoiceWritesNoLedgerRow(t *testing.T) {
+// Regression guard on the path Cancel's credit-note fix does NOT touch. This
+// used to assert that cancelling a plain invoice wrote nothing at all to the
+// ledger — true only because, before task 8b, a from-scratch bill recorded no
+// income in the first place. Task 8b's own tests (invoice_ledger_test.go)
+// cover that gap; what's left worth guarding here, alongside the rest of this
+// file's cancel-path tests, is that the net effect still nets to zero rather
+// than leaving the reversed income sitting on the books uncancelled.
+func TestInvoiceCancel_PlainInvoiceNetsToZeroOnLedger(t *testing.T) {
 	cleanupTables(t)
 	admin := createTestUser(t, "9800000406", "Admin")
 	orgID := createTestOrg(t, admin, "No Ledger On Cancel Gym")
@@ -144,13 +148,14 @@ func TestInvoiceCancel_PlainInvoiceWritesNoLedgerRow(t *testing.T) {
 		map[string]any{"reason": "wrong customer"}, token)
 	assertStatus(t, resp, http.StatusOK)
 
-	var count int
+	var net float64
 	err := testPool.QueryRow(context.Background(),
-		`SELECT COUNT(*) FROM transactions WHERE organization_id = $1`, orgID).Scan(&count)
+		`SELECT COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE -amount END), 0)
+		   FROM transactions WHERE organization_id = $1`, orgID).Scan(&net)
 	if err != nil {
-		t.Fatalf("counting transactions: %v", err)
+		t.Fatalf("summing net ledger effect: %v", err)
 	}
-	if count != 0 {
-		t.Errorf("ledger rows after cancelling a plain invoice = %d, want 0", count)
+	if net != 0 {
+		t.Errorf("net ledger effect after cancelling a plain invoice = %.2f, want 0", net)
 	}
 }

@@ -74,9 +74,12 @@ audit.
 The two corrections differ here, and the distinction is the whole reason both
 exist:
 
-- **Cancel touches nothing in `transactions`.** A cancelled bill is a document
-  withdrawn before it counted. If money genuinely moved, cancelling is the wrong
-  instrument — use a credit note.
+- **Cancel touches `transactions` only to undo what the bill itself wrote.** A
+  cancelled bill is a document withdrawn before it counted, so it reverses
+  exactly the income it created (see `owns_transaction` below) and nothing
+  more — a package sale's income is never this document's to touch. If money
+  genuinely moved and there is nothing of the bill's own to reverse, cancelling
+  is the wrong instrument — use a credit note.
 - **A credit note always writes a reversing ledger row**: a `transactions` row
   of type `expense`, category `refund`, for the credit amount, linked back to
   the credit note. Always, regardless of whether the original bill created its
@@ -88,6 +91,22 @@ The `expense`/`refund` mapping is a known simplification. A sales return is
 properly contra-revenue, but `transactions.transaction_type` only admits
 `income` and `expense`, and inventing a third type would ripple through every
 existing accounts report. Revisit if the books need it.
+
+**A bill's own income follows the same never-touch-what-you-don't-own rule as
+the credit note's refund above, mirrored for issue rather than cancel.**
+Ownership cannot be inferred from the row alone — a linked transaction and an
+owned one look identical once written — so `invoices.owns_transaction` records
+it explicitly at insert, and the immutability trigger protects it from
+changing afterwards:
+
+| Bill | At issue | On cancel |
+|------|----------|-----------|
+| No `transaction_id` supplied (raised from scratch) | Creates an `income`/`Sales` row, links it, and sets `owns_transaction` | Reverses it with an `expense`/`Sales reversal` row |
+| `transaction_id` supplied (package sale pre-fill) | Links the existing row, writes nothing, `owns_transaction` stays false | Writes nothing |
+
+A bill only ever reverses income it created. A package sale's income belongs
+to the package flow (`recordPackageIncome`) and is not this document's to
+undo.
 
 ---
 

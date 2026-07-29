@@ -220,11 +220,15 @@ func TestInvoiceCredit_CancellingReversesRefundAndFreesCapacity(t *testing.T) {
 	}
 
 	// The net ledger effect of issuing a credit note and then cancelling it
-	// is zero: the refund and its reversal cancel out.
+	// is zero: the refund and its reversal cancel out. Scoped to the
+	// refund/refund_reversal categories, not the whole org ledger — the
+	// parent invoice's own income row (task 8b) is still on the books at
+	// this point, since only the credit note was cancelled, not the parent.
 	var net float64
 	err = testPool.QueryRow(context.Background(),
 		`SELECT COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE -amount END), 0)
-		   FROM transactions WHERE organization_id = $1`, orgID).Scan(&net)
+		   FROM transactions WHERE organization_id = $1
+		     AND category IN ('refund', 'refund_reversal')`, orgID).Scan(&net)
 	if err != nil {
 		t.Fatalf("summing net ledger effect: %v", err)
 	}

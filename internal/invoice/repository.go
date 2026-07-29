@@ -172,15 +172,16 @@ type issueParams struct {
 }
 
 // insertDocument writes an invoice or credit note and its line items inside tx.
-func insertDocument(ctx context.Context, tx pgx.Tx, p issueParams, seller sellerIdentity) (string, string, int, error) {
-	seq, err := allocateSequence(ctx, tx, p.OrgID, p.FiscalYear)
-	if err != nil {
-		return "", "", 0, err
-	}
-	number := fmt.Sprintf("%s/%06d", p.FiscalYear, seq)
-
+//
+// seq and number are allocated by the caller, not here: the income row a
+// from-scratch bill writes (see Issue) needs the invoice number as its
+// ledger reference before the invoice row exists, and insertDocument writing
+// the invoice row is what used to allocate the number — a cycle. Both
+// callers allocate first and pass the result in, inside the same
+// transaction, so a rollback still returns the number.
+func insertDocument(ctx context.Context, tx pgx.Tx, p issueParams, seller sellerIdentity, seq int, number string, ownsTransaction bool) (string, error) {
 	var id string
-	err = tx.QueryRow(ctx,
+	err := tx.QueryRow(ctx,
 		`INSERT INTO invoices (
 			organization_id, fiscal_year, sequence, invoice_number,
 			doc_type, credit_note_for,
@@ -188,7 +189,7 @@ func insertDocument(ctx context.Context, tx pgx.Tx, p issueParams, seller seller
 			customer_user_id, customer_name, customer_pan, customer_address, customer_phone,
 			issued_date, issued_date_bs,
 			subtotal, discount, taxable_amount, vat_rate, vat_amount, total, amount_in_words,
-			payment_method, transaction_id, member_package_id, issued_by
+			payment_method, transaction_id, member_package_id, issued_by, owns_transaction
 		 ) VALUES (
 			$1, $2, $3, $4,
 			$5, NULLIF($6, '')::uuid,
@@ -196,7 +197,7 @@ func insertDocument(ctx context.Context, tx pgx.Tx, p issueParams, seller seller
 			NULLIF($11, '')::uuid, $12, NULLIF($13, ''), NULLIF($14, ''), NULLIF($15, ''),
 			$16::date, $17,
 			$18, $19, $20, 0, 0, $21, $22,
-			NULLIF($23, ''), NULLIF($24, '')::uuid, NULLIF($25, '')::uuid, $26
+			NULLIF($23, ''), NULLIF($24, '')::uuid, NULLIF($25, '')::uuid, $26, $27
 		 ) RETURNING id`,
 		p.OrgID, p.FiscalYear, seq, number,
 		p.DocType, p.CreditNoteFor,
@@ -204,7 +205,7 @@ func insertDocument(ctx context.Context, tx pgx.Tx, p issueParams, seller seller
 		p.In.CustomerUserID, p.In.CustomerName, p.In.CustomerPAN, p.In.CustomerAddress, p.In.CustomerPhone,
 		p.IssuedDate, p.IssuedDateBS,
 		p.Subtotal, p.Discount, p.TaxableAmount, p.Total, p.AmountInWords,
-		p.In.PaymentMethod, p.In.TransactionID, p.In.MemberPackageID, p.IssuedBy,
+		p.In.PaymentMethod, p.In.TransactionID, p.In.MemberPackageID, p.IssuedBy, ownsTransaction,
 	).Scan(&id)
 	if err != nil {
 		// The partial unique index on transaction_id is what stops the same
@@ -215,9 +216,9 @@ func insertDocument(ctx context.Context, tx pgx.Tx, p issueParams, seller seller
 		// index rename would silently degrade this 409 into a generic 400.
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.ConstraintName == "idx_invoices_one_per_transaction" {
-			return "", "", 0, ErrAlreadyBilled
+			return "", ErrAlreadyBilled
 		}
-		return "", "", 0, fmt.Errorf("inserting invoice: %w", err)
+		return "", fmt.Errorf("inserting invoice: %w", err)
 	}
 
 	for i, it := range p.In.Items {
@@ -227,11 +228,11 @@ func insertDocument(ctx context.Context, tx pgx.Tx, p issueParams, seller seller
 			id, i+1, it.Description, it.DescriptionNe, it.Quantity, it.UnitPrice,
 			round2(it.Quantity*it.UnitPrice),
 		); err != nil {
-			return "", "", 0, fmt.Errorf("inserting line item %d: %w", i+1, err)
+			return "", fmt.Errorf("inserting line item %d: %w", i+1, err)
 		}
 	}
 
-	return id, number, seq, nil
+	return id, nil
 }
 
 // Issue writes a new bill and returns it.
@@ -251,7 +252,40 @@ func (r *Repository) Issue(ctx context.Context, p issueParams) (*Invoice, error)
 		return nil, err
 	}
 
-	id, _, _, err := insertDocument(ctx, tx, p, seller)
+	seq, err := allocateSequence(ctx, tx, p.OrgID, p.FiscalYear)
+	if err != nil {
+		return nil, err
+	}
+	number := fmt.Sprintf("%s/%06d", p.FiscalYear, seq)
+
+	// A bill raised from scratch is the only record that this money came in, so
+	// it creates its own income row. A bill pre-filled from a package sale links
+	// the row that flow already wrote — creating a second one would double-count
+	// the same payment.
+	ownsTransaction := false
+	if p.In.TransactionID == "" && p.Total > 0 {
+		var transactionID string
+		err := tx.QueryRow(ctx,
+			`INSERT INTO transactions
+			        (organization_id, category, description, transaction_date,
+			         transaction_type, amount, payment_type, reference, entry_by)
+			 VALUES ($1, 'Sales', $2, CURRENT_DATE, 'income', $3, $4, $5, $6)
+			 RETURNING id`,
+			p.OrgID,
+			"Invoice "+number+" — "+p.In.CustomerName,
+			p.Total,
+			defaultTo(p.In.PaymentMethod, "cash"),
+			number,
+			p.IssuedBy,
+		).Scan(&transactionID)
+		if err != nil {
+			return nil, fmt.Errorf("recording invoice income: %w", err)
+		}
+		p.In.TransactionID = transactionID
+		ownsTransaction = true
+	}
+
+	id, err := insertDocument(ctx, tx, p, seller, seq, number, ownsTransaction)
 	if err != nil {
 		return nil, err
 	}
@@ -363,13 +397,16 @@ func (r *Repository) Get(ctx context.Context, orgID, id string) (*Invoice, error
 // Cancel marks an invoice cancelled. The number stays consumed; that is the
 // point of cancelling rather than deleting.
 //
-// The ledger must always equal the sum of non-cancelled documents. An
-// invoice writes no ledger row when issued, so cancelling one correctly
-// writes nothing here — there is nothing to undo. A credit note DID write a
-// refund row at issue, so cancelling one must reverse it in the same
-// transaction: otherwise the refund survives the cancellation, and
-// creditedSoFar (which only counts status='issued' credit notes) silently
-// frees up capacity to credit the parent all over again.
+// The ledger must always equal the sum of non-cancelled documents. A bill
+// that created its own income row (owns_transaction) must reverse exactly
+// that row here, in the same transaction, or the ledger keeps money for a
+// document that no longer counts. A bill that only linked a package sale's
+// row leaves it alone — that income belongs to the package flow, not to this
+// document, so cancelling the bill must not touch it. A credit note DID
+// write a refund row at issue, so cancelling one must reverse it too:
+// otherwise the refund survives the cancellation, and creditedSoFar (which
+// only counts status='issued' credit notes) silently frees up capacity to
+// credit the parent all over again.
 func (r *Repository) Cancel(ctx context.Context, orgID, id, cancelledBy, reason string) (*Invoice, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -379,14 +416,15 @@ func (r *Repository) Cancel(ctx context.Context, orgID, id, cancelledBy, reason 
 
 	var docType, invoiceNumber, paymentMethod string
 	var total float64
+	var ownsTransaction bool
 	err = tx.QueryRow(ctx,
 		`UPDATE invoices
 		    SET status = 'cancelled', cancelled_at = NOW(),
 		        cancelled_by = $3, cancellation_reason = $4
 		  WHERE id = $1 AND organization_id = $2 AND status = 'issued'
-		  RETURNING doc_type, invoice_number, total, COALESCE(payment_method, '')`,
+		  RETURNING doc_type, invoice_number, total, COALESCE(payment_method, ''), owns_transaction`,
 		id, orgID, cancelledBy, reason,
-	).Scan(&docType, &invoiceNumber, &total, &paymentMethod)
+	).Scan(&docType, &invoiceNumber, &total, &paymentMethod, &ownsTransaction)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Either it does not exist in this org, or it is already cancelled.
 		existing, getErr := getInTx(ctx, tx, orgID, id)
@@ -415,6 +453,23 @@ func (r *Repository) Cancel(ctx context.Context, orgID, id, cancelledBy, reason 
 			cancelledBy,
 		); err != nil {
 			return nil, fmt.Errorf("writing refund reversal ledger row: %w", err)
+		}
+	} else if docType == "invoice" && ownsTransaction {
+		// This bill created the income row it links (see Issue), so
+		// cancelling it must reverse exactly that money, not a package sale's
+		// income it never owned.
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO transactions (organization_id, category, description, transaction_date,
+			                           transaction_type, amount, payment_type, reference, entry_by)
+			 VALUES ($1, 'Sales reversal', $2, CURRENT_DATE, 'expense', $3, $4, $5, $6)`,
+			orgID,
+			"Cancelled invoice "+invoiceNumber,
+			total,
+			defaultTo(paymentMethod, "cash"),
+			invoiceNumber,
+			cancelledBy,
+		); err != nil {
+			return nil, fmt.Errorf("writing invoice reversal ledger row: %w", err)
 		}
 	}
 
@@ -503,8 +558,17 @@ func (r *Repository) CreditNote(ctx context.Context, p issueParams, parentID str
 		return nil, err
 	}
 
+	seq, err := allocateSequence(ctx, tx, p.OrgID, p.FiscalYear)
+	if err != nil {
+		return nil, err
+	}
+	number := fmt.Sprintf("%s/%06d", p.FiscalYear, seq)
+
 	p.CreditNoteFor = parentID
-	id, number, _, err := insertDocument(ctx, tx, p, seller)
+	// A credit note never owns a transaction: it writes its own refund row
+	// below regardless of who wrote the original income, so it has nothing
+	// of its own to reverse on cancel.
+	id, err := insertDocument(ctx, tx, p, seller, seq, number, false)
 	if err != nil {
 		return nil, err
 	}
