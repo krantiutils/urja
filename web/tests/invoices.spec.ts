@@ -153,6 +153,9 @@ function mockInvoiceAPI(
     // printed) without duplicating the whole route handler.
     initial?: ReturnType<typeof baseInvoice>;
     onCreditNote?: (body: Record<string, unknown>) => void;
+    onIssue?: (body: Record<string, unknown>) => void;
+    // Makes the issue endpoint reject as if this payment were already billed.
+    issueConflictCode?: string;
   } = {}
 ) {
   let invoice = opts.initial ?? baseInvoice();
@@ -207,6 +210,17 @@ function mockInvoiceAPI(
 
     if (method === "POST" && url.pathname.endsWith("/invoices")) {
       const body = route.request().postDataJSON();
+      opts.onIssue?.(body);
+      if (opts.issueConflictCode) {
+        return route.fulfill({
+          status: opts.issueConflictCode === "already_billed" ? 409 : 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: "this payment already has a bill",
+            code: opts.issueConflictCode,
+          }),
+        });
+      }
       invoice = baseInvoice({ customer_name: body.customer_name });
       return route.fulfill({
         status: 201,
@@ -316,5 +330,53 @@ test.describe("Bills", () => {
     expect(Array.isArray(captured.body?.items)).toBe(true);
     const items = captured.body?.items as Array<Record<string, unknown>>;
     expect(items[0].unit_price).toBe(1500);
+  });
+
+  const SALE_QUERY =
+    "?customer=Ram%20Bahadur&customer_user_id=u-77" +
+    "&package=Monthly%20Boxing&amount=3000" +
+    "&transaction_id=txn-55&member_package_id=mp-9";
+
+  test("a package sale pre-fills the bill form", async ({ page }) => {
+    await mockInvoiceAPI(page);
+    await page.goto(`/en/dashboard/invoices/new${SALE_QUERY}`);
+
+    // A sale always has a real member behind it, so the form opens with them
+    // already selected — shown as the chosen-member chip, not a name to type.
+    await expect(page.getByText("Ram Bahadur")).toBeVisible();
+    await expect(page.getByLabel(/description/i).first()).toHaveValue("Monthly Boxing");
+    await expect(page.getByLabel(/rate/i).first()).toHaveValue("3000");
+  });
+
+  test("a pre-filled bill links the sale's ledger row instead of writing its own", async ({
+    page,
+  }) => {
+    const captured: { body: Record<string, unknown> | null } = { body: null };
+    await mockInvoiceAPI(page, {
+      onIssue: (body) => {
+        captured.body = body;
+      },
+    });
+
+    await page.goto(`/en/dashboard/invoices/new${SALE_QUERY}`);
+    await page.getByRole("button", { name: /issue/i }).click();
+    await expect(page).toHaveURL(/\/dashboard\/invoices\/inv-001/);
+
+    // The whole point of the pre-fill: without transaction_id the backend
+    // would mint a second income row and double-count the same payment.
+    expect(captured.body?.transaction_id).toBe("txn-55");
+    expect(captured.body?.member_package_id).toBe("mp-9");
+    expect(captured.body?.customer_user_id).toBe("u-77");
+  });
+
+  test("billing a payment twice explains itself instead of showing a raw error", async ({
+    page,
+  }) => {
+    await mockInvoiceAPI(page, { issueConflictCode: "already_billed" });
+
+    await page.goto(`/en/dashboard/invoices/new${SALE_QUERY}`);
+    await page.getByRole("button", { name: /issue/i }).click();
+
+    await expect(page.getByText(/this payment already has a bill/i)).toBeVisible();
   });
 });

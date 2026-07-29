@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Plus, Receipt, Trash2, X } from "lucide-react";
 import { api, ApiRequestError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -41,15 +41,32 @@ export default function NewInvoicePage({ params }: { params: { lang: string } })
   const router = useRouter();
   const base = `/${locale}/dashboard`;
 
-  const [mode, setMode] = useState<CustomerMode>("walkIn");
-  const [customerUserId, setCustomerUserId] = useState<string | undefined>();
-  const [customerName, setCustomerName] = useState("");
+  // Pre-fill from a package sale. `transaction_id` is the load-bearing one:
+  // assigning a package already wrote an income row, so the bill must LINK
+  // that row rather than create its own. Arriving without it would post the
+  // same payment to the books twice.
+  const search = useSearchParams();
+  const prefillTransactionID = search.get("transaction_id") ?? undefined;
+  const prefillMemberPackageID = search.get("member_package_id") ?? undefined;
+
+  const [mode, setMode] = useState<CustomerMode>(
+    search.get("customer_user_id") ? "existing" : "walkIn"
+  );
+  const [customerUserId, setCustomerUserId] = useState<string | undefined>(
+    search.get("customer_user_id") ?? undefined
+  );
+  const [customerName, setCustomerName] = useState(search.get("customer") ?? "");
   const [customerPhone, setCustomerPhone] = useState<string | undefined>();
   const [customerPan, setCustomerPan] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [discount, setDiscount] = useState("");
-  const [items, setItems] = useState<ItemRow[]>([emptyRow()]);
+  const [items, setItems] = useState<ItemRow[]>(() => {
+    const description = search.get("package");
+    const amount = search.get("amount");
+    if (!description && !amount) return [emptyRow()];
+    return [{ description: description ?? "", quantity: "1", unit_price: amount ?? "" }];
+  });
 
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [membersLoaded, setMembersLoaded] = useState(false);
@@ -162,12 +179,21 @@ export default function NewInvoicePage({ params }: { params: { lang: string } })
         payment_method: paymentMethod || undefined,
         discount: discountNum || undefined,
         items: lineItems,
+        transaction_id: prefillTransactionID,
+        member_package_id: prefillMemberPackageID,
       };
       const invoice = await api.issueInvoice(orgId, payload);
       router.push(`${base}/invoices/${invoice.id}`);
     } catch (err) {
       if (err instanceof ApiRequestError && err.code === "pan_not_configured") {
         setPanMissing(true);
+      } else if (
+        err instanceof ApiRequestError &&
+        (err.code === "already_billed" || err.code === "transaction_already_owned")
+      ) {
+        // Both mean "this payment is already accounted for on a bill". Saying
+        // so plainly beats surfacing the API's wording.
+        setFormError(t.invoices.paymentAlreadyBilled);
       } else {
         setFormError(err instanceof ApiRequestError ? err.message : t.common.error);
       }

@@ -235,10 +235,14 @@ func (r *Repository) AssignPackage(ctx context.Context, orgID, memberID string, 
 		return nil, nil, fmt.Errorf("inserting payment: %w", err)
 	}
 
-	if err := recordPackageIncome(ctx, tx, orgID, particular, req.AmountPaid,
-		req.PaymentMethod, req.PaymentReference, entryByUserID); err != nil {
+	txnID, err := recordPackageIncome(ctx, tx, orgID, particular, req.AmountPaid,
+		req.PaymentMethod, req.PaymentReference, entryByUserID)
+	if err != nil {
 		return nil, nil, err
 	}
+	// Surfaced so a bill issued for this sale links this row instead of
+	// writing a second income row for the same payment.
+	pmt.TransactionID = txnID
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, nil, fmt.Errorf("commit transaction: %w", err)
@@ -347,10 +351,14 @@ func (r *Repository) RenewPackage(ctx context.Context, orgID, memberID string, o
 		return nil, nil, fmt.Errorf("inserting renewal payment: %w", err)
 	}
 
-	if err := recordPackageIncome(ctx, tx, orgID, particular, req.AmountPaid,
-		req.PaymentMethod, req.PaymentReference, entryByUserID); err != nil {
+	txnID, err := recordPackageIncome(ctx, tx, orgID, particular, req.AmountPaid,
+		req.PaymentMethod, req.PaymentReference, entryByUserID)
+	if err != nil {
 		return nil, nil, err
 	}
+	// Surfaced so a bill issued for this sale links this row instead of
+	// writing a second income row for the same payment.
+	pmt.TransactionID = txnID
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, nil, fmt.Errorf("commit transaction: %w", err)
@@ -414,10 +422,14 @@ func (r *Repository) ExtendPackage(ctx context.Context, orgID, memberID string, 
 		return nil, nil, fmt.Errorf("inserting extension payment: %w", err)
 	}
 
-	if err := recordPackageIncome(ctx, tx, orgID, particular, req.AmountPaid,
-		req.PaymentMethod, req.PaymentReference, entryByUserID); err != nil {
+	txnID, err := recordPackageIncome(ctx, tx, orgID, particular, req.AmountPaid,
+		req.PaymentMethod, req.PaymentReference, entryByUserID)
+	if err != nil {
 		return nil, nil, err
 	}
+	// Surfaced so a bill issued for this sale links this row instead of
+	// writing a second income row for the same payment.
+	pmt.TransactionID = txnID
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, nil, fmt.Errorf("commit transaction: %w", err)
@@ -604,20 +616,26 @@ func defaultIfEmpty(s, fallback string) string {
 // dues collections only and missed most of its revenue. This runs inside the
 // caller's transaction: a payment recorded against a member but absent from the
 // books is exactly the bug being fixed, so the two must not be able to diverge.
+// It returns the id of the ledger row it wrote, or "" when there was nothing to
+// record. Callers surface that id so a bill issued for this sale can LINK the
+// row rather than writing its own — without it the same payment lands in the
+// books twice, once from the package flow and once from the invoice.
 func recordPackageIncome(ctx context.Context, tx pgx.Tx, orgID, description string,
-	amount float64, method, reference, entryByUserID string) error {
+	amount float64, method, reference, entryByUserID string) (string, error) {
 	if amount <= 0 {
-		return nil
+		return "", nil
 	}
-	_, err := tx.Exec(ctx,
+	var id string
+	err := tx.QueryRow(ctx,
 		`INSERT INTO transactions
 		        (organization_id, category, description, transaction_date,
 		         transaction_type, amount, payment_type, reference, entry_by)
-		 VALUES ($1, 'Subscription', $2, CURRENT_DATE, 'income', $3, $4, $5, $6)`,
+		 VALUES ($1, 'Subscription', $2, CURRENT_DATE, 'income', $3, $4, $5, $6)
+		 RETURNING id`,
 		orgID, description, amount, defaultIfEmpty(method, "cash"),
-		nilIfEmpty(reference), entryByUserID)
+		nilIfEmpty(reference), entryByUserID).Scan(&id)
 	if err != nil {
-		return fmt.Errorf("recording income for package payment: %w", err)
+		return "", fmt.Errorf("recording income for package payment: %w", err)
 	}
-	return nil
+	return id, nil
 }

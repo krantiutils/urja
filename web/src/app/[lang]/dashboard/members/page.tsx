@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { getDictionary } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { api, ApiRequestError } from "@/lib/api";
@@ -17,6 +18,7 @@ import {
   UserMinus,
   UserCheck,
   Loader2,
+  Receipt,
 } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -68,6 +70,7 @@ export default function MembersPage({
 }) {
   const locale = params.lang as Locale;
   const t = getDictionary(locale);
+  const base = `/${locale}/dashboard`;
   const { user } = useAuth();
 
   const [members, setMembers] = useState<OrgMember[]>([]);
@@ -89,6 +92,14 @@ export default function MembersPage({
   // members but had no way to put the two together — the central transaction
   // of the business was unreachable from the product.
   const [sellFor, setSellFor] = useState<OrgMember | null>(null);
+  const [lastSale, setLastSale] = useState<{
+    memberId: string;
+    memberName: string;
+    particular: string;
+    amount: number;
+    transactionId?: string;
+    memberPackageId: string;
+  } | null>(null);
   const [packages, setPackages] = useState<OrgPackage[]>([]);
   const [sellPackageId, setSellPackageId] = useState("");
   const [sellStart, setSellStart] = useState("");
@@ -215,12 +226,24 @@ export default function MembersPage({
       setSellLoading(true);
       setSellError(null);
       try {
-        await api.assignPackage(orgId, sellFor.id, {
+        const sold = await api.assignPackage(orgId, sellFor.id, {
           package_id: sellPackageId,
           start_date: sellStart,
           payment_method: sellMethod,
           amount_paid: parseFloat(sellPaid) || 0,
           discount: parseFloat(sellDiscount) || 0,
+        });
+        // Offer a bill rather than issuing one automatically — not every sale
+        // needs a tax invoice. transaction_id carries the ledger row this sale
+        // just wrote, so the bill links it instead of recording the payment
+        // a second time.
+        setLastSale({
+          memberId: sellFor.id,
+          memberName: sellFor.name,
+          particular: sold.payment.particular,
+          amount: sold.payment.paid_amount,
+          transactionId: sold.payment.transaction_id,
+          memberPackageId: sold.payment.member_package_id,
         });
         setSellFor(null);
         await fetchMembers();
@@ -335,6 +358,40 @@ export default function MembersPage({
           {t.members.addMember}
         </button>
       </div>
+
+      {/* Offer a bill for the sale just made. Dismissible: a tax invoice is
+          the gym's choice, not an automatic consequence of taking money. */}
+      {lastSale && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-accent/10 border border-accent/20 text-sm text-fg">
+          <span>
+            {lastSale.particular} — {lastSale.memberName}
+          </span>
+          <div className="flex items-center gap-2">
+            <Link
+              href={
+                `${base}/invoices/new?customer=${encodeURIComponent(lastSale.memberName)}` +
+                `&customer_user_id=${lastSale.memberId}` +
+                `&package=${encodeURIComponent(lastSale.particular)}` +
+                `&amount=${lastSale.amount}` +
+                `&member_package_id=${lastSale.memberPackageId}` +
+                (lastSale.transactionId ? `&transaction_id=${lastSale.transactionId}` : "")
+              }
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent text-bg-deep font-medium hover:bg-accent-bright transition-colors"
+            >
+              <Receipt className="w-4 h-4" />
+              {t.invoices.issueBillForSale}
+            </Link>
+            <button
+              type="button"
+              onClick={() => setLastSale(null)}
+              aria-label={t.common.cancel}
+              className="p-1.5 rounded-lg text-fg-muted hover:bg-surface transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">

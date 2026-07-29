@@ -893,6 +893,9 @@ export interface SubscriptionPayment {
   payment_method?: string;
   payment_reference?: string;
   payment_date: string;
+  /** Ledger row this sale wrote. A bill for the sale links it rather than
+   *  creating its own income row, so the payment is never counted twice. */
+  transaction_id?: string;
 }
 
 export interface AssignPackageRequest {

@@ -74,6 +74,10 @@ type Payment struct {
 	PaymentMethod    string    `json:"payment_method,omitempty"`
 	PaymentReference string    `json:"payment_reference,omitempty"`
 	PaymentDate      time.Time `json:"payment_date"`
+	// TransactionID is the ledger row this sale wrote. A bill issued for the
+	// sale links it instead of creating its own income row, so the payment is
+	// never counted twice. Empty when nothing was paid.
+	TransactionID string `json:"transaction_id,omitempty"`
 }
 
 // AssignRequest is the input for assigning a package to a member.
