@@ -67,6 +67,37 @@ func (r *Repository) OrgBySlug(ctx context.Context, slug string) (orgID, name, n
 	return orgID, name, nameNe, nil
 }
 
+// OrgContact is a gym's public contact detail, used to build the structured
+// data every page emits. Read from the organization rather than from whichever
+// page happens to carry a contact section: search engines and assistants want
+// these facts on the home page most of all, and that is exactly the page a
+// gym is least likely to put a contact block on.
+//
+// Every field here is already public via the gym directory — this exposes
+// nothing new, it just puts it where the site renderer can reach it.
+type OrgContact struct {
+	Address   string   `json:"address,omitempty"`
+	AddressNe string   `json:"address_ne,omitempty"`
+	Phone     string   `json:"phone,omitempty"`
+	Email     string   `json:"email,omitempty"`
+	Latitude  *float64 `json:"latitude,omitempty"`
+	Longitude *float64 `json:"longitude,omitempty"`
+}
+
+// OrgContactByID reads a gym's public contact detail.
+func (r *Repository) OrgContactByID(ctx context.Context, orgID string) (*OrgContact, error) {
+	var c OrgContact
+	err := r.db.QueryRow(ctx,
+		`SELECT COALESCE(address, ''), COALESCE(address_ne, ''),
+		        COALESCE(phone, ''), COALESCE(email, ''), latitude, longitude
+		   FROM organizations WHERE id = $1`, orgID,
+	).Scan(&c.Address, &c.AddressNe, &c.Phone, &c.Email, &c.Latitude, &c.Longitude)
+	if err != nil {
+		return nil, fmt.Errorf("reading org contact: %w", err)
+	}
+	return &c, nil
+}
+
 // --- Pages ---
 
 // CreatePage inserts a new page for an organization.

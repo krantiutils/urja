@@ -119,6 +119,18 @@ export interface PublicSite {
   footer: SiteFooter;
   socials: SiteSocials;
   pages: PageSummary[];
+  /** The gym's public contact detail, read from its own record so every page
+   *  — the home page above all — can emit it as structured data. */
+  contact?: SiteContact | null;
+}
+
+export interface SiteContact {
+  address?: string;
+  address_ne?: string;
+  phone?: string;
+  email?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export type TemplateId =

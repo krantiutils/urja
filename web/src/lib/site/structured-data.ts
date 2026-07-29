@@ -21,6 +21,15 @@ interface Section {
   content?: Record<string, unknown>;
 }
 
+interface SiteContact {
+  address?: string;
+  address_ne?: string;
+  phone?: string;
+  email?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 interface SiteLike {
   slug: string;
   org_name: string;
@@ -28,6 +37,7 @@ interface SiteLike {
   /** Loose on purpose: SiteSocials is a fixed-key interface with no index
    *  signature, and all this needs is "every value that looks like a URL". */
   socials?: object | null;
+  contact?: SiteContact | null;
 }
 
 function str(v: unknown): string | undefined {
@@ -81,20 +91,32 @@ export function buildGymSchema({
   locale,
   origin,
 }: GymSchemaInput): Record<string, unknown> | null {
-  const contact = findSection(sections, "contact_info")?.content ?? {};
+  const section = findSection(sections, "contact_info")?.content ?? {};
   const hero = findSection(sections, "hero")?.content ?? {};
+  const org = site.contact ?? {};
 
   const name =
     (locale === "ne" ? site.org_name_ne : undefined) || site.org_name;
 
-  const phone = str(contact.phone);
-  const address = str(locale === "ne" ? contact.addressNe : contact.address) ?? str(contact.address);
-  const hours = str(contact.hoursNote) ?? str(contact.hoursNoteNe);
+  // The gym's own record wins; a contact section is the fallback. Preferring
+  // the record is what lets the home page carry this at all — a contact block
+  // usually lives on the contact page, and the home page is the one that most
+  // needs to state where the gym is.
+  const phone = str(org.phone) ?? str(section.phone);
+  const address =
+    str(locale === "ne" ? org.address_ne : org.address) ??
+    str(org.address) ??
+    str(locale === "ne" ? section.addressNe : section.address) ??
+    str(section.address);
+  const hours = str(section.hoursNote) ?? str(section.hoursNoteNe);
   const description =
     str(locale === "ne" ? hero.subtitleNe : hero.subtitle) ?? str(hero.subtitle);
 
+  const hasGeo =
+    typeof org.latitude === "number" && typeof org.longitude === "number";
+
   // A bare name tells neither Google nor an assistant anything useful.
-  if (!phone && !address) return null;
+  if (!phone && !address && !hasGeo) return null;
 
   const sameAs = Object.values(site.socials ?? {}).filter(
     (v): v is string => typeof v === "string" && v.startsWith("http")
@@ -108,7 +130,19 @@ export function buildGymSchema({
     url: origin,
     ...(description ? { description } : {}),
     ...(phone ? { telephone: phone } : {}),
+    ...(str(org.email) ? { email: org.email } : {}),
     ...(address ? { address: postalAddress(address) } : {}),
+    // A map pin is the single most useful thing for "gyms near me" style
+    // questions, and it is the one fact a crawler cannot infer from prose.
+    ...(hasGeo
+      ? {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: org.latitude,
+            longitude: org.longitude,
+          },
+        }
+      : {}),
     // Free-form rather than openingHoursSpecification: the gym writes hours as
     // a sentence, and parsing "mornings and 5:00 - 7:00 PM" into structured
     // day/time pairs would mean guessing which days the mornings cover.

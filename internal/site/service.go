@@ -30,6 +30,9 @@ type PublicSite struct {
 	Footer    json.RawMessage `json:"footer"`
 	Socials   json.RawMessage `json:"socials"`
 	Pages     []PageSummary   `json:"pages"`
+	// Contact backs the structured data every page emits. Present on the site
+	// rather than a page so the home page can carry it too.
+	Contact *OrgContact `json:"contact,omitempty"`
 }
 
 // ListLiveSites returns the published gym subdomains for the sitemap index.
@@ -61,10 +64,19 @@ func (s *Service) GetPublicSite(ctx context.Context, slug string) (*PublicSite, 
 		return nil, err
 	}
 
+	// Contact detail is a nice-to-have for the renderer and a must-have for
+	// structured data, but it is not worth failing the whole page over.
+	contact, err := s.repo.OrgContactByID(ctx, orgID)
+	if err != nil {
+		s.logger.Warn("could not read org contact for site", "slug", slug, "error", err)
+		contact = nil
+	}
+
 	return &PublicSite{
 		Slug: slug, OrgName: name, OrgNameNe: nameNe,
 		Template: settings.Template, Theme: settings.Theme, Nav: settings.Nav,
 		Footer: settings.Footer, Socials: settings.Socials, Pages: pages,
+		Contact: contact,
 	}, nil
 }
 
