@@ -1,0 +1,25 @@
+@media print {
+  /* Only the document reaches paper. Hiding is the safe default here because
+     the dashboard shell (sidebar, topbar) sits alongside the document in the
+     DOM, not inside it — an allowlist of what to print, rather than a
+     denylist of what to hide, would need updating every time the chrome
+     changes. */
+  body * {
+    visibility: hidden;
+  }
+  .invoice-doc,
+  .invoice-doc * {
+    visibility: visible;
+  }
+  .invoice-doc {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    max-width: none;
+    padding: 12mm;
+  }
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}
