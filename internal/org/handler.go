@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -11,6 +12,12 @@ import (
 
 	"github.com/urja-gym/urja/pkg/middleware"
 )
+
+// panNumberRe matches a Nepali PAN: exactly 9 digits. Mirrors the
+// organizations_pan_number_format CHECK constraint, but validated here too
+// so a malformed PAN comes back as a clean 400 instead of an opaque pgx
+// constraint-violation error.
+var panNumberRe = regexp.MustCompile(`^[0-9]{9}$`)
 
 // Handler handles HTTP requests for organization endpoints.
 type Handler struct {
@@ -135,6 +142,9 @@ type updateOrgRequest struct {
 	Latitude      *float64         `json:"latitude"`
 	Longitude     *float64         `json:"longitude"`
 	Settings      *json.RawMessage `json:"settings"`
+	PANNumber     *string          `json:"pan_number"`
+	TaxLegalName  *string          `json:"tax_legal_name"`
+	TaxAddress    *string          `json:"tax_address"`
 }
 
 // Update handles PUT /api/v1/orgs/{orgId}
@@ -157,6 +167,21 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.PANNumber != nil && *req.PANNumber != "" {
+		if !panNumberRe.MatchString(*req.PANNumber) {
+			writeJSON(w, http.StatusBadRequest,
+				map[string]string{"error": "pan_number must be exactly 9 digits"})
+			return
+		}
+	}
+	// An empty string means "leave PAN unchanged", not "clear it to empty":
+	// the repository's COALESCE($n, column) pattern only knows nil-means-
+	// unchanged, and an empty string would otherwise be written through and
+	// trip the database's digit-format CHECK constraint.
+	if req.PANNumber != nil && *req.PANNumber == "" {
+		req.PANNumber = nil
+	}
+
 	in := &UpdateOrgInput{
 		Name:          req.Name,
 		NameNe:        req.NameNe,
@@ -170,6 +195,9 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		Latitude:      req.Latitude,
 		Longitude:     req.Longitude,
 		Settings:      req.Settings,
+		PANNumber:     req.PANNumber,
+		TaxLegalName:  req.TaxLegalName,
+		TaxAddress:    req.TaxAddress,
 	}
 
 	org, err := h.service.Update(r.Context(), userID, orgID, in)

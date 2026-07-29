@@ -26,6 +26,9 @@ type Organization struct {
 	Email         string          `json:"email,omitempty"`
 	Latitude      *float64        `json:"latitude,omitempty"`
 	Longitude     *float64        `json:"longitude,omitempty"`
+	PANNumber     string          `json:"pan_number,omitempty"`
+	TaxLegalName  string          `json:"tax_legal_name,omitempty"`
+	TaxAddress    string          `json:"tax_address,omitempty"`
 	Timezone      string          `json:"timezone"`
 	Settings      json.RawMessage `json:"settings"`
 	IsActive      bool            `json:"is_active"`
@@ -65,6 +68,9 @@ type UpdateOrgInput struct {
 	Latitude      *float64
 	Longitude     *float64
 	Settings      *json.RawMessage
+	PANNumber     *string
+	TaxLegalName  *string
+	TaxAddress    *string
 }
 
 const orgSelectColumns = `id, name, COALESCE(name_ne, ''), slug,
@@ -72,6 +78,7 @@ const orgSelectColumns = `id, name, COALESCE(name_ne, ''), slug,
 	COALESCE(logo_url, ''), COALESCE(address, ''), COALESCE(address_ne, ''),
 	COALESCE(phone, ''), COALESCE(email, ''),
 	latitude, longitude,
+	COALESCE(pan_number, ''), COALESCE(tax_legal_name, ''), COALESCE(tax_address, ''),
 	timezone, settings, is_active, created_at, updated_at`
 
 // Repository handles organization data persistence.
@@ -92,6 +99,7 @@ func scanOrg(scanner interface{ Scan(dest ...any) error }) (*Organization, error
 		&o.LogoURL, &o.Address, &o.AddressNe,
 		&o.Phone, &o.Email,
 		&o.Latitude, &o.Longitude,
+		&o.PANNumber, &o.TaxLegalName, &o.TaxAddress,
 		&o.Timezone, &o.Settings, &o.IsActive, &o.CreatedAt, &o.UpdatedAt,
 	)
 	if err != nil {
@@ -172,7 +180,10 @@ func (r *Repository) Update(ctx context.Context, id string, in *UpdateOrgInput) 
 			email         = COALESCE($10, email),
 			latitude      = COALESCE($11, latitude),
 			longitude     = COALESCE($12, longitude),
-			settings      = COALESCE($13, settings)
+			settings      = COALESCE($13, settings),
+			pan_number     = COALESCE($14, pan_number),
+			tax_legal_name = COALESCE($15, tax_legal_name),
+			tax_address    = COALESCE($16, tax_address)
 		 WHERE id = $1
 		 RETURNING `+orgSelectColumns,
 		id,
@@ -182,6 +193,7 @@ func (r *Repository) Update(ctx context.Context, id string, in *UpdateOrgInput) 
 		in.Phone, in.Email,
 		in.Latitude, in.Longitude,
 		in.Settings,
+		in.PANNumber, in.TaxLegalName, in.TaxAddress,
 	)
 	o, err := scanOrg(row)
 	if err != nil {
