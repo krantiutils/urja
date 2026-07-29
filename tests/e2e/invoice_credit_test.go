@@ -73,6 +73,61 @@ func TestInvoiceCredit_ReversesAndLinks(t *testing.T) {
 	}
 }
 
+// A credit note that cannot say which bill it reverses is not a usable tax
+// document — credit_note_for is a UUID the customer never sees, so the
+// printed reference has to be the parent's own invoice_number, snapshotted at
+// credit time. A plain invoice has no parent, so it must carry none.
+func TestInvoiceCredit_CarriesParentInvoiceNumber(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000508", "Admin")
+	orgID := createTestOrg(t, admin, "Reference Gym")
+	setPAN(t, orgID, "601234567")
+	token := generateTestToken(admin, "member")
+
+	resp := doRequest(t, http.MethodPost, "/api/v1/orgs/"+orgID+"/invoices",
+		issueBody("Ram", 1, 1000), token)
+	assertStatus(t, resp, http.StatusCreated)
+	var parent struct {
+		ID                  string `json:"id"`
+		InvoiceNumber       string `json:"invoice_number"`
+		CreditNoteForNumber string `json:"credit_note_for_number"`
+	}
+	parseJSON(t, resp, &parent)
+	if parent.CreditNoteForNumber != "" {
+		t.Errorf("plain invoice credit_note_for_number = %q, want empty", parent.CreditNoteForNumber)
+	}
+
+	resp = doRequest(t, http.MethodPost,
+		"/api/v1/orgs/"+orgID+"/invoices/"+parent.ID+"/credit-note", creditBody(1, 500), token)
+	assertStatus(t, resp, http.StatusCreated)
+
+	var note struct {
+		ID                  string `json:"id"`
+		CreditNoteFor       string `json:"credit_note_for"`
+		CreditNoteForNumber string `json:"credit_note_for_number"`
+	}
+	parseJSON(t, resp, &note)
+	if note.CreditNoteFor != parent.ID {
+		t.Errorf("credit_note_for = %q, want the parent id %q", note.CreditNoteFor, parent.ID)
+	}
+	if note.CreditNoteForNumber != parent.InvoiceNumber {
+		t.Errorf("credit_note_for_number = %q, want the parent's invoice_number %q",
+			note.CreditNoteForNumber, parent.InvoiceNumber)
+	}
+
+	// Reading the credit note back later (e.g. reprinting it) must still
+	// carry the reference — this isn't only present on the create response.
+	resp = doRequest(t, http.MethodGet, "/api/v1/orgs/"+orgID+"/invoices/"+note.ID, nil, token)
+	assertStatus(t, resp, http.StatusOK)
+	var reread struct {
+		CreditNoteForNumber string `json:"credit_note_for_number"`
+	}
+	parseJSON(t, resp, &reread)
+	if reread.CreditNoteForNumber != parent.InvoiceNumber {
+		t.Errorf("re-read credit_note_for_number = %q, want %q", reread.CreditNoteForNumber, parent.InvoiceNumber)
+	}
+}
+
 func TestInvoiceCredit_CannotExceedBalance(t *testing.T) {
 	cleanupTables(t)
 	admin := createTestUser(t, "9800000502", "Admin")

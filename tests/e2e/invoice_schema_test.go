@@ -45,6 +45,24 @@ func TestInvoiceSchema_CannotUpdateAmount(t *testing.T) {
 	}
 }
 
+// credit_note_for_number is a snapshot like every other field on this table:
+// once written, it must be as immutable as the amounts it sits next to.
+func TestInvoiceSchema_CannotUpdateCreditNoteForNumber(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000107", "Admin")
+	orgID := createTestOrg(t, admin, "Reference Immutable Gym")
+	id := seedInvoice(t, orgID, admin, 1)
+
+	_, err := testPool.Exec(context.Background(),
+		`UPDATE invoices SET credit_note_for_number = '2082-83/999999' WHERE id = $1`, id)
+	if err == nil {
+		t.Fatal("expected the immutability trigger to reject a credit_note_for_number change, got nil")
+	}
+	if !strings.Contains(err.Error(), "only cancellation may change") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
 func TestInvoiceSchema_CannotChangeID(t *testing.T) {
 	cleanupTables(t)
 	admin := createTestUser(t, "9800000106", "Admin")

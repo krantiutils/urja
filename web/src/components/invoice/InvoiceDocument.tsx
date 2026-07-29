@@ -70,6 +70,15 @@ export function InvoiceDocument({
           <p className="font-mono">{invoice.invoice_number}</p>
           <p>{invoice.issued_date_bs} (BS)</p>
           <p className="text-black/60">{invoice.issued_date} (AD)</p>
+          {/* Only a credit note has a parent to point back to, and the API
+              only ever populates this for one — credit_note_for itself is a
+              UUID the customer would never recognize, so the printed
+              reference has to be the parent's own number. */}
+          {isCredit && invoice.credit_note_for_number && (
+            <p className="text-black/60">
+              {t.invoices.creditedAgainst}: {invoice.credit_note_for_number}
+            </p>
+          )}
         </div>
       </section>
 

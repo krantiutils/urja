@@ -12,11 +12,24 @@
     visibility: visible;
   }
   .invoice-doc {
+    /* top/left/right only — no bottom. `inset: 0` pins all four edges, which
+       forces the box to exactly one page's height; an absolutely positioned
+       box's overflow doesn't extend document flow the way in-flow content
+       does, so a bill with enough line items to need a second page would
+       have the rest clipped at the physical edge instead of paginating.
+       Leaving height unset lets content height drive how many pages print. */
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
     margin: 0;
     max-width: none;
     padding: 12mm;
+  }
+  /* A row split across a page break reads as a formatting error on a legal
+     document — force it onto whichever page it fits on whole. */
+  .invoice-doc tr {
+    break-inside: avoid;
   }
   @page {
     size: A4;

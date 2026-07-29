@@ -178,19 +178,20 @@ func verifyOrgReferences(ctx context.Context, tx pgx.Tx, orgID string, in IssueI
 
 // issueParams carries everything the service computed for a new document.
 type issueParams struct {
-	OrgID         string
-	FiscalYear    string
-	DocType       string
-	CreditNoteFor string
-	IssuedDate    string
-	IssuedDateBS  string
-	Subtotal      float64
-	Discount      float64
-	TaxableAmount float64
-	Total         float64
-	AmountInWords string
-	IssuedBy      string
-	In            IssueInput
+	OrgID               string
+	FiscalYear          string
+	DocType             string
+	CreditNoteFor       string
+	CreditNoteForNumber string
+	IssuedDate          string
+	IssuedDateBS        string
+	Subtotal            float64
+	Discount            float64
+	TaxableAmount       float64
+	Total               float64
+	AmountInWords       string
+	IssuedBy            string
+	In                  IssueInput
 }
 
 // insertDocument writes an invoice or credit note and its line items inside tx.
@@ -206,7 +207,7 @@ func insertDocument(ctx context.Context, tx pgx.Tx, p issueParams, seller seller
 	err := tx.QueryRow(ctx,
 		`INSERT INTO invoices (
 			organization_id, fiscal_year, sequence, invoice_number,
-			doc_type, credit_note_for,
+			doc_type, credit_note_for, credit_note_for_number,
 			seller_name, seller_pan, seller_address, seller_vat_registered,
 			customer_user_id, customer_name, customer_pan, customer_address, customer_phone,
 			issued_date, issued_date_bs,
@@ -214,15 +215,15 @@ func insertDocument(ctx context.Context, tx pgx.Tx, p issueParams, seller seller
 			payment_method, transaction_id, member_package_id, issued_by, owns_transaction
 		 ) VALUES (
 			$1, $2, $3, $4,
-			$5, NULLIF($6, '')::uuid,
-			$7, $8, $9, $10,
-			NULLIF($11, '')::uuid, $12, NULLIF($13, ''), NULLIF($14, ''), NULLIF($15, ''),
-			$16::date, $17,
-			$18, $19, $20, 0, 0, $21, $22,
-			NULLIF($23, ''), NULLIF($24, '')::uuid, NULLIF($25, '')::uuid, $26, $27
+			$5, NULLIF($6, '')::uuid, NULLIF($7, ''),
+			$8, $9, $10, $11,
+			NULLIF($12, '')::uuid, $13, NULLIF($14, ''), NULLIF($15, ''), NULLIF($16, ''),
+			$17::date, $18,
+			$19, $20, $21, 0, 0, $22, $23,
+			NULLIF($24, ''), NULLIF($25, '')::uuid, NULLIF($26, '')::uuid, $27, $28
 		 ) RETURNING id`,
 		p.OrgID, p.FiscalYear, seq, number,
-		p.DocType, p.CreditNoteFor,
+		p.DocType, p.CreditNoteFor, p.CreditNoteForNumber,
 		seller.Name, seller.PAN, seller.Address, seller.VATRegistered,
 		p.In.CustomerUserID, p.In.CustomerName, p.In.CustomerPAN, p.In.CustomerAddress, p.In.CustomerPhone,
 		p.IssuedDate, p.IssuedDateBS,
@@ -325,7 +326,7 @@ func (r *Repository) Issue(ctx context.Context, p issueParams) (*Invoice, error)
 
 const invoiceColumns = `
 	id, organization_id, fiscal_year, sequence, invoice_number,
-	doc_type, COALESCE(credit_note_for::text, ''),
+	doc_type, COALESCE(credit_note_for::text, ''), COALESCE(credit_note_for_number, ''),
 	seller_name, seller_pan, COALESCE(seller_address, ''), seller_vat_registered,
 	COALESCE(customer_user_id::text, ''), customer_name,
 	COALESCE(customer_pan, ''), COALESCE(customer_address, ''), COALESCE(customer_phone, ''),
@@ -340,7 +341,7 @@ func scanInvoice(row pgx.Row) (*Invoice, error) {
 	var v Invoice
 	err := row.Scan(
 		&v.ID, &v.OrgID, &v.FiscalYear, &v.Sequence, &v.InvoiceNumber,
-		&v.DocType, &v.CreditNoteFor,
+		&v.DocType, &v.CreditNoteFor, &v.CreditNoteForNumber,
 		&v.SellerName, &v.SellerPAN, &v.SellerAddress, &v.SellerVATRegistered,
 		&v.CustomerUserID, &v.CustomerName,
 		&v.CustomerPAN, &v.CustomerAddress, &v.CustomerPhone,
@@ -587,6 +588,7 @@ func (r *Repository) CreditNote(ctx context.Context, p issueParams, parentID str
 	number := fmt.Sprintf("%s/%06d", p.FiscalYear, seq)
 
 	p.CreditNoteFor = parentID
+	p.CreditNoteForNumber = parent.InvoiceNumber
 	// A credit note never owns a transaction: it writes its own refund row
 	// below regardless of who wrote the original income, so it has nothing
 	// of its own to reverse on cancel.

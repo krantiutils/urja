@@ -62,6 +62,13 @@ type Invoice struct {
 	InvoiceNumber string `json:"invoice_number"`
 	DocType       string `json:"doc_type"`
 	CreditNoteFor string `json:"credit_note_for,omitempty"`
+	// CreditNoteForNumber is the parent's invoice_number, snapshotted at credit
+	// time. credit_note_for is a UUID a customer never sees; the printed
+	// document needs to say which bill it reverses, and that snapshot is the
+	// only way to do it without joining back to the parent row at print time
+	// and breaking the read-only-from-this-row guarantee every other field
+	// here relies on.
+	CreditNoteForNumber string `json:"credit_note_for_number,omitempty"`
 
 	SellerName          string `json:"seller_name"`
 	SellerPAN           string `json:"seller_pan"`

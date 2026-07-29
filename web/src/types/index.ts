@@ -958,6 +958,9 @@ export interface Invoice {
   invoice_number: string;
   doc_type: "invoice" | "credit_note";
   credit_note_for?: string;
+  /** Parent's invoice_number, snapshotted at credit time — the id above is a
+   *  UUID the customer never sees; the printed document needs this. */
+  credit_note_for_number?: string;
 
   seller_name: string;
   seller_pan: string;
