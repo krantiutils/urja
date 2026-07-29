@@ -300,7 +300,16 @@ BEGIN
         RAISE EXCEPTION 'invoice %: issued invoices cannot be deleted', OLD.invoice_number;
     END IF;
 
+    -- The primary key is guarded on its own, outside the positional tuple
+    -- below: it isn't a column a future migration would think to add to that
+    -- list, so it needs its own explicit check rather than relying on being
+    -- remembered.
+    IF NEW.id IS DISTINCT FROM OLD.id THEN
+        RAISE EXCEPTION 'invoice %: the primary key cannot be changed', OLD.invoice_number;
+    END IF;
+
     -- Only cancellation fields, print_count and synced_at may ever change.
+    -- id is guarded separately above, not here.
     -- NOTE: this comparison is positional. A new column added to `invoices`
     -- must be added here too, or it silently becomes mutable.
     IF (NEW.organization_id, NEW.fiscal_year, NEW.sequence, NEW.invoice_number,

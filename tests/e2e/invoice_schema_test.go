@@ -45,6 +45,22 @@ func TestInvoiceSchema_CannotUpdateAmount(t *testing.T) {
 	}
 }
 
+func TestInvoiceSchema_CannotChangeID(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000106", "Admin")
+	orgID := createTestOrg(t, admin, "PK Gym")
+	id := seedInvoice(t, orgID, admin, 1)
+
+	_, err := testPool.Exec(context.Background(),
+		`UPDATE invoices SET id = gen_random_uuid() WHERE id = $1`, id)
+	if err == nil {
+		t.Fatal("expected the immutability trigger to reject a primary key change, got nil")
+	}
+	if !strings.Contains(err.Error(), "the primary key cannot be changed") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
 func TestInvoiceSchema_CannotDelete(t *testing.T) {
 	cleanupTables(t)
 	admin := createTestUser(t, "9800000102", "Admin")
@@ -112,22 +128,42 @@ func TestInvoiceSchema_SequenceIsUniquePerOrgAndYear(t *testing.T) {
 	orgA := createTestOrg(t, admin, "Seq Gym A")
 	orgB := createTestOrg(t, admin, "Seq Gym B")
 
+	// seedInvoice(orgA, ..., 1) takes sequence=1, invoice_number='2082-83/000001'.
 	seedInvoice(t, orgA, admin, 1)
 
 	// The same sequence in a different org is fine.
 	seedInvoice(t, orgB, admin, 1)
 
-	// The same sequence in the same org and year is not.
+	// Same sequence, same org and year, but a DISTINCT invoice_number: only
+	// the (organization_id, fiscal_year, sequence) constraint can reject this,
+	// so this specifically pins sequence uniqueness rather than riding along
+	// on the invoice_number constraint.
 	_, err := testPool.Exec(context.Background(),
 		`INSERT INTO invoices (
 			organization_id, fiscal_year, sequence, invoice_number,
 			seller_name, seller_pan, customer_name, issued_date, issued_date_bs,
 			subtotal, taxable_amount, total, amount_in_words, issued_by
-		) VALUES ($1, '2082-83', 1, '2082-83/000001',
+		) VALUES ($1, '2082-83', 1, '2082-83/000999',
 			'Test Gym', '123456789', 'Someone', CURRENT_DATE, '2082-04-14',
 			1000, 1000, 1000, 'One thousand rupees only', $2)`,
 		orgA, admin)
 	if err == nil {
 		t.Fatal("expected duplicate sequence to be rejected, got nil")
+	}
+
+	// Mirror case: same invoice_number, DISTINCT sequence. Only the
+	// (organization_id, invoice_number) constraint can reject this, so this
+	// pins that constraint independently of the one above.
+	_, err = testPool.Exec(context.Background(),
+		`INSERT INTO invoices (
+			organization_id, fiscal_year, sequence, invoice_number,
+			seller_name, seller_pan, customer_name, issued_date, issued_date_bs,
+			subtotal, taxable_amount, total, amount_in_words, issued_by
+		) VALUES ($1, '2082-83', 2, '2082-83/000001',
+			'Test Gym', '123456789', 'Someone', CURRENT_DATE, '2082-04-14',
+			1000, 1000, 1000, 'One thousand rupees only', $2)`,
+		orgA, admin)
+	if err == nil {
+		t.Fatal("expected duplicate invoice_number to be rejected, got nil")
 	}
 }
