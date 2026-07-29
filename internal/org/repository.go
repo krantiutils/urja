@@ -156,6 +156,22 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*Organization, err
 	return o, nil
 }
 
+// GetFullByID retrieves an organization by ID for an authenticated org admin
+// (or super_admin) viewing their own settings, including the tax identity.
+// Deliberately uses orgSelectColumns, not orgPublicColumns — see GetByID.
+// Callers must have already checked the caller's authority; this method does
+// not gate access itself.
+func (r *Repository) GetFullByID(ctx context.Context, id string) (*Organization, error) {
+	row := r.db.QueryRow(ctx,
+		`SELECT `+orgSelectColumns+` FROM organizations WHERE id = $1`, id,
+	)
+	o, err := scanOrg(row)
+	if err != nil {
+		return nil, fmt.Errorf("organization not found: %w", err)
+	}
+	return o, nil
+}
+
 // List retrieves active organizations (public listing). Deliberately uses
 // orgPublicColumns — see GetByID.
 func (r *Repository) List(ctx context.Context, limit, offset int) ([]Organization, error) {

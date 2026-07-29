@@ -2,6 +2,7 @@ package org
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -70,6 +71,38 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	org, err := h.service.Get(r.Context(), id)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "gym not found"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, org)
+}
+
+// GetAuthenticated handles GET /api/v1/orgs/{orgId} — the authenticated
+// counterpart to the public GET /api/v1/gyms/{id}, additionally returning the
+// org's tax identity (pan_number, tax_legal_name, tax_address). Only reachable
+// by that org's own admin or a super_admin; see Service.GetAuthenticated for
+// why a failed check reads as 404 rather than 403.
+func (h *Handler) GetAuthenticated(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	orgID := chi.URLParam(r, "orgId")
+	if orgID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization ID"})
+		return
+	}
+
+	org, err := h.service.GetAuthenticated(r.Context(), userID, orgID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "organization not found"})
+			return
+		}
+		h.logger.Error("failed to get organization", "error", err, "org_id", orgID)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 		return
 	}
 

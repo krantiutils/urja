@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
-import { injectAuth } from "./helpers";
+import { injectAdminAuth } from "./helpers";
 
 const ORG = {
   id: "org-001",
@@ -27,7 +27,10 @@ function mockOrgAPI(page: Page) {
 test.describe("Tax settings", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/en/login");
-    await injectAuth(page);
+    // The Tax section is gated the same way the sibling org cards are
+    // (canEditOrg): an "admin" identity is required to see the editable form
+    // rather than the read-only fallback.
+    await injectAdminAuth(page);
     await mockOrgAPI(page);
   });
 
@@ -68,5 +71,39 @@ test.describe("Tax settings", () => {
     await pan.fill("");
     await saveButton.click();
     await expect(page.getByText(/9 digits/i)).toHaveCount(0);
+  });
+
+  test("loads a previously saved PAN from the authenticated org endpoint", async ({ page }) => {
+    // A saved PAN must actually show up on reload. This mocks only
+    // /api/v1/orgs/{orgId} (authenticated, carries the tax identity) — not
+    // the public /api/v1/gyms/{id} directory, which never does (see the
+    // backend's orgPublicColumns). If api.getOrg regresses back to the
+    // /gyms/ endpoint, this request goes unmocked, the fetch fails, and the
+    // field renders blank instead of pre-filled — that's the failure this
+    // test exists to catch.
+    await page.route("**/api/v1/orgs/org-001", (route: Route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "org-001",
+          name: "Test Gym",
+          slug: "test-gym",
+          pan_number: "609999999",
+          tax_legal_name: "Existing Legal Name Pvt Ltd",
+          tax_address: "Existing Address, Kathmandu",
+        }),
+      })
+    );
+
+    await page.goto("/en/dashboard/settings");
+
+    await expect(page.getByLabel(/PAN/i)).toHaveValue("609999999");
+    await expect(page.getByLabel(/registered legal name/i)).toHaveValue(
+      "Existing Legal Name Pvt Ltd"
+    );
+    await expect(page.getByLabel(/registered address/i)).toHaveValue(
+      "Existing Address, Kathmandu"
+    );
   });
 });

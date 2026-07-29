@@ -11,15 +11,12 @@ function fakeJWT(payload: Record<string, unknown>): string {
   return `${header}.${body}.${sig}`;
 }
 
-/**
- * Inject a fake authenticated session into localStorage so AuthGuard lets us through.
- */
-export async function injectAuth(page: Page): Promise<void> {
+async function injectSession(page: Page, role: string): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   const accessToken = fakeJWT({
     sub: "test-user-001",
     phone: "9841000000",
-    role: "super_admin",
+    role,
     org_id: "org-001",
     iat: now,
     exp: now + 3600, // 1 hour from now
@@ -40,4 +37,21 @@ export async function injectAuth(page: Page): Promise<void> {
     },
     { access: accessToken, refresh: refreshToken },
   );
+}
+
+/**
+ * Inject a fake authenticated session into localStorage so AuthGuard lets us through.
+ */
+export async function injectAuth(page: Page): Promise<void> {
+  return injectSession(page, "super_admin");
+}
+
+/**
+ * Like injectAuth, but with role "admin" instead of "super_admin". Needed for
+ * screens gated by a client-side check on `user.role === "admin" || "staff"`
+ * (e.g. settings' canEditOrg) — that check reads the JWT's role claim
+ * directly and does not treat "super_admin" as satisfying it.
+ */
+export async function injectAdminAuth(page: Page): Promise<void> {
+  return injectSession(page, "admin");
 }

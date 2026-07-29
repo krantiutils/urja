@@ -2,6 +2,7 @@ package org
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -10,6 +11,13 @@ import (
 
 	"golang.org/x/text/unicode/norm"
 )
+
+// ErrNotFound signals that GetAuthenticated has nothing to return for this
+// caller — either the org truly doesn't exist, or the caller has no business
+// seeing it. Kept distinct from Update's "forbidden" errors on purpose: an
+// outsider probing another gym's org ID must get a 404, not a 403 that
+// confirms the org exists.
+var ErrNotFound = errors.New("organization not found")
 
 // Service handles organization business logic.
 type Service struct {
@@ -71,6 +79,26 @@ func (s *Service) Create(ctx context.Context, userID string, in *CreateOrgInput)
 	}
 
 	return s.repo.Create(ctx, in)
+}
+
+// GetAuthenticated retrieves the full organization record — including its tax
+// identity — for the org's own admin (or a super_admin) viewing settings.
+// Gated the same way Update is gated: role must be admin, or the caller must
+// be a super_admin. See ErrNotFound for why a failed check surfaces as
+// "not found" rather than "forbidden".
+func (s *Service) GetAuthenticated(ctx context.Context, userID, orgID string) (*Organization, error) {
+	role, err := s.repo.GetOrgRole(ctx, userID, orgID)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+	if role != "admin" {
+		isSA, saErr := s.repo.IsSuperAdmin(ctx, userID)
+		if saErr != nil || !isSA {
+			return nil, ErrNotFound
+		}
+	}
+
+	return s.repo.GetFullByID(ctx, orgID)
 }
 
 // Update updates an existing organization. Caller must be an admin of the org.

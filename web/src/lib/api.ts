@@ -174,8 +174,13 @@ class ApiClient {
 
   // --- Organization ---
 
+  // Authenticated read — includes the tax identity (pan_number,
+  // tax_legal_name, tax_address) the public gym directory deliberately
+  // omits. Its only caller is the dashboard settings page, which is always
+  // authenticated, so this is safe to point at the org-scoped endpoint
+  // rather than the public /gyms/{id} one.
   async getOrg(orgId: string): Promise<Organization> {
-    return this.request(`/api/v1/gyms/${orgId}`);
+    return this.request(`/api/v1/orgs/${orgId}`);
   }
 
   async updateOrg(

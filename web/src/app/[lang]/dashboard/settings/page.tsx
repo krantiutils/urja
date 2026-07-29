@@ -960,77 +960,108 @@ export default function SettingsPage({
                 {t.settings.taxDetails}
               </h2>
             </div>
-            <form onSubmit={handleSaveTax} className="p-5 space-y-4">
-              <p className="text-sm text-fg-muted">{t.settings.taxDetailsIntro}</p>
-              <div>
-                <label htmlFor="tax-pan" className={labelClass}>
-                  {t.settings.panNumber}
-                </label>
-                <input
-                  id="tax-pan"
-                  type="text"
-                  inputMode="numeric"
-                  value={pan}
-                  onChange={(e) => setPan(e.target.value)}
-                  placeholder="123456789"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label htmlFor="tax-legal-name" className={labelClass}>
-                  {t.settings.taxLegalName}
-                </label>
-                <input
-                  id="tax-legal-name"
-                  type="text"
-                  value={taxLegalName}
-                  onChange={(e) => setTaxLegalName(e.target.value)}
-                  maxLength={255}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label htmlFor="tax-address" className={labelClass}>
-                  {t.settings.taxAddress}
-                </label>
-                <input
-                  id="tax-address"
-                  type="text"
-                  value={taxAddress}
-                  onChange={(e) => setTaxAddress(e.target.value)}
-                  maxLength={500}
-                  className={inputClass}
-                />
-              </div>
+            <div className="p-5 space-y-4">
+              {canEditOrg ? (
+                <form onSubmit={handleSaveTax} className="space-y-4">
+                  <p className="text-sm text-fg-muted">{t.settings.taxDetailsIntro}</p>
+                  <div>
+                    <label htmlFor="tax-pan" className={labelClass}>
+                      {t.settings.panNumber}
+                    </label>
+                    <input
+                      id="tax-pan"
+                      type="text"
+                      inputMode="numeric"
+                      value={pan}
+                      onChange={(e) => setPan(e.target.value)}
+                      placeholder="123456789"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tax-legal-name" className={labelClass}>
+                      {t.settings.taxLegalName}
+                    </label>
+                    <input
+                      id="tax-legal-name"
+                      type="text"
+                      value={taxLegalName}
+                      onChange={(e) => setTaxLegalName(e.target.value)}
+                      maxLength={255}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tax-address" className={labelClass}>
+                      {t.settings.taxAddress}
+                    </label>
+                    <input
+                      id="tax-address"
+                      type="text"
+                      value={taxAddress}
+                      onChange={(e) => setTaxAddress(e.target.value)}
+                      maxLength={500}
+                      className={inputClass}
+                    />
+                  </div>
 
-              {panError && (
-                <p className="text-sm text-red-400" role="alert">
-                  {panError}
-                </p>
+                  {panError && (
+                    <p className="text-sm text-red-400" role="alert">
+                      {panError}
+                    </p>
+                  )}
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="submit"
+                      disabled={taxSaving}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors shadow-accent-glow disabled:opacity-50"
+                    >
+                      {taxSaving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : taxSaved ? (
+                        <Check className="w-4 h-4" />
+                      ) : null}
+                      {taxSaving
+                        ? t.settings.saving
+                        : taxSaved
+                          ? t.settings.saved
+                          : t.settings.saveChanges}
+                    </button>
+                    {taxSaveError && (
+                      <span className="text-sm text-red-400">{taxSaveError}</span>
+                    )}
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-fg-muted">
+                      {t.settings.panNumber}
+                    </span>
+                    <span className="text-sm text-fg font-mono">
+                      {readOnlyValue(org?.pan_number)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-fg-muted">
+                      {t.settings.taxLegalName}
+                    </span>
+                    <span className="text-sm text-fg">
+                      {readOnlyValue(org?.tax_legal_name)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-fg-muted">
+                      {t.settings.taxAddress}
+                    </span>
+                    <span className="text-sm text-fg text-right max-w-[60%]">
+                      {readOnlyValue(org?.tax_address)}
+                    </span>
+                  </div>
+                </>
               )}
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={taxSaving}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-accent text-bg-deep font-medium text-sm rounded-xl hover:bg-accent-bright transition-colors shadow-accent-glow disabled:opacity-50"
-                >
-                  {taxSaving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : taxSaved ? (
-                    <Check className="w-4 h-4" />
-                  ) : null}
-                  {taxSaving
-                    ? t.settings.saving
-                    : taxSaved
-                      ? t.settings.saved
-                      : t.settings.saveChanges}
-                </button>
-                {taxSaveError && (
-                  <span className="text-sm text-red-400">{taxSaveError}</span>
-                )}
-              </div>
-            </form>
+            </div>
           </div>
 
           {/* Save Org Button — only for admin/staff */}

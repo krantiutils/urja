@@ -342,79 +342,86 @@ func TestMain(m *testing.M) {
 			})
 
 			r.Route("/orgs/{orgId}", func(r chi.Router) {
-				r.Use(middleware.OrgScope(orgSvc))
+				// GetAuthenticated runs its own admin/super_admin check and turns a
+				// failed check into 404 — mounted outside the OrgScope group below,
+				// mirroring cmd/api/main.go.
+				r.Get("/", orgHandler.GetAuthenticated)
 
-				r.Put("/", orgHandler.Update)
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.OrgScope(orgSvc))
 
-				r.Route("/packages", func(r chi.Router) {
-					pkgHandler.RegisterOrgRoutes(r)
-					subscriptionHandler.RegisterPackageRoutes(r)
-				})
+					r.Put("/", orgHandler.Update)
 
-				r.Route("/members", func(r chi.Router) {
-					memberHandler.RegisterOrgRoutes(r)
-					r.Route("/{memberId}", func(r chi.Router) {
-						memberHandler.RegisterMemberRoutes(r)
-						subscriptionHandler.RegisterMemberRoutes(r)
-						workoutHandler.RegisterMemberRoutes(r)
-						boxingHandler.RegisterMemberRoutes(r)
+					r.Route("/packages", func(r chi.Router) {
+						pkgHandler.RegisterOrgRoutes(r)
+						subscriptionHandler.RegisterPackageRoutes(r)
 					})
-				})
 
-				r.Route("/attendance", func(r chi.Router) {
-					attendanceHandler.RegisterOrgRoutes(r)
-				})
+					r.Route("/members", func(r chi.Router) {
+						memberHandler.RegisterOrgRoutes(r)
+						r.Route("/{memberId}", func(r chi.Router) {
+							memberHandler.RegisterMemberRoutes(r)
+							subscriptionHandler.RegisterMemberRoutes(r)
+							workoutHandler.RegisterMemberRoutes(r)
+							boxingHandler.RegisterMemberRoutes(r)
+						})
+					})
 
-				r.Route("/staff", func(r chi.Router) {
-					staffHandler.RegisterOrgRoutes(r)
-				})
+					r.Route("/attendance", func(r chi.Router) {
+						attendanceHandler.RegisterOrgRoutes(r)
+					})
 
-				r.Route("/site", func(r chi.Router) {
-					siteHandler.RegisterOrgRoutes(r)
-				})
+					r.Route("/staff", func(r chi.Router) {
+						staffHandler.RegisterOrgRoutes(r)
+					})
 
-				r.Route("/dues", func(r chi.Router) {
-					duesHandler.RegisterRoutes(r)
-				})
+					r.Route("/site", func(r chi.Router) {
+						siteHandler.RegisterOrgRoutes(r)
+					})
 
-				r.Route("/invoices", func(r chi.Router) {
-					invoiceHandler.RegisterRoutes(r)
-				})
+					r.Route("/dues", func(r chi.Router) {
+						duesHandler.RegisterRoutes(r)
+					})
 
-				r.Route("/accounts", func(r chi.Router) {
-					accountsHandler.RegisterRoutes(r)
-				})
+					r.Route("/invoices", func(r chi.Router) {
+						invoiceHandler.RegisterRoutes(r)
+					})
 
-				r.Route("/notices", func(r chi.Router) {
-					noticeHandler.RegisterOrgRoutes(r)
-				})
+					r.Route("/accounts", func(r chi.Router) {
+						accountsHandler.RegisterRoutes(r)
+					})
 
-				r.Route("/feedbacks", func(r chi.Router) {
-					feedbackHandler.RegisterOrgRoutes(r)
-				})
+					r.Route("/notices", func(r chi.Router) {
+						noticeHandler.RegisterOrgRoutes(r)
+					})
 
-				r.Route("/sms", func(r chi.Router) {
-					smsapiHandler.RegisterOrgRoutes(r)
-				})
+					r.Route("/feedbacks", func(r chi.Router) {
+						feedbackHandler.RegisterOrgRoutes(r)
+					})
 
-				r.Route("/absentees", func(r chi.Router) {
-					absenteeHandler.RegisterOrgRoutes(r)
-				})
+					r.Route("/sms", func(r chi.Router) {
+						smsapiHandler.RegisterOrgRoutes(r)
+					})
 
-				r.Route("/training-guides", func(r chi.Router) {
-					guideHandler.RegisterOrgRoutes(r)
-				})
+					r.Route("/absentees", func(r chi.Router) {
+						absenteeHandler.RegisterOrgRoutes(r)
+					})
 
-				r.Route("/workout-templates", func(r chi.Router) {
-					workoutHandler.RegisterOrgRoutes(r)
-				})
+					r.Route("/training-guides", func(r chi.Router) {
+						guideHandler.RegisterOrgRoutes(r)
+					})
 
-				nfcHandler.RegisterOrgRoutes(r)
-				activityLogHandler.RegisterOrgRoutes(r)
-				qrHandler.RegisterOrgRoutes(r)
+					r.Route("/workout-templates", func(r chi.Router) {
+						workoutHandler.RegisterOrgRoutes(r)
+					})
 
-				r.Route("/leaderboard", func(r chi.Router) {
-					leaderboardHandler.RegisterOrgRoutes(r)
+					nfcHandler.RegisterOrgRoutes(r)
+					activityLogHandler.RegisterOrgRoutes(r)
+					qrHandler.RegisterOrgRoutes(r)
+
+					r.Route("/leaderboard", func(r chi.Router) {
+						leaderboardHandler.RegisterOrgRoutes(r)
+					})
 				})
 			})
 		})

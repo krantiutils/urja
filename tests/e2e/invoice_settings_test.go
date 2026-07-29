@@ -169,3 +169,63 @@ func TestOrgPublic_DoesNotLeakTaxIdentity(t *testing.T) {
 		}
 	}
 }
+
+// TestOrgSettings_GetAuthenticated_RoundTrip is fix-round-2 finding 1: a saved
+// PAN must actually be readable back by the org that saved it. Before this
+// fix there was no authenticated GET at all — the settings page's initial
+// fetch hit the unauthenticated GET /api/v1/gyms/{id} directory, which never
+// carries pan_number/tax_legal_name/tax_address by design (see
+// TestOrgPublic_DoesNotLeakTaxIdentity above), so a saved PAN would reload as
+// blank forever even though the database had it.
+func TestOrgSettings_GetAuthenticated_RoundTrip(t *testing.T) {
+	cleanupTables(t)
+	admin := createTestUser(t, "9800000206", "Admin")
+	orgID := createTestOrg(t, admin, "Round Trip Gym")
+	token := generateTestToken(admin, "member")
+
+	putResp := doRequest(t, http.MethodPut, "/api/v1/orgs/"+orgID, map[string]any{
+		"pan_number":     "601111111",
+		"tax_legal_name": "Round Trip Gym Pvt Ltd",
+		"tax_address":    "Patan, Lalitpur",
+	}, token)
+	assertStatus(t, putResp, http.StatusOK)
+	putResp.Body.Close()
+
+	getResp := doRequest(t, http.MethodGet, "/api/v1/orgs/"+orgID, nil, token)
+	assertStatus(t, getResp, http.StatusOK)
+
+	var got struct {
+		PANNumber    string `json:"pan_number"`
+		TaxLegalName string `json:"tax_legal_name"`
+		TaxAddress   string `json:"tax_address"`
+	}
+	parseJSON(t, getResp, &got)
+	if got.PANNumber != "601111111" {
+		t.Errorf("pan_number = %q, want %q", got.PANNumber, "601111111")
+	}
+	if got.TaxLegalName != "Round Trip Gym Pvt Ltd" {
+		t.Errorf("tax_legal_name = %q, want %q", got.TaxLegalName, "Round Trip Gym Pvt Ltd")
+	}
+	if got.TaxAddress != "Patan, Lalitpur" {
+		t.Errorf("tax_address = %q, want %q", got.TaxAddress, "Patan, Lalitpur")
+	}
+}
+
+// TestOrgSettings_GetAuthenticated_CrossTenant404 is fix-round-2 finding 1's
+// other half: an admin of one gym must not be able to read another gym's tax
+// identity by guessing its org ID, and the response must not even confirm the
+// org exists — 404, not the 403 that OrgScope's shared "not a member" check
+// would otherwise give away (which is why this route is deliberately not
+// gated by OrgScope; see cmd/api/main.go).
+func TestOrgSettings_GetAuthenticated_CrossTenant404(t *testing.T) {
+	cleanupTables(t)
+	ownerA := createTestUser(t, "9800000207", "Owner A")
+	orgA := createTestOrg(t, ownerA, "Org A")
+
+	ownerB := createTestUser(t, "9800000208", "Owner B")
+	createTestOrg(t, ownerB, "Org B") // ownerB legitimately admins a different org
+	tokenB := generateTestToken(ownerB, "member")
+
+	resp := doRequest(t, http.MethodGet, "/api/v1/orgs/"+orgA, nil, tokenB)
+	assertStatus(t, resp, http.StatusNotFound)
+}
