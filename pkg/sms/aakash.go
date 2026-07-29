@@ -36,9 +36,31 @@ func NewClient(token, apiURL string, logger *slog.Logger) *Client {
 }
 
 // aakashResponse represents the response from the Aakash SMS API.
+//
+// `error` is a BOOLEAN on the wire — `{"error": false, "message": "..."}` on
+// success. It was declared as a string here, so json.Unmarshal failed on every
+// single response including the successful ones, and no SMS this product ever
+// sent was reported as delivered. That is why OTP appeared not to work at all
+// and why a static-code bypass was carrying the entire login flow.
+//
+// Message is json.RawMessage because the field is a plain string on success
+// and has been observed as a structured object on some failures; decoding it
+// leniently means a message-shape change can never again break sending.
 type aakashResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message"`
+	Error   bool            `json:"error"`
+	Message json.RawMessage `json:"message"`
+}
+
+// text renders Message for humans whether it arrived as a string or an object.
+func (r aakashResponse) text() string {
+	if len(r.Message) == 0 {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(r.Message, &s); err == nil {
+		return s
+	}
+	return string(r.Message)
 }
 
 // Send sends an arbitrary SMS message to the given phone number.
@@ -96,11 +118,18 @@ func (c *Client) send(ctx context.Context, phone, message string) error {
 
 	var apiResp aakashResponse
 	if err := json.Unmarshal(body, &apiResp); err != nil {
-		return fmt.Errorf("parsing SMS response: %w", err)
+		// The message was accepted with a 200; failing here would report a
+		// delivered SMS as an error and, for OTP, make the user request
+		// another code that is also already on its way.
+		c.logger.Warn("could not parse SMS response, treating 200 as sent",
+			"error", err, "body", string(body))
+		return nil
 	}
 
-	if apiResp.Error != "" {
-		return fmt.Errorf("SMS API error: %s", apiResp.Error)
+	if apiResp.Error {
+		c.logger.Error("SMS API rejected the message",
+			"message", apiResp.text(), "phone", phone[:4]+"******")
+		return fmt.Errorf("SMS API error: %s", apiResp.text())
 	}
 
 	c.logger.Info("SMS sent successfully",
