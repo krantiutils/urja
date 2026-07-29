@@ -120,6 +120,23 @@ func (s *Service) Issue(ctx context.Context, orgID, issuedBy string, in IssueInp
 	return inv, nil
 }
 
+// Cancel withdraws a bill issued in error. It does not touch the ledger — if
+// money actually moved, a credit note is the correct instrument.
+func (s *Service) Cancel(ctx context.Context, orgID, id, cancelledBy, reason string) (*Invoice, error) {
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return nil, ErrReasonRequired
+	}
+	inv, err := s.repo.Cancel(ctx, orgID, id, cancelledBy, reason)
+	if err != nil {
+		return nil, err
+	}
+	s.logger.Info("invoice cancelled",
+		"invoice_number", inv.InvoiceNumber, "org_id", orgID,
+		"cancelled_by", cancelledBy, "reason", reason)
+	return inv, nil
+}
+
 // Get reads one invoice, scoped to the org.
 func (s *Service) Get(ctx context.Context, orgID, id string) (*Invoice, error) {
 	return s.repo.Get(ctx, orgID, id)

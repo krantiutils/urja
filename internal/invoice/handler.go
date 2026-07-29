@@ -138,9 +138,35 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"data": list, "total": total})
 }
 
+type cancelRequest struct {
+	Reason string `json:"reason"`
+}
+
 // Cancel handles POST /api/v1/orgs/{orgId}/invoices/{invoiceId}/cancel
 func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusNotImplemented, map[string]string{"error": "not implemented"})
+	orgID, ok := middleware.OrgIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing organization"})
+		return
+	}
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	var req cancelRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	inv, err := h.service.Cancel(r.Context(), orgID, chi.URLParam(r, "invoiceId"), userID, req.Reason)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, inv)
 }
 
 // CreditNote handles POST /api/v1/orgs/{orgId}/invoices/{invoiceId}/credit-note

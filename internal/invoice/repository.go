@@ -360,6 +360,32 @@ func (r *Repository) Get(ctx context.Context, orgID, id string) (*Invoice, error
 	return inv, nil
 }
 
+// Cancel marks an invoice cancelled. The number stays consumed; that is the
+// point of cancelling rather than deleting.
+func (r *Repository) Cancel(ctx context.Context, orgID, id, cancelledBy, reason string) (*Invoice, error) {
+	tag, err := r.db.Exec(ctx,
+		`UPDATE invoices
+		    SET status = 'cancelled', cancelled_at = NOW(),
+		        cancelled_by = $3, cancellation_reason = $4
+		  WHERE id = $1 AND organization_id = $2 AND status = 'issued'`,
+		id, orgID, cancelledBy, reason)
+	if err != nil {
+		return nil, fmt.Errorf("cancelling invoice: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		// Either it does not exist in this org, or it is already cancelled.
+		existing, getErr := r.Get(ctx, orgID, id)
+		if getErr != nil {
+			return nil, getErr
+		}
+		if existing.Status == "cancelled" {
+			return nil, ErrAlreadyCancelled
+		}
+		return nil, ErrNotFound
+	}
+	return r.Get(ctx, orgID, id)
+}
+
 // List returns invoices for an org, newest first.
 func (r *Repository) List(ctx context.Context, f ListFilter) ([]Invoice, int, error) {
 	conds := []string{"organization_id = $1"}
