@@ -20,13 +20,15 @@ var tens = []string{
 }
 
 // under1000 renders 0..999. Returns "" for 0 so callers can omit empty groups.
-// Defensive lower bound guards against negative indices from out-of-range inputs.
+// Defensive: bounds check on both lower and upper ends to prevent index panics
+// from unexpected input. Should never receive n > 999 after tighter guards in words(),
+// but this protects against future tier additions and is inexpensive.
 func under1000(n int) string {
-	if n <= 0 {
+	if n <= 0 || n > 999 {
 		return ""
 	}
 	var parts []string
-	if h := n / 100; h > 0 {
+	if h := n / 100; h > 0 && h < len(ones) {
 		parts = append(parts, ones[h], "hundred")
 	}
 	r := n % 100
@@ -34,14 +36,16 @@ func under1000(n int) string {
 	case r == 0:
 	case r < 0 || r >= 20:
 		// Defensive: r >= 20 handles normal path; r < 0 guards against panic
-		if r >= 20 {
+		if r >= 20 && r/10 < len(tens) {
 			parts = append(parts, tens[r/10])
-			if r%10 > 0 {
+			if r%10 > 0 && r%10 < len(ones) {
 				parts = append(parts, ones[r%10])
 			}
 		}
 	default:
-		parts = append(parts, ones[r])
+		if r >= 0 && r < len(ones) {
+			parts = append(parts, ones[r])
+		}
 	}
 	return strings.Join(parts, " ")
 }
@@ -106,7 +110,7 @@ func Rupees(amount float64) string {
 	total := int64(math.Round(amount*100 + 1e-9))
 
 	// Guard against out-of-range: if the rounded paisa value doesn't fit in int64,
-	// return a sentinel rather than panicking in under1000().
+	// return a sentinel rather than panicking.
 	if total < math.MinInt64/100 || total > math.MaxInt64/100 {
 		return "Amount out of range"
 	}
@@ -118,6 +122,13 @@ func Rupees(amount float64) string {
 	}
 
 	rupees := total / 100
+
+	// Tighter bound: the top tier (kharab) can only handle up to 999, so the
+	// largest representable amount is 999 * 1e11 = 9.99e13 rupees. Reject anything
+	// at or above 1e14 to prevent under1000() from panicking on out-of-range indices.
+	if rupees >= 1e14 {
+		return "Amount out of range"
+	}
 	paisa := total % 100
 
 	unit := "rupees"

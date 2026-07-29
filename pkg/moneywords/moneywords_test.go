@@ -63,3 +63,54 @@ func TestRupeesFixes(t *testing.T) {
 		})
 	}
 }
+
+func TestRupeesRound2Fixes(t *testing.T) {
+	tests := []struct {
+		amount float64
+		want   string
+		desc   string
+	}{
+		// Fix Round 2: Regression fix — kharab tier out-of-range panic
+		// Value that would cause under1000(3000) -> ones[30] panic before the fix.
+		{3e14, "Amount out of range", "3e14 triggers kharab overflow without tighter guard"},
+
+		// Largest representable value: 999 kharab is 9.99e13 rupees < 1e14 boundary.
+		{9.99e13, "Nine hundred ninety nine kharab rupees only", "max value just under 1e14 boundary"},
+
+		// Edge case: exactly at the boundary should also be rejected.
+		{1e14, "Amount out of range", "1e14 is exactly at the rejection boundary"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			if got := Rupees(tt.amount); got != tt.want {
+				t.Errorf("Rupees(%.2e) = %q, want %q (%s)", tt.amount, got, tt.want, tt.desc)
+			}
+		})
+	}
+}
+
+func TestUnder1000Defensive(t *testing.T) {
+	// Test that under1000() cannot panic even when called with n > 999.
+	// It should return an empty string for out-of-contract input.
+	// This is an internal function test ensuring the defensive bounds work.
+	tests := []struct {
+		n    int
+		desc string
+	}{
+		{1000, "n = 1000, just above contract"},
+		{3000, "n = 3000, the original panic case from kharab tier"},
+		{9223, "n = 9223, would index ones[92] without defensive check"},
+		{-1, "n = -1, negative input"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("under1000(%d) panicked: %v (%s)", tt.n, r, tt.desc)
+				}
+			}()
+			_ = under1000(tt.n)
+			// If we reach here, no panic occurred — test passes.
+		})
+	}
+}
