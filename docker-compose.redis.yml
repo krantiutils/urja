@@ -1,0 +1,25 @@
+# Standalone Redis lifecycle: the original polecat checkout no longer exists.
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: urja_redis_1
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - urja_default
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+volumes:
+  redis_data:
+    external: true
+    name: urja_redis_data
+networks:
+  urja_default:
+    external: true
+    name: urja_default
